@@ -79,6 +79,11 @@ def ensure(asset: Asset) -> Path:
     and wrong.
     """
     target = asset.path
+    # A name may carry a subdirectory: ONNX graphs reference their external
+    # weight files by the exact name they were built with, so those files
+    # have to keep it and sit together rather than be renamed into one flat
+    # cache.
+    target.parent.mkdir(parents=True, exist_ok=True)
     if target.exists():
         if digest(target) == asset.sha256:
             return target
@@ -125,5 +130,30 @@ def ensure(asset: Asset) -> Path:
     return target
 
 
-def ensure_all(assets: list[Asset]) -> list[Path]:
+def missing(assets) -> list[Asset]:
+    """Which of these are absent or fail their digest."""
+    out = []
+    for asset in assets:
+        if not asset.path.exists() or digest(asset.path) != asset.sha256:
+            out.append(asset)
+    return out
+
+
+def ensure_all(assets) -> list[Path]:
+    """Fetch every asset, reporting all of them at once when it cannot.
+
+    One at a time would be one round trip per file: someone with downloads
+    disabled and five models to fetch should get five commands, not the
+    first one and then another error after they run it.
+    """
+    assets = list(assets)
+    if os.environ.get("EARSHOT_NO_DOWNLOAD"):
+        absent = missing(assets)
+        if absent:
+            lines = "\n".join(f"  curl -L --create-dirs -o {a.path} {a.url}"
+                               for a in absent)
+            raise EngineError(
+                f"{len(absent)} file(s) missing and downloading is disabled "
+                f"(EARSHOT_NO_DOWNLOAD). Fetch them by hand:\n{lines}"
+            )
     return [ensure(asset) for asset in assets]

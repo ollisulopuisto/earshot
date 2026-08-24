@@ -106,5 +106,6 @@ def check_contract(before: np.ndarray, after: np.ndarray, name: str) -> np.ndarr
     return after
 
 
+from . import lavasr as _lavasr  # noqa: E402,F401
 from . import passthrough as _passthrough  # noqa: E402,F401  (registers itself)
 from . import vst3 as _vst3  # noqa: E402,F401

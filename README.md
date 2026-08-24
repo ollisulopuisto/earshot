@@ -170,10 +170,40 @@ remote guest on a telephone codec is exactly the wrong one.
 
 | engine | approach | licence | status |
 |---|---|---|---|
-| [LavaSR](https://github.com/ysharma3501/LavaSR) | Vocos, bandwidth extension + denoise, 50 MB | Apache-2.0 | next up |
+| [LavaSR](https://github.com/ysharma3501/LavaSR) | Vocos, bandwidth extension + denoise, 56 MB | Apache-2.0 | **measured** — see below |
 | [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) | real-time denoise only, very fast | MIT/Apache-2.0 | queued |
 | [Sidon](https://arxiv.org/html/2509.17052v1) | w2v-BERT + HiFi-GAN resynthesis, 250M params | CC BY 4.0 | queued |
 | [Resemble Enhance](https://github.com/resemble-ai/resemble-enhance) | denoiser + enhancer | MIT | queued |
+
+## First head-to-head
+
+Four excerpts, two speakers, real podcast material. `gained` is recovery
+against the untouched original; `origin` is how much of the output is still
+the input in that band.
+
+| | dxRevive | LavaSR | what it means |
+|---|---|---|---|
+| VoIP recovery | **+3.82 dB** | +3.09 dB | dxRevive still ahead, but not by much |
+| speech band 1–4 kHz | +0.66 | **+1.00** | LavaSR leaves the speaker's own waveform alone; dxRevive rewrites it |
+| clean material | **−3.36 dB** | −5.87 dB | LavaSR does more harm when nothing needed fixing |
+| denoising (hiss) | **+9.71 dB** | +6.93 dB | LavaSR is not a denoiser, and does not claim to be |
+| non-speech, 0.5–2 kHz | +56.85 dB | **−0.01 dB** | dxRevive deletes it; LavaSR leaves it |
+| speed | 7× realtime | **77×** | eleven times faster, on CPU, no GPU involved |
+
+Two findings worth stating plainly. **LavaSR preserves the speech band
+completely** — its `origin` of +1.00 through 1–4 kHz is not an approximation,
+it is the untouched input, because the model's output is crossfaded in above
+4 kHz and below that your waveform survives. And **it does not destroy
+non-speech**: a sweep loses 0.01 dB where dxRevive removes 57. For a
+recording with a room in it, that is a different tool, not a slightly
+different score.
+
+Its `denoise` option is currently harmful on this material — floor −36.9 dB
+and *speech* −5.1 dB, recovering nothing. Left off by default and not
+recommended until someone works out why.
+
+The shape this suggests is a chain: denoise with something built for it, then
+extend the band with LavaSR. That is [issue #5](https://github.com/ollisulopuisto/earshot/issues/5).
 
 ## Results
 
