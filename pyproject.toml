@@ -1,0 +1,32 @@
+[project]
+name = "earshot"
+version = "0.1.0"
+description = "Measure, then restore: a bench for speech restoration on podcast voices"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Olli Sulopuisto" }]
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "soundfile>=0.12",
+]
+
+[project.optional-dependencies]
+# The VST3 engine. Optional because the bench itself must run in CI, where
+# no plug-in is installed and none can be.
+vst3 = ["pedalboard>=0.9"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+earshot = "earshot.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/earshot"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
