@@ -33,15 +33,34 @@ def test_options_are_checked_not_ignored():
 
 
 def test_no_download_gives_a_usable_message(tmp_path, monkeypatch):
+    """Asks the fetcher directly rather than through the engine.
+
+    Going through `engines.load("lavasr")` reports "install the extra" first
+    on a machine without onnxruntime — which is the right thing to say to a
+    person and the wrong thing to assert here, and it turned CI red once.
+    The message under test belongs to the fetcher, so the fetcher is what
+    gets asked.
+    """
     monkeypatch.setenv("EARSHOT_CACHE", str(tmp_path))
     monkeypatch.setenv("EARSHOT_NO_DOWNLOAD", "1")
     with pytest.raises(engines.EngineError) as caught:
-        engines.load("lavasr")
+        fetch.ensure_all(lavasr.ASSETS)
     message = str(caught.value)
     # Every missing file at once: one at a time would be one round trip per
     # model, which is not a switch so much as an obstacle.
     assert message.count("curl -L") == len(lavasr.ASSETS)
     assert "enhancer_backbone.onnx.data" in message
+
+
+def test_the_engine_asks_for_the_extra_before_anything_else():
+    """On a machine without onnxruntime, that is the actionable first step."""
+    onnx = pytest.importorskip
+    try:
+        import onnxruntime  # noqa: F401
+    except ImportError:
+        with pytest.raises(engines.EngineError) as caught:
+            engines.load("lavasr")
+        assert "earshot[lavasr]" in str(caught.value)
 
 
 def test_the_resampler_round_trip_keeps_the_length_within_a_few_samples():
