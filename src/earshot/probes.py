@@ -74,6 +74,7 @@ class Run:
     engine: str
     damage: str
     material: str = ""
+    speaker: str = ""
     results: list[Result] = field(default_factory=list)
     skipped: str = ""
     failed: str = ""

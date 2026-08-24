@@ -241,3 +241,55 @@ def _run_from(raw: dict) -> Run:
               failed=raw.get("failed", ""))
     run.results = [Result(**r) for r in raw.get("results", [])]
     return run
+
+
+# Metrics broken out per speaker. Two, not six: the spread already says an
+# engine is inconsistent, and this table exists to say *on whom*. A wall of
+# numbers would bury that.
+PER_SPEAKER: tuple[tuple[str, str, str], ...] = (
+    ("recovery", "gained", "recovered"),
+    ("origin", "mid", "origin 1-4k"),
+)
+
+
+def per_speaker(runs: list[Run]) -> str:
+    """One table per metric, engines as rows and speakers as columns.
+
+    An engine that wins on average and loses badly on one voice is a
+    different proposition from one that wins everywhere, and the mean plus a
+    spread cannot tell them apart. This can: the losing column has a name.
+    """
+    from statistics import fmean
+
+    live = [r for r in runs if r.speaker and not r.skipped and not r.failed]
+    speakers = sorted({r.speaker for r in live})
+    engines = sorted({r.engine for r in live})
+    if len(speakers) < 2 or not engines:
+        return ""
+
+    out: list[str] = []
+    for probe, metric, label in PER_SPEAKER:
+        rows: list[str] = []
+        for engine in engines:
+            cells = []
+            for speaker in speakers:
+                values = [
+                    r.value(probe, metric)
+                    for r in live
+                    if r.engine == engine and r.speaker == speaker
+                ]
+                values = [v for v in values if v is not None and v == v]
+                cells.append(f"{fmean(values):+.2f}" if values else "—")
+            if any(c != "—" for c in cells):
+                rows.append(f"| {engine} | " + " | ".join(cells) + " |")
+        if not rows:
+            continue
+        out += [
+            f"#### {label}, per speaker",
+            "",
+            "| engine | " + " | ".join(speakers) + " |",
+            "|---" * (len(speakers) + 1) + "|",
+            *rows,
+            "",
+        ]
+    return "\n".join(out)

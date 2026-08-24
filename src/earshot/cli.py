@@ -137,11 +137,13 @@ def _bench(args) -> int:
             for _, item in loaded:
                 run = probes.run_all(item, piece.audio, piece.rate, recipe)
                 run.material = piece.label
+                run.speaker = piece.speaker
                 runs.append(run)
         every += runs
         sections.append(
             report.render(report.aggregate(runs), f"{recipe.name} — {recipe.describe}")
         )
+        sections.append(report.per_speaker(runs))
         if args.write and out_dir:
             first = pieces[0]
             _write_audio(out_dir / recipe.name, first.audio, first.rate, recipe, loaded)

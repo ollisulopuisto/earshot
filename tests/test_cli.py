@@ -45,3 +45,22 @@ def test_scoreboard_says_so_when_there_is_nothing(tmp_path, monkeypatch, capsys)
     monkeypatch.chdir(tmp_path)
     assert cli.main(["scoreboard"]) == 1
     assert "no results found" in capsys.readouterr().err
+
+
+def test_per_speaker_tables_name_the_losing_voice(tmp_path, capsys):
+    """A mean plus a spread says an engine is inconsistent; this says on whom."""
+    import numpy as np
+    import soundfile as sf
+
+    from earshot import probes
+
+    rate = 48000
+    for name in ("alpha take.wav", "beta take.wav"):
+        sf.write(tmp_path / name, probes.default_material(rate, 20.0), rate)
+
+    assert cli.main(["bench", "--input", str(tmp_path), "--seconds", "4",
+                     "--excerpts", "4", "--damage", "hiss",
+                     "--engine", "passthrough:3"]) == 0
+    out = capsys.readouterr().out
+    assert "per speaker" in out
+    assert "alpha" in out and "beta" in out
