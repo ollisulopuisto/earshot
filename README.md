@@ -171,7 +171,7 @@ remote guest on a telephone codec is exactly the wrong one.
 | engine | approach | licence | status |
 |---|---|---|---|
 | [LavaSR](https://github.com/ysharma3501/LavaSR) | Vocos, bandwidth extension + denoise, 56 MB | Apache-2.0 | **measured** — see below |
-| [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) | real-time denoise only, very fast | MIT/Apache-2.0 | queued |
+| [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) | real-time denoise only, very fast | MIT/Apache-2.0 | queued — needs a decision, see below |
 | [Sidon](https://arxiv.org/html/2509.17052v1) | w2v-BERT + HiFi-GAN resynthesis, 250M params | CC BY 4.0 | queued |
 | [Resemble Enhance](https://github.com/resemble-ai/resemble-enhance) | denoiser + enhancer | MIT | queued |
 
@@ -204,6 +204,69 @@ recommended until someone works out why.
 
 The shape this suggests is a chain: denoise with something built for it, then
 extend the band with LavaSR. That is [issue #5](https://github.com/ollisulopuisto/earshot/issues/5).
+
+## Invent where there is nothing: the router
+
+The awkward fork in this project was that a telephone-band guest has nothing
+left to filter, so only invention helps — while a good local microphone has
+everything, so invention means replacing a voice that was fine. `router:`
+refuses to choose. It finds the frequency above which the input holds nothing
+and crossfades to the engine there, so the same setting does both and the
+material decides.
+
+Four excerpts of real podcast, two speakers:
+
+| | clean | narrowband VoIP | Opus 16k | non-speech |
+|---|---|---|---|---|
+| dxRevive | −3.78 dB | **+2.58 dB** | −0.94 dB | +11.19 dB |
+| lavasr, always on | −5.27 dB | +2.01 dB | −1.42 dB | +1.38 dB |
+| **router(lavasr)** | **−0.23 dB** | +0.73 dB | **+0.00 dB** | **+0.00 dB** |
+
+It trades **1.3 dB of recovery for 5 dB less harm**, and on material that
+needs nothing it does nothing at all — `origin` stays at +1.00 through every
+band it can measure. Whether that trade is right depends on how much of your
+material is already good, which is a question about your archive rather than
+about the engine.
+
+Its threshold is measured, not chosen. On real microphones, relative to the
+300–3000 Hz band, clean material sits at −16 dB at 6 kHz while the same
+material through a telephone codec sits at −49 — a 33 dB gap, and the
+threshold sits inside it. The first value tried was 60 dB, on the theory that
+a codec leaves a cliff. It does not: clipping generates harmonics that refill
+the top, and real Opus measures −34 dB at 6 kHz where an ideal brickwall
+would be at −114.
+
+That same measurement validates the bench: our synthetic `narrowband-voip`
+lands at −34.1 dB at 6 kHz against real Opus at −34.4.
+
+## Two things that did not work
+
+**Chaining two restorers made things worse.** `dxRevive → lavasr` scored
+−6.12 dB on clean against dxRevive's −3.78, and lost on every other damage
+too. dxRevive already outputs full band, so LavaSR finds nothing missing and
+replaces the top regardless — `origin` in 6–12 kHz falls to −0.02. Two
+generative stages stacked means the second overwrites the first with its own
+guess. Routing the second stage fixes it: `chain:dxRevive+router:lavasr`
+scores identically to dxRevive alone, because the router correctly declines
+to act on a signal that is already full-band.
+
+**Nothing helps real Opus at 16 kbit/s.** Both engines score negative there.
+Opus at that rate is wideband, so there is no missing band to restore — only
+quantisation noise — and both engines rewrite a top that was already present.
+Bandwidth extension is the answer to band limiting, not to codecs in general,
+and the recipe name was misleading us.
+
+## Restoring a real file
+
+```bash
+earshot restore take.wav --engine router:lavasr
+earshot restore ./episode-audio -o ./restored --engine lavasr
+```
+
+Same engines as the bench, pointed at material you actually want fixed. It
+never writes over its input and keeps the length and sample rate — the same
+contract the bench enforces, because an engine that shifts a file is useless
+to an editor however it scores.
 
 ## Results
 
