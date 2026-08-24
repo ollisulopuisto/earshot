@@ -14,7 +14,51 @@ import platform
 from dataclasses import asdict
 
 from . import __version__
-from .probes import Run
+from .probes import Result, Run
+
+
+def aggregate(runs: list[Run]) -> list[Run]:
+    """Merge runs of the same engine and damage across excerpts.
+
+    The mean is what the table shows; the spread is what stops it lying. A
+    single excerpt is passed through unchanged, so the one-file case reads
+    exactly as before.
+    """
+    from statistics import fmean, pstdev
+
+    grouped: dict[tuple[str, str], list[Run]] = {}
+    for run in runs:
+        grouped.setdefault((run.engine, run.damage), []).append(run)
+
+    merged: list[Run] = []
+    for (engine, damage), group in grouped.items():
+        live = [r for r in group if not r.skipped and not r.failed]
+        if len(group) == 1 or not live:
+            merged.append(group[0])
+            continue
+        keys: list[tuple[str, str]] = []
+        for run in live:
+            for result in run.results:
+                if (result.probe, result.metric) not in keys:
+                    keys.append((result.probe, result.metric))
+        out = Run(engine=engine, damage=damage,
+                  material=f"{len(live)} excerpts")
+        for probe, metric in keys:
+            values = [r.value(probe, metric) for r in live]
+            values = [v for v in values if v is not None and v == v]
+            if not values:
+                continue
+            sample = next(
+                x for r in live for x in r.results
+                if x.probe == probe and x.metric == metric
+            )
+            out.results.append(
+                Result(probe, metric, fmean(values), sample.unit, sample.better,
+                       sample.detail, pstdev(values) if len(values) > 1 else 0.0,
+                       len(values))
+            )
+        merged.append(out)
+    return merged
 
 
 def _cell(value: float, unit: str) -> str:
@@ -58,6 +102,10 @@ def table(runs: list[Run], probe: str) -> str:
                 cells.append("—")
                 continue
             text = _cell(value, unit)
+            found = next((r for r in run.results
+                          if r.probe == probe and r.metric == metric), None)
+            if found is not None and found.n > 1 and found.spread:
+                text += f" ±{found.spread:.2f}"
             if better and metric in best and value == best[metric]:
                 text = f"**{text}**"
             cells.append(text)
@@ -126,3 +174,70 @@ def as_json(runs: list[Run], material: str = "", indent: int = 2) -> str:
         indent=indent,
         ensure_ascii=False,
     )
+
+
+# Metrics worth carrying into a cross-run summary. Not every number: a table
+# nobody can hold in their head is one nobody checks.
+HEADLINE: tuple[tuple[str, str, str], ...] = (
+    ("recovery", "gained", "recovered"),
+    ("perceptual", "pesq_gained", "PESQ"),
+    ("cleanup", "floor_change", "floor"),
+    ("cleanup", "speech_change", "speech"),
+    ("origin", "mid", "origin 1-4k"),
+    ("throughput", "realtime", "speed"),
+)
+
+
+def scoreboard(files: list) -> str:
+    """One table across every stored result file.
+
+    Results accumulate: engines arrive one at a time, over months, measured
+    by different people on different machines. The scoreboard is what makes
+    that a comparison rather than a pile, and it is generated rather than
+    edited so it cannot drift from the numbers it claims to summarise.
+    """
+    import json as _json
+    from pathlib import Path as _Path
+
+    rows: list[tuple[str, str, str, dict]] = []
+    for name in files:
+        data = _json.loads(_Path(name).read_text(encoding="utf-8"))
+        machine = data.get("machine", {}).get("processor", "?")
+        merged = aggregate([_run_from(r) for r in data.get("runs", [])])
+        for run in merged:
+            if run.damage == "sweep" or run.skipped or run.failed:
+                continue
+            values = {}
+            for probe, metric, _ in HEADLINE:
+                found = run.value(probe, metric)
+                if found is not None:
+                    values[(probe, metric)] = found
+            rows.append((run.engine, run.damage, machine, values))
+
+    if not rows:
+        return "_no stored results_\n"
+
+    head = "| engine | damage | " + " | ".join(l for _, _, l in HEADLINE) + " | machine |"
+    lines = [head, "|---" * (len(HEADLINE) + 3) + "|"]
+    for engine, damage, machine, values in sorted(rows, key=lambda r: (r[1], r[0])):
+        cells = []
+        for probe, metric, _ in HEADLINE:
+            value = values.get((probe, metric))
+            if value is None:
+                cells.append("—")
+            elif metric == "realtime":
+                cells.append(f"{value:.0f}×")
+            elif probe == "origin" or probe == "perceptual":
+                cells.append(f"{value:+.2f}")
+            else:
+                cells.append(f"{value:+.2f} dB")
+        lines.append(f"| {engine} | {damage} | " + " | ".join(cells) + f" | {machine} |")
+    return "\n".join(lines) + "\n"
+
+
+def _run_from(raw: dict) -> Run:
+    run = Run(engine=raw["engine"], damage=raw["damage"],
+              material=raw.get("material", ""), skipped=raw.get("skipped", ""),
+              failed=raw.get("failed", ""))
+    run.results = [Result(**r) for r in raw.get("results", [])]
+    return run

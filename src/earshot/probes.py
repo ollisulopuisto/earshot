@@ -21,6 +21,10 @@ decision at least once:
                   be cached and whether a measured difference is the setting
                   or the dice. Reported as a margin, not a yes/no — the
                   first plug-in measured was neither bit-exact nor unstable.
+``perceptual``    PESQ and STOI, when the optional dependency is present.
+                  Here for comparability with published claims, not because
+                  they are the truth: both are referenced and both were
+                  designed for telephony.
 ``throughput``    How much faster than realtime, and on how many cores.
 
 Every probe returns ``Result`` objects with ``better`` set, so the report
@@ -42,7 +46,13 @@ from .engines import Loaded, check_contract
 
 @dataclass
 class Result:
-    """One measurement, with enough context to be read a year later."""
+    """One measurement, with enough context to be read a year later.
+
+    ``spread`` and ``n`` are filled in when several excerpts are averaged.
+    An engine that wins on average and loses badly on one speaker is a
+    different proposition from one that wins everywhere, and the mean alone
+    cannot tell them apart.
+    """
 
     probe: str
     metric: str
@@ -50,6 +60,8 @@ class Result:
     unit: str = "dB"
     better: str = "lower"  # "lower", "higher" or "" when it is not a score
     detail: str = ""
+    spread: float = 0.0
+    n: int = 1
 
     def __str__(self) -> str:
         return f"{self.probe}/{self.metric} = {self.value:.2f} {self.unit}".strip()
@@ -61,6 +73,7 @@ class Run:
 
     engine: str
     damage: str
+    material: str = ""
     results: list[Result] = field(default_factory=list)
     skipped: str = ""
     failed: str = ""
@@ -136,6 +149,21 @@ def run_all(
             Result("recovery", "gained", before - after, "dB", "higher",
                    "positive means closer to the original than the damage was"),
         ]
+
+    # --- perceptual: the literature's numbers, for comparison with papers
+    before_scores = metrics.perceptual(clean, broken, rate)
+    after_scores = metrics.perceptual(clean, restored, rate)
+    for key, better in (("pesq", "higher"), ("stoi", "higher")):
+        if key in before_scores and key in after_scores:
+            run.results += [
+                Result("perceptual", f"{key}_before", before_scores[key], "",
+                       better, "damaged against clean"),
+                Result("perceptual", f"{key}_after", after_scores[key], "",
+                       better, "restored against clean"),
+                Result("perceptual", f"{key}_gained",
+                       after_scores[key] - before_scores[key], "", "higher",
+                       "positive means the engine improved the score"),
+            ]
 
     # --- origin: filtering or invention, band by band
     for name, band_low, band_high in BANDS:

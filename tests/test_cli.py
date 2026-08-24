@@ -28,3 +28,20 @@ def test_report_is_written_to_a_directory(tmp_path, capsys):
 def test_an_unloadable_engine_fails_loudly(capsys):
     assert cli.main(["bench", "--engine", "vst3:/ei/ole.vst3", "--seconds", "2"]) == 2
     assert "no plug-in at" in capsys.readouterr().err
+
+
+def test_scoreboard_reads_stored_results(tmp_path, capsys):
+    """Results accumulate over months and machines; the summary is generated
+    from them so it cannot drift from the numbers it claims to summarise."""
+    assert cli.main(["bench", "--seconds", "3", "--damage", "hiss",
+                     "--out", str(tmp_path)]) == 0
+    capsys.readouterr()
+    assert cli.main(["scoreboard", str(tmp_path / "results.json")]) == 0
+    out = capsys.readouterr().out
+    assert "passthrough" in out and "hiss" in out and "recovered" in out
+
+
+def test_scoreboard_says_so_when_there_is_nothing(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["scoreboard"]) == 1
+    assert "no results found" in capsys.readouterr().err

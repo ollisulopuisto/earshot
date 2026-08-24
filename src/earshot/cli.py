@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 from . import audio as audio_io
-from . import degrade, engines, probes, report
+from . import degrade, engines, material, metrics, probes, report
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -35,11 +35,19 @@ def main(argv: list[str] | None = None) -> int:
              "vst3:/path/Thing.vst3?mix=100",
     )
     bench.add_argument(
-        "--input", metavar="WAV",
-        help="clean recording to damage and restore; synthetic material if omitted",
+        "--input", metavar="PATH",
+        help="a clean recording, or a directory of them; synthetic material "
+             "if omitted. A directory is sampled: see --excerpts",
     )
-    bench.add_argument("--start", type=float, default=0.0, help="seconds into the file")
-    bench.add_argument("--seconds", type=float, default=12.0, help="how much to use")
+    bench.add_argument("--start", type=float, default=0.0,
+                       help="seconds into the file (single file only)")
+    bench.add_argument("--seconds", type=float, default=12.0,
+                       help="length of each excerpt")
+    bench.add_argument(
+        "--excerpts", type=int, default=6, metavar="N",
+        help="how many excerpts to take from a directory. One excerpt of one "
+             "voice is an anecdote; the table reports the spread across them",
+    )
     bench.add_argument(
         "--damage", action="append", default=[], metavar="NAME",
         help=f"repeatable; default is all. Known: {', '.join(d.name for d in degrade.RECIPES)}",
@@ -57,6 +65,12 @@ def main(argv: list[str] | None = None) -> int:
 
     listing = sub.add_parser("damages", help="list the damage recipes")
     listing.set_defaults(func=_damages)
+
+    board = sub.add_parser(
+        "scoreboard", help="one table across stored results (default results/*.json)"
+    )
+    board.add_argument("files", nargs="*", metavar="JSON")
+    board.set_defaults(func=_scoreboard)
     bench.set_defaults(func=_bench)
 
     args = parser.parse_args(argv)
@@ -70,14 +84,37 @@ def _damages(_args) -> int:
     return 0
 
 
+def _scoreboard(args) -> int:
+    files = args.files or sorted(str(p) for p in Path("results").glob("*.json"))
+    if not files:
+        print("no results found; run `earshot bench --out results/`", file=sys.stderr)
+        return 1
+    print(report.scoreboard(files))
+    return 0
+
+
 def _bench(args) -> int:
     specs = args.engine or ["passthrough"]
-    if args.input:
-        clean, rate = audio_io.read(args.input, args.seconds, args.start)
-        source = f"{Path(args.input).name} ({args.start:g}–{args.start + args.seconds:g} s)"
+    pieces: list[material.Excerpt] = []
+    if args.input and Path(args.input).is_dir():
+        pieces = material.excerpts(args.input, args.seconds, args.excerpts)
+        if not pieces:
+            print(f"error: no usable material under {args.input}", file=sys.stderr)
+            return 2
+        speakers = sorted({p.speaker for p in pieces})
+        source = (f"{len(pieces)} excerpts of {args.seconds:g} s from "
+                  f"{Path(args.input).name}, {len(speakers)} speakers "
+                  f"({', '.join(speakers)})")
+    elif args.input:
+        audio, rate = audio_io.read(args.input, args.seconds, args.start)
+        pieces = [material.Excerpt(Path(args.input), args.start, args.seconds,
+                                   audio, rate)]
+        source = (f"{Path(args.input).name} "
+                  f"({args.start:g}–{args.start + args.seconds:g} s)")
     else:
         rate = 48000
-        clean = probes.default_material(rate, args.seconds)
+        pieces = [material.Excerpt(Path("synthetic"), 0.0, args.seconds,
+                                   probes.default_material(rate, args.seconds), rate)]
         source = "synthetic material (no recording given)"
 
     wanted = args.damage or [d.name for d in degrade.RECIPES]
@@ -95,22 +132,30 @@ def _bench(args) -> int:
     sections: list[str] = []
     every: list[probes.Run] = []
     for recipe in recipes:
-        runs = [
-            probes.run_all(item, clean, rate, recipe) for _, item in loaded
-        ]
+        runs: list[probes.Run] = []
+        for piece in pieces:
+            for _, item in loaded:
+                run = probes.run_all(item, piece.audio, piece.rate, recipe)
+                run.material = piece.label
+                runs.append(run)
         every += runs
-        sections.append(report.render(runs, f"{recipe.name} — {recipe.describe}"))
+        sections.append(
+            report.render(report.aggregate(runs), f"{recipe.name} — {recipe.describe}")
+        )
         if args.write and out_dir:
-            _write_audio(out_dir / recipe.name, clean, rate, recipe, loaded)
+            first = pieces[0]
+            _write_audio(out_dir / recipe.name, first.audio, first.rate, recipe, loaded)
 
-    sweep = [probes.preservation(item, rate) for _, item in loaded]
+    sweep = [probes.preservation(item, pieces[0].rate) for _, item in loaded]
     every += sweep
     sections.append(
         report.render(sweep, "non-speech — a logarithmic sweep, not a voice")
     )
 
+    missing = ("" if metrics.perceptual_available() else
+               "\n_PESQ and STOI not measured: `pip install earshot[perceptual]`._\n")
     text = "\n".join(
-        ["# earshot bench", "", f"Material: {source}", "",
+        ["# earshot bench", "", f"Material: {source}", missing, "",
          report.legend(), ""] + sections
     )
     machine_readable = report.as_json(every, source)

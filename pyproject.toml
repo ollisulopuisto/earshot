@@ -16,6 +16,10 @@ dependencies = [
 # The VST3 engine. Optional because the bench itself must run in CI, where
 # no plug-in is installed and none can be.
 vst3 = ["pedalboard>=0.9"]
+# PESQ and STOI. Optional because they are the metrics of the literature
+# rather than of this bench: they exist so our numbers can be held against a
+# paper's, and the bench must still run without them.
+perceptual = ["pesq>=0.0.4", "pystoi>=0.4"]
 dev = ["pytest>=8.0"]
 
 [project.scripts]

@@ -17,6 +17,10 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --extra dev
+        # No weights are fetched in CI. An engine that cannot say so without
+        # reaching the network is an engine that will surprise a contributor.
       - run: uv run pytest -q
+        env:
+          EARSHOT_NO_DOWNLOAD: "1"
       - name: the bench must run with nothing installed
         run: uv run earshot bench --seconds 4 --damage clean --damage narrowband-voip

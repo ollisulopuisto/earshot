@@ -35,6 +35,24 @@ material, with what result. "Sounds better" is not a finding; "recovers
 
 If you cannot measure it, add the probe first.
 
+## Weights and results
+
+Model weights are declared, not downloaded by hand: `fetch.Asset(name, url,
+sha256)` and `fetch.ensure(asset)`. The checksum is not optional — a model
+file that changed upstream turns every number ever measured with it into a
+number about a different model, and nothing else would notice.
+`EARSHOT_NO_DOWNLOAD=1` must keep working; CI sets it.
+
+Measured results go in `results/` as JSON and are summarised by `earshot
+scoreboard`. Post the numbers in the PR too, but the file is the record.
+
+## Material
+
+`material/` holds committed excerpts that speakers have agreed to publish.
+`material/local/` is gitignored and is where anything unconsented stays. A
+voice is a person: having the file is not the same as being allowed to
+publish it.
+
 ## Adding an engine
 
 `src/earshot/engines/` — one class with `name` and `process(audio, rate)`, one

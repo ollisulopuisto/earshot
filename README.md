@@ -69,7 +69,16 @@ earshot bench --input take.wav --start 300 --seconds 30 \
               --engine 'vst3:/Library/Audio/Plug-Ins/VST3/Thing.vst3?mix=100' \
               --out out/ --write
 
-earshot damages    # what the recipes are
+earshot damages     # what the recipes are
+earshot scoreboard  # one table across everything measured so far
+```
+
+Point `--input` at a **directory** and it samples excerpts across it,
+avoiding silence, spreading them over the recordings, and reporting the
+spread as well as the mean. One excerpt of one voice is an anecdote:
+
+```bash
+earshot bench --input material/local --seconds 10 --excerpts 8 --out out/
 ```
 
 `--out DIR` writes `report.md` and `results.json` side by side; `--json`
@@ -138,6 +147,25 @@ stochastic.** Below 1 kHz it repeats to +74 dB; in the bands it invents, two
 runs of the same input differ by *more than the signal itself*. Deterministic
 where it filters, a dice roll where it generates.
 
+## Read the metrics before trusting them
+
+They disagree with each other, on purpose. Measured on real podcast
+material — six excerpts, two speakers, dxRevive at `mix=100`:
+
+| damage | `recovery/gained` | PESQ | STOI |
+|---|---|---|---|
+| clean | −3.45 dB | −1.89 | −0.07 |
+| hiss | **+8.65 dB** | **+0.75** | −0.04 |
+| narrowband-voip | **+2.84 dB** | **−0.83** | +0.03 |
+
+On noise everything agrees. On band-limiting **PESQ says the opposite of
+everything else** — because the engine invents the missing band, and PESQ
+scores invention as distortion. Every candidate model's paper leads with
+PESQ, so selecting by it picks the least generative model, which for a
+remote guest on a telephone codec is exactly the wrong one.
+
+[`docs/metrics.md`](docs/metrics.md) has the argument and the numbers.
+
 ## Candidates being evaluated
 
 | engine | approach | licence | status |
@@ -146,6 +174,15 @@ where it filters, a dice roll where it generates.
 | [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) | real-time denoise only, very fast | MIT/Apache-2.0 | queued |
 | [Sidon](https://arxiv.org/html/2509.17052v1) | w2v-BERT + HiFi-GAN resynthesis, 250M params | CC BY 4.0 | queued |
 | [Resemble Enhance](https://github.com/resemble-ai/resemble-enhance) | denoiser + enhancer | MIT | queued |
+
+## Results
+
+Measured results are committed under `results/` and summarised by
+`earshot scoreboard`, so a new engine's numbers land next to every earlier
+one rather than in a comment nobody can find again. Each file records the
+earshot version and the machine, because `throughput` means nothing without
+the latter and a probe changing its definition is the obvious way for two
+numbers to stop being comparable without anyone noticing.
 
 ## State
 

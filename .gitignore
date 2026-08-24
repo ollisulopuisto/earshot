@@ -6,4 +6,8 @@ build/
 *.egg-info/
 .pytest_cache/
 out/
-material/
+
+# Local material stays local; anything committed under material/ is there on
+# purpose and with the speakers' consent. See material/README.md.
+material/local/
+out/

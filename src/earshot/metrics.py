@@ -176,3 +176,71 @@ def repeatability(first: np.ndarray, second: np.ndarray) -> float:
     n = min(len(first), len(second))
     difference = rms_db(np.asarray(first)[:n] - np.asarray(second)[:n])
     return float(rms_db(np.asarray(first)[:n]) - difference)
+
+
+# --------------------------------------------------------------- perceptual
+
+# PESQ and STOI are the two numbers every speech restoration paper reports,
+# and the only reason they are here is comparability: a claim of "3.1 PESQ"
+# in a paper means nothing next to our own metrics unless we can compute the
+# same figure on the same material.
+#
+# Both are referenced — they need the clean original — so they say nothing
+# about a real bad recording. And both were designed for narrowband telephony
+# and codec artefacts, which is exactly our VoIP case and exactly not our
+# good-microphone case. Read them as "how would the literature score this",
+# not as "how good does it sound".
+PESQ_RATE = 16000
+
+
+def _resampled(x: np.ndarray, rate: int, target: int) -> np.ndarray:
+    if rate == target:
+        return np.asarray(x, dtype=np.float64)
+    from math import gcd
+
+    factor = gcd(int(rate), int(target))
+    return signal.resample_poly(
+        np.asarray(x, dtype=np.float64), target // factor, rate // factor
+    )
+
+
+def perceptual_available() -> bool:
+    try:
+        import pesq  # noqa: F401
+        import pystoi  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+def perceptual(reference: np.ndarray, degraded: np.ndarray, rate: int) -> dict:
+    """PESQ (wideband MOS-LQO, 1–4.5) and STOI (intelligibility, 0–1).
+
+    Returns an empty dict when the optional dependencies are absent, so the
+    bench reports nothing rather than reporting a substitute. A metric that
+    silently falls back to something else is worse than a missing one.
+
+    Both are computed at 16 kHz: PESQ accepts nothing else in wideband mode,
+    and STOI resamples internally anyway, so doing it once keeps the two
+    reading the same signal.
+    """
+    if not perceptual_available():
+        return {}
+    from pesq import pesq as _pesq
+    from pystoi import stoi as _stoi
+
+    n = min(len(reference), len(degraded))
+    ref = _resampled(np.asarray(reference)[:n], rate, PESQ_RATE)
+    deg = _resampled(np.asarray(degraded)[:n], rate, PESQ_RATE)
+    out: dict = {}
+    try:
+        out["pesq"] = float(_pesq(PESQ_RATE, ref, deg, "wb"))
+    except Exception:
+        # PESQ refuses signals with no active speech, which happens on a
+        # silent excerpt. That is a fact about the material, not an error.
+        pass
+    try:
+        out["stoi"] = float(_stoi(ref, deg, PESQ_RATE, extended=False))
+    except Exception:
+        pass
+    return out
