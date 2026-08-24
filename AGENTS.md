@@ -38,7 +38,10 @@ If you cannot measure it, add the probe first.
 ## Adding an engine
 
 `src/earshot/engines/` — one class with `name` and `process(audio, rate)`, one
-`@register("scheme")` loader. Then:
+`@register("scheme")` loader, and one test that calls
+`earshot.testing.assert_engine_contract`. That call is not optional: it is
+how the contract stays true without a reviewer holding it in their head.
+Then:
 
 - Real weights and models are **not** committed. They are downloaded, cached,
   or found on the system. Keep the repo small enough to clone on a phone.

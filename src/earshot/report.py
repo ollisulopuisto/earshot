@@ -9,6 +9,11 @@ result, which is enough to mark the winner of a column and nothing more.
 
 from __future__ import annotations
 
+import json
+import platform
+from dataclasses import asdict
+
+from . import __version__
 from .probes import Run
 
 
@@ -93,4 +98,31 @@ def legend() -> str:
         "be negative and `speech_change` should be near zero: together they "
         "separate cleaning from turning down. `preservation` is how much of "
         "a non-speech signal the engine deleted.\n"
+    )
+
+
+def as_json(runs: list[Run], material: str = "", indent: int = 2) -> str:
+    """The same results, for a machine.
+
+    Results have to accumulate across engines, machines and months, and a
+    markdown table cannot be diffed or sorted. This is what a contributor
+    attaches to an issue and what CI would compare against a previous run.
+
+    The machine is recorded because ``throughput`` is meaningless without it,
+    and the earshot version because a probe changing its definition is the
+    obvious way for two numbers to stop being comparable without anyone
+    noticing.
+    """
+    return json.dumps(
+        {
+            "earshot": __version__,
+            "material": material,
+            "machine": {
+                "platform": platform.platform(),
+                "processor": platform.processor() or platform.machine(),
+            },
+            "runs": [asdict(run) for run in runs],
+        },
+        indent=indent,
+        ensure_ascii=False,
     )

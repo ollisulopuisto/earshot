@@ -72,6 +72,12 @@ earshot bench --input take.wav --start 300 --seconds 30 \
 earshot damages    # what the recipes are
 ```
 
+`--out DIR` writes `report.md` and `results.json` side by side; `--json`
+prints the machine-readable form to stdout. Results record the earshot
+version and the machine, because `throughput` means nothing without the
+latter and a probe changing its definition is the obvious way for two
+numbers to stop being comparable without anyone noticing.
+
 `passthrough` is always worth including. A metric that scores "do nothing" as
 an improvement is measuring itself.
 
@@ -100,6 +106,20 @@ def _load(argument):
 3. **One channel in, one channel out.** Restoration is per microphone.
 
 Violations raise `EngineError` and are reported, never swallowed.
+
+And one line in your test, which checks all three plus the cases that have
+actually broken engines — silence, lengths that are not a whole number of
+frames, a DC offset, and state leaking from one call into the next:
+
+```python
+from earshot.testing import assert_engine_contract
+
+def test_my_engine_keeps_the_contract():
+    assert_engine_contract(MyEngine())
+```
+
+It passes a real stochastic commercial plug-in, so being non-deterministic is
+not a failure. Carrying the previous file's tail into this one is.
 
 ## Reference numbers
 

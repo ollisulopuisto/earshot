@@ -49,6 +49,11 @@ def main(argv: list[str] | None = None) -> int:
         "--write", action="store_true",
         help="also write the damaged and restored audio for listening",
     )
+    bench.add_argument(
+        "--json", action="store_true",
+        help="print the results as JSON instead of a table; with --out, "
+             "results.json is written either way",
+    )
 
     listing = sub.add_parser("damages", help="list the damage recipes")
     listing.set_defaults(func=_damages)
@@ -88,29 +93,34 @@ def _bench(args) -> int:
 
     out_dir = Path(args.out) if args.out else None
     sections: list[str] = []
+    every: list[probes.Run] = []
     for recipe in recipes:
         runs = [
             probes.run_all(item, clean, rate, recipe) for _, item in loaded
         ]
+        every += runs
         sections.append(report.render(runs, f"{recipe.name} — {recipe.describe}"))
         if args.write and out_dir:
             _write_audio(out_dir / recipe.name, clean, rate, recipe, loaded)
 
+    sweep = [probes.preservation(item, rate) for _, item in loaded]
+    every += sweep
     sections.append(
-        report.render(
-            [probes.preservation(item, rate) for _, item in loaded],
-            "non-speech — a logarithmic sweep, not a voice",
-        )
+        report.render(sweep, "non-speech — a logarithmic sweep, not a voice")
     )
 
     text = "\n".join(
-        [f"# earshot bench", "", f"Material: {source}", "",
+        ["# earshot bench", "", f"Material: {source}", "",
          report.legend(), ""] + sections
     )
+    machine_readable = report.as_json(every, source)
     if out_dir:
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / "report.md").write_text(text, encoding="utf-8")
-        print(f"wrote {out_dir / 'report.md'}")
+        (out_dir / "results.json").write_text(machine_readable, encoding="utf-8")
+        print(f"wrote {out_dir / 'report.md'} and results.json")
+    elif args.json:
+        print(machine_readable)
     else:
         print(text)
     return 0

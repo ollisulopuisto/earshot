@@ -14,9 +14,11 @@ earshot bench                       # synthetic material, no setup needed
 
 ## Good first contributions
 
-- **Wire up an engine.** LavaSR, DeepFilterNet, Sidon and Resemble Enhance are
-  all listed in the README and none is integrated yet. One file in
-  `src/earshot/engines/`, one entry in the README table.
+- **Wire up an engine.** LavaSR, DeepFilterNet, Sidon and Resemble Enhance
+  are all listed in the README and none is integrated yet. One file in
+  `src/earshot/engines/`, one entry in the README table, and one test calling
+  `assert_engine_contract` — start with that call, it will tell you what is
+  wrong before the bench does. Each has an open issue.
 - **Bring material.** The bench is only as good as what it is run on. Real
   degraded podcast audio — with permission to publish — is more valuable than
   any code here.
