@@ -64,3 +64,40 @@ def test_per_speaker_tables_name_the_losing_voice(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "per speaker" in out
     assert "alpha" in out and "beta" in out
+
+
+def test_restore_writes_beside_the_input_and_never_over_it(tmp_path, capsys):
+    import numpy as np
+    import soundfile as sf
+
+    from earshot import probes
+
+    rate = 48000
+    source = tmp_path / "take.wav"
+    sf.write(source, probes.default_material(rate, 3.0), rate)
+
+    assert cli.main(["restore", str(source), "--engine", "passthrough:3"]) == 0
+    # Not glob: "[" is a character class, and the engine name is in brackets.
+    written = [p for p in tmp_path.iterdir() if p.name.startswith("take [")]
+    assert len(written) == 1
+    assert sf.info(str(written[0])).frames == sf.info(str(source)).frames
+    out = capsys.readouterr().out
+    assert "realtime" in out and "floor" in out
+
+
+def test_restore_refuses_to_overwrite(tmp_path, capsys):
+    import soundfile as sf
+
+    from earshot import probes
+
+    source = tmp_path / "take.wav"
+    sf.write(source, probes.default_material(48000, 2.0), 48000)
+    code = cli.main(["restore", str(source), "-o", str(source),
+                     "--engine", "passthrough"])
+    assert code == 2
+    assert "refusing to write over" in capsys.readouterr().err
+
+
+def test_restore_reports_a_bad_engine_before_reading_anything(tmp_path, capsys):
+    assert cli.main(["restore", str(tmp_path), "--engine", "nope"]) == 2
+    assert "nope" in capsys.readouterr().err

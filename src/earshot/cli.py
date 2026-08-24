@@ -63,6 +63,21 @@ def main(argv: list[str] | None = None) -> int:
              "results.json is written either way",
     )
 
+    restore = sub.add_parser(
+        "restore", help="process a real recording and write the result"
+    )
+    restore.add_argument("input", metavar="WAV", help="a file, or a directory of them")
+    restore.add_argument(
+        "-o", "--out", metavar="PATH",
+        help="output file, or a directory when the input is one. Defaults to "
+             "'<name> [engine].wav' beside the input",
+    )
+    restore.add_argument(
+        "--engine", metavar="SPEC", default="lavasr",
+        help="engine to use; same specs as bench, e.g. router:lavasr",
+    )
+    restore.set_defaults(func=_restore)
+
     listing = sub.add_parser("damages", help="list the damage recipes")
     listing.set_defaults(func=_damages)
 
@@ -81,6 +96,70 @@ def _damages(_args) -> int:
     for recipe in degrade.RECIPES:
         needs = f"  (needs {recipe.needs})" if recipe.needs else ""
         print(f"{recipe.name:18s} {recipe.describe}{needs}")
+    return 0
+
+
+def _restore(args) -> int:
+    """Process real material rather than a damaged excerpt.
+
+    The bench measures; this is the same engines pointed at a file someone
+    actually wants fixed. Two rules it will not break: the input is never
+    written over, and the output keeps the input's length and sample rate —
+    the same contract the bench enforces, because an engine that shifts a
+    file is useless to an editor no matter how it scores.
+    """
+    import time as _time
+
+    source = Path(args.input)
+    if not source.exists():
+        print(f"error: no such path: {source}", file=sys.stderr)
+        return 2
+    try:
+        loaded = engines.load(args.engine)
+    except engines.EngineError as exc:
+        print(f"error: {args.engine}: {exc}", file=sys.stderr)
+        return 2
+
+    files = material.recordings(source)
+    if not files:
+        print(f"error: no recordings under {source}", file=sys.stderr)
+        return 2
+
+    out_dir = Path(args.out) if (args.out and len(files) > 1) else None
+    if out_dir:
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+    for path in files:
+        audio, rate = audio_io.read(path)
+        if out_dir:
+            target = out_dir / path.name
+        elif args.out and len(files) == 1:
+            target = Path(args.out)
+        else:
+            target = path.with_name(f"{path.stem} [{loaded.engine.name}].wav")
+        if target.resolve() == path.resolve():
+            print(f"error: refusing to write over {path}", file=sys.stderr)
+            return 2
+
+        started = _time.perf_counter()
+        try:
+            done = engines.check_contract(
+                audio, loaded.engine.process(audio, rate), loaded.engine.name
+            )
+        except engines.EngineError as exc:
+            print(f"error: {path.name}: {exc}", file=sys.stderr)
+            return 1
+        elapsed = _time.perf_counter() - started
+
+        audio_io.write(target, done, rate)
+        before, after = metrics.dynamics(audio, rate), metrics.dynamics(done, rate)
+        print(
+            f"{path.name} -> {target.name}\n"
+            f"  {len(audio) / rate / 60:.1f} min in {elapsed:.1f} s "
+            f"({len(audio) / rate / max(elapsed, 1e-9):.0f}x realtime)\n"
+            f"  speech {before.speech:+.1f} -> {after.speech:+.1f} dBFS, "
+            f"floor {before.floor:+.1f} -> {after.floor:+.1f} dBFS"
+        )
     return 0
 
 

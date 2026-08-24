@@ -58,11 +58,24 @@ HOP = 512
 REFERENCE_BAND_HZ = (300.0, 3000.0)
 
 # How far below the speech band a frequency must fall to count as empty.
-# Sixty decibels is a cliff, not a roll-off: a dull microphone that is merely
-# quiet up top keeps its content, and only a band that was actually zeroed
-# gets invented into. The asymmetry is deliberate — replacing a voice that
-# was fine is the expensive mistake.
-CLIFF_DB = 60.0
+#
+# Measured rather than chosen. On real podcast microphones, relative to the
+# 300–3000 Hz band: clean material sits at −16 dB at 6 kHz and −19 dB at
+# 8 kHz, while the same material through a telephone-band codec sits at −49
+# and −53. That is a 33 dB gap, and forty decibels falls inside it with room
+# on both sides.
+#
+# The first value here was sixty, chosen from the idea that a codec leaves a
+# cliff. It does not: clipping generates harmonics that refill the top, so a
+# real Opus stream at 16 kbit/s measures −34 dB at 6 kHz rather than −114.
+# At sixty the router never engaged on anything realistic.
+#
+# The asymmetry still holds and sets which way to err: declining to improve a
+# recording costs an improvement, replacing a voice that was fine costs the
+# voice. Clean material at 16 kHz sits at −46 dB and will be invented into;
+# that band is nearly inaudible and it is where every restoration engine
+# invents anyway.
+CLIFF_DB = 40.0
 
 # The crossfade around the edge, in octaves. Narrow enough that little is
 # blended, wide enough not to be a step.
