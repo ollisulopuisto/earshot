@@ -30,6 +30,17 @@ neighbouring bins on ordinary speech, and a crossover that moves quickly is
 audible as a warble. It is smoothed over ``EDGE_SMOOTH_S`` and can only move
 so fast, so it tracks a codec change over a sentence and ignores a sibilant.
 
+**A knee detector was tried here and reverted.** Scoring every candidate
+edge by the contrast between the octave below and the octave above finds a
+true cliff beautifully — 3246 Hz for a 3400 Hz brickwall against the
+threshold method's 4717 — and falls apart on anything real. With clipping
+harmonics and added noise in the picture it read 8.7 kHz on clean material,
+which would invent into a good recording, and no edge at all on the VoIP
+recipe it was meant to improve. The threshold method reads high, but it reads
+high *consistently and in the safe direction*, and that is worth more than a
+sharper answer that is sometimes badly wrong. If someone revisits this, the
+measurements are in the commit that reverted it.
+
 This engine is a hypothesis with a knob, not a finished answer. What it
 should do is show up in the bench as high ``origin`` correlation in bands
 that had content and low correlation only where the input was empty. If it
