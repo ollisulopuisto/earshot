@@ -53,6 +53,24 @@ scoreboard`. Post the numbers in the PR too, but the file is the record.
 voice is a person: having the file is not the same as being allowed to
 publish it.
 
+## Vendored code
+
+`src/earshot/vendor/` holds third-party source copied in under its own
+licence. Vendoring is a fork unless the drift is handled, so:
+
+- `PINNED` records the origin, commit, date and SHA-256 of every file, and a
+  test fails if the file on disk no longer hashes to it. **Never edit a
+  vendored file**, not even to fix a bug — the stored results name an
+  unmodified project. Patch at the call site instead, or send upstream a PR.
+- A scheduled workflow fails when upstream moves. It updates nothing.
+- A vendor bump must arrive **with new bench results in the same change**.
+  Different code means different numbers, and the old ones stop being
+  comparable the moment the file changes. A bump with no new results is the
+  thing to reject in review.
+
+Weights are never vendored: they are fetched and verified against a digest,
+which pins them just as firmly without putting tens of megabytes in the repo.
+
 ## Adding an engine
 
 `src/earshot/engines/` — one class with `name` and `process(audio, rate)`, one

@@ -1,0 +1,20 @@
+name: vendor drift
+
+# Vendoring is a fork unless someone notices when upstream moves. This is the
+# someone. It never updates anything -- it fails, and a human re-vendors
+# deliberately and re-runs the bench, because changed code means the stored
+# results are about different code.
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --extra dev
+      - name: compare every pinned file against upstream
+        run: uv run python scripts/vendor_check.py
