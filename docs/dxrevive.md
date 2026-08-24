@@ -213,3 +213,45 @@ To be a real alternative on podcast material, an engine needs to:
 Points 3 and 5 are where an open model most plausibly *loses* to dxRevive
 despite better headline numbers, and neither appears in any published
 benchmark. That is the gap this bench is for.
+
+## Reproducing the binary findings
+
+Everything in "Architecture, from the binary" comes from four commands. They
+read files that ship in the open; nothing is patched, decrypted or extracted.
+
+```bash
+PLUGIN="/Library/Audio/Plug-Ins/VST3/Accentize-dxRevive.vst3"
+
+# 1. Where the models actually live. They are not in the bundle: the plug-in
+#    loads them at runtime, so the path only appears in a running process.
+python - <<'PY'
+import os, subprocess, pedalboard
+pedalboard.load_plugin(os.environ["PLUGIN"])
+print(subprocess.run(["vmmap", str(os.getpid())], capture_output=True, text=True).stdout)
+PY
+# → /Users/Shared/Accentize/dxRevive/Models/*.dylib
+
+MODEL=/Users/Shared/Accentize/dxRevive/Models/Studio2_050224.dylib
+
+# 2. Where the size is. __cstring holding 22 MB is not string literals.
+size -m "$MODEL"
+
+# 3. What maths it calls — this is what settles the architecture.
+nm -u "$MODEL" | grep -iE "vdsp|blas|gemm|gemv|fft|bnns"
+
+# 4. How the weights are stored (base64, tagged DXREVIVE).
+otool -s __TEXT __cstring "$MODEL" | head -3
+```
+
+The behavioural findings are reproduced by the bench itself:
+
+```bash
+earshot bench --input your-voice.wav --start 300 --seconds 20 \
+              --damage clean --damage hiss --damage narrowband-voip \
+              --engine passthrough \
+              --engine "vst3:$PLUGIN?mix=100"
+```
+
+`origin`, `cleanup`, `stability` and `preservation` in that output are the
+tables above. The throughput numbers need a longer file — the plug-in's load
+time dominates a short one.
