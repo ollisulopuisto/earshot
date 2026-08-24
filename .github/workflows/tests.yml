@@ -1,0 +1,21 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    # Bare runner on purpose: no models, no plug-ins, no ffmpeg. If the bench
+    # cannot run here, it cannot run on a contributor's laptop either, and a
+    # probe that silently needs something must fail rather than skip unnoticed.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv python install 3.12
+      - run: uv pip install --system -e ".[dev]"
+      - run: pytest -q
+      - name: the bench must run with nothing installed
+        run: earshot bench --seconds 4 --damage clean --damage narrowband-voip
