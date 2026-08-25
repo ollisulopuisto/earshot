@@ -122,6 +122,53 @@ def dropout(
     return y.astype(np.float32)
 
 
+def gate(
+    x: np.ndarray,
+    rate: int,
+    threshold_db: float = -18.0,
+    hold_ms: float = 80.0,
+    release_ms: float = 40.0,
+):
+    """Silence suppression: the pauses become exact digital zero.
+
+    This is the defect that actually separates remote-platform audio from a
+    studio track, and it was the one nothing here modelled. Measured across
+    the material in hand: the studio recordings contain no run of eight or
+    more zero samples in 224 minutes, while every platform file is 8.0 to
+    57.8 per cent exact zero, and the one genuine 7.5 kHz call is 57.8 per
+    cent with single gaps reaching 21 seconds.
+
+    It matters more than the added noise the VoIP recipes model, and it runs
+    the other way: a denoiser estimates its noise from the pauses, and a gate
+    leaves none to estimate from. What survives is speech with hard edges
+    into digital silence, which is where a generative engine invents.
+
+    The hold is what stops it chattering inside a word — measured gaps sit in
+    the pauses, with 0.0 to 0.3 per cent of them inside speech, so a gate
+    that cut into words would model something the material does not do.
+
+    The threshold is relative to the speech level rather than to full scale,
+    because the material arrives at every level: speech sits between -27 and
+    -52 dBFS across the files measured. -18 dB was chosen by sweeping it on
+    two studio tracks until the digital-silence fraction matched the real
+    ones: it gives 15.5 to 23.3 per cent against a platform range of 8.0 to
+    57.8 per cent and a median near 15.5, while keeping 100 per cent of the
+    loud samples. A studio room tone sits only about 22 dB below its speech,
+    so a deeper threshold never fires at all — -35 dB gates nothing.
+    """
+    envelope = _envelope(np.abs(x), rate, attack_ms=1.0, release_ms=release_ms)
+    open_gate = envelope > 10 ** (threshold_db / 20) * _speech_rms(x, rate)
+
+    # Hold the gate open for a while after the level drops, so the tail of a
+    # word is not clipped off and the gate does not stutter mid-syllable.
+    hold = max(1, int(hold_ms * rate / 1000))
+    if hold > 1:
+        kernel = np.ones(hold, dtype=bool)
+        open_gate = np.convolve(open_gate, kernel, mode="same") > 0
+
+    return (x * open_gate).astype(np.float32)
+
+
 def autogain(
     x: np.ndarray,
     rate: int,
@@ -273,9 +320,35 @@ RECIPES: tuple[Damage, ...] = (
         "wideband-voip",
         "a decent call: 8 kHz ceiling, mild noise, a little auto-gain",
         (
-            (band_limit, {"low": 80.0, "high": 8000.0}),
+            # The noise goes in before the band limit, not after. A call
+            # carries the room and the microphone's own noise, and then the
+            # codec band-limits all of it; nothing above the ceiling is ever
+            # transmitted. Adding broadband noise afterwards refilled the
+            # band this recipe exists to empty — measured at -24 dB below the
+            # speech band where band_limit had left -147 dB — so the recipe
+            # stopped modelling a call, the router declined to engage on a
+            # signal that really did reach 24 kHz, and an engine scored for
+            # removing noise no telephone band would have carried.
             (noise, {"snr_db": 30.0}),
+            (band_limit, {"low": 80.0, "high": 8000.0}),
             (autogain, {"target_db": -20.0}),
+        ),
+    ),
+    Damage(
+        "platform-upload",
+        "what a remote-recording platform delivers: 15 kHz ceiling, gated silence",
+        (
+            # Built from measurement rather than from what a call is imagined
+            # to do. Across sixteen files: every remote-platform track is
+            # band-limited to 14.0-15.6 kHz with a flat stopband, and 8.0 to
+            # 57.8 per cent of it is exact digital zero, while the studio
+            # tracks reach 24 kHz and hold no run of eight zero samples in
+            # 224 minutes. Packet loss inside speech is 0.0 to 0.3 per cent
+            # and clipping single-digit parts per million, so neither is
+            # modelled here — and no noise is added, because the platform
+            # removes the room tone rather than adding to it.
+            (gate, {}),
+            (band_limit, {"low": 0.0, "high": 15000.0}),
         ),
     ),
     Damage(
