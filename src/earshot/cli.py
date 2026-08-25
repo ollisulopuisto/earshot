@@ -76,6 +76,18 @@ def main(argv: list[str] | None = None) -> int:
         "--engine", metavar="SPEC", default="lavasr",
         help="engine to use; same specs as bench, e.g. router:lavasr",
     )
+    restore.add_argument(
+        "--chunk", metavar="SECONDS", type=float, default=60.0,
+        help="process in chunks this long, 0 for the whole file at once. "
+             "Memory scales with the length of one call: LavaSR needs about "
+             "0.3 GB for 5 s and 1.4 GB for 160 s, so a whole episode does "
+             "not fit on most machines (default: 60)",
+    )
+    restore.add_argument(
+        "--overlap", metavar="SECONDS", type=float, default=2.0,
+        help="crossfade between chunks; must cover whatever context the "
+             "engine keeps (default: 2)",
+    )
     restore.set_defaults(func=_restore)
 
     listing = sub.add_parser("damages", help="list the damage recipes")
@@ -143,8 +155,9 @@ def _restore(args) -> int:
 
         started = _time.perf_counter()
         try:
-            done = engines.check_contract(
-                audio, loaded.engine.process(audio, rate), loaded.engine.name
+            done = engines.process_in_chunks(
+                loaded.engine, audio, rate,
+                chunk_seconds=args.chunk, overlap_seconds=args.overlap,
             )
         except engines.EngineError as exc:
             print(f"error: {path.name}: {exc}", file=sys.stderr)

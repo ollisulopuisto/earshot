@@ -87,6 +87,82 @@ def schemes() -> list[str]:
     return sorted(_REGISTRY)
 
 
+def process_in_chunks(
+    engine,
+    audio: np.ndarray,
+    rate: int,
+    chunk_seconds: float = 60.0,
+    overlap_seconds: float = 2.0,
+) -> np.ndarray:
+    """Run an engine over a long recording without holding it all at once.
+
+    Memory scales with the length of a single ``process`` call: measured with
+    LavaSR in a fresh process, 0.30 GB for 5 s of audio and 1.41 GB for 160 s,
+    which puts a 56 minute episode somewhere between 10 and 25 GB. That is
+    more than the machine this was written on has free, so restoring a real
+    recording — the thing the project exists to do — was being killed while
+    the bench, which uses 10 second excerpts, ran perfectly.
+
+    Chunks overlap and are crossfaded linearly rather than butted together.
+    Linear is right here because both chunks are the same source and the
+    engine should produce nearly the same thing in the overlap, so the two
+    ramps sum to unity; an equal-power fade would lift the seam instead.
+    The overlap has to be long enough for whatever context the engine keeps
+    — the router smooths its band edge over 0.75 s — which is why the default
+    is seconds and not milliseconds.
+
+    Anything shorter than one chunk is passed straight through, so short
+    signals take exactly the code path they always did.
+    """
+    x = np.asarray(audio, dtype=np.float32).reshape(-1)
+    chunk = int(chunk_seconds * rate)
+    overlap = int(overlap_seconds * rate)
+    if chunk <= 0 or len(x) <= chunk:
+        return check_contract(x, engine.process(x, rate), getattr(engine, "name", "?"))
+    overlap = max(1, min(overlap, chunk // 2))
+
+    # Complementary ramps, so the two halves of a crossfade sum to exactly
+    # one and no normalising pass is needed. The obvious linspace(0, 1, n)
+    # against its own reverse sums to (n-1)/n instead, which is close enough
+    # to pass a -60 dB test and wrong enough to need a full-length weight
+    # array to hide it — and that array cost 2.6 GB on a real episode.
+    fade_in = np.linspace(0.0, 1.0, overlap + 2, dtype=np.float32)[1:-1]
+    fade_out = (1.0 - fade_in).astype(np.float32)
+
+    step = chunk - overlap
+    out = np.zeros(len(x), dtype=np.float32)
+
+    start = 0
+    while start < len(x):
+        stop = min(start + chunk, len(x))
+        piece = x[start:stop]
+        # Copied, not viewed. An engine that returns its input unchanged
+        # hands back a view of the caller's array, and fading that in place
+        # silently rewrites the recording being processed — which is how this
+        # first went wrong, with 0.38 of error at every seam.
+        done = np.array(
+            check_contract(piece, engine.process(piece, rate),
+                           getattr(engine, "name", "?")),
+            dtype=np.float32, copy=True,
+        )
+
+        # Fade in everywhere except the start of the recording and out
+        # everywhere except the end, so every sample is covered by weights
+        # that sum to one without anything having to divide afterwards.
+        if start > 0:
+            done[:overlap] *= fade_in[: len(done)]
+        if stop < len(x):
+            tail = min(overlap, len(done))
+            done[len(done) - tail:] *= fade_out[:tail]
+
+        out[start:stop] += done
+        if stop >= len(x):
+            break
+        start += step
+
+    return out
+
+
 def check_contract(before: np.ndarray, after: np.ndarray, name: str) -> np.ndarray:
     """Enforce rule 1 at the point of use.
 
