@@ -316,3 +316,7 @@ is the whole point of building the measuring stick first.
 
 Apache-2.0. Contributions and agents both welcome; see
 [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`AGENTS.md`](AGENTS.md).
+
+**Picking this up mid-flight?** [`docs/handover.md`](docs/handover.md) has the
+state: what is known, what is not, what has already been tried and reverted,
+and how to run it on a second machine.
