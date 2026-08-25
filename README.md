@@ -166,6 +166,34 @@ remote guest on a telephone codec is exactly the wrong one.
 
 [`docs/metrics.md`](docs/metrics.md) has the argument and the numbers.
 
+**And `recovery/gained` has the same problem one level down.** It is a
+log-spectral distance, and the 2026 survey of audio super-resolution
+([arXiv:2605.16681](https://arxiv.org/abs/2605.16681)) states the weakness
+plainly: LSD "often fails to account for the quality of reconstructed signals
+that are perceptually authentic but not mathematically identical to the
+reference spectra", and for bandwidth extension in particular, sample-level
+agreement between generated high frequencies and the reference is not
+required for perceptual fidelity.
+
+So the headline column of this bench is biased against precisely the class of
+engine it exists to evaluate. A generative model that invents a plausible top
+end is charged for every decibel by which its invention differs from the
+original, whether or not anyone could hear the difference. That is not a
+reason to drop the number — it is the only reference-based recovery measure
+here — but it is a reason never to read it alone, and it is why `origin` sits
+beside it. The survey's own recommendation is to pair LSD with a listening
+score, which is what `out/kuuntelu/` is for and why nothing here claims a
+quality result on numbers alone.
+
+Two things that survey does *not* cover are worth knowing, because they are
+where this bench is on its own. It does not discuss generative models
+altering speaker identity while scoring well — which is what `origin` was
+built to catch — and it evaluates on inputs "typically obtained by applying a
+low-pass filter", not on real degradation. Measured here, real remote podcast
+audio is 8 to 58 per cent exact digital silence and lossily encoded before it
+ever reaches a bandwidth extender. A model selected on lowpass-only
+benchmarks has not been tested on what actually arrives.
+
 ## Candidates being evaluated
 
 | engine | approach | licence | status |
@@ -174,6 +202,15 @@ remote guest on a telephone codec is exactly the wrong one.
 | [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) | denoise only, native 48 kHz | MIT/Apache-2.0 | **measured** |
 | [Sidon](https://arxiv.org/html/2509.17052v1) | w2v-BERT + HiFi-GAN resynthesis, 250M params | CC BY 4.0 | queued |
 | [Resemble Enhance](https://github.com/resemble-ai/resemble-enhance) | denoiser + enhancer | MIT | queued |
+| [ClearerVoice-Studio](https://github.com/modelscope/ClearerVoice-Studio) | speech super-resolution to 48 kHz, numpy in/out | Apache-2.0 | queued, with a caveat |
+
+ClearerVoice-Studio is the closest fit on paper — Apache-2.0, outputs 48 kHz,
+and takes and returns a numpy array, which is the interface an engine here
+needs. The caveat is measured rather than theoretical: it states an input
+requirement of **at least 16 kHz effective sampling rate**, and the one
+genuine call in this project's material has an effective ceiling of 7.5 kHz.
+The material that most needs bandwidth extension may be below what the model
+accepts. Worth wiring up and measuring; not worth assuming.
 
 ## First head-to-head
 
