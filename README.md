@@ -239,6 +239,28 @@ would be at −114.
 That same measurement validates the bench: our synthetic `narrowband-voip`
 lands at −34.1 dB at 6 kHz against real Opus at −34.4.
 
+## The denoiser, and why it needs a leash
+
+DeepFilterNet is the best denoiser the bench has measured — and unbounded it
+is disqualifying.
+
+| | hiss | room | narrowband VoIP | clean |
+|---|---|---|---|---|
+| DFN, unbounded | **+13.88 dB**, PESQ **+1.96** | speech **−60.5 dB** | PESQ −1.00 | −2.23 dB |
+| DFN @ 20 dB | +12.88 dB | speech −19.9 dB | PESQ −0.04 | −1.88 dB |
+| **DFN @ 12 dB** | +8.75 dB | speech −12.0 dB, `origin` **+1.00** | PESQ **+0.16** | **−1.46 dB** |
+
+On noise it beats the commercial plug-in at the commercial plug-in's own job:
+PESQ +1.96 against dxRevive's +1.01, while preserving the speech band far
+better — `origin` +0.97 against +0.80. A dedicated denoiser doing less damage
+than a general restorer.
+
+On *reverberant* speech it decides the signal is noise and removes it: 60 dB
+of speech gone. `atten_lim_db` exists for this, and bounding it to 12 dB makes
+it safe everywhere at the cost of 5 dB of denoising power. Which bound is
+right depends on how noisy and how live your rooms are — another question
+your own archive can answer and a synthetic recipe cannot.
+
 ## Two things that did not work
 
 **Chaining two restorers made things worse.** `dxRevive → lavasr` scored
