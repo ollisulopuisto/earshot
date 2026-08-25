@@ -11,10 +11,45 @@ from __future__ import annotations
 
 import json
 import platform
+import subprocess
 from dataclasses import asdict
+from pathlib import Path
 
 from . import __version__
 from .probes import Result, Run
+
+
+def cpu_name() -> str:
+    """The CPU this ran on, specifically enough to compare two throughputs.
+
+    ``platform.processor()`` returns ``arm`` for every Apple Silicon Mac, so
+    an M1 Max and an M2 record the same machine and their speed columns can
+    be compared by mistake. The two here differed only in a ``-Mach-O``
+    suffix that comes from the Python build, not the chip. Ask the system for
+    the model instead, and fall back rather than fail: a missing CPU name
+    costs a label, an exception costs the whole run.
+    """
+    system = platform.system()
+    if system == "Darwin":
+        try:
+            found = subprocess.run(
+                ["sysctl", "-n", "machdep.cpu.brand_string"],
+                capture_output=True, text=True, timeout=5, check=True,
+            ).stdout.strip()
+            if found:
+                return found
+        except (OSError, subprocess.SubprocessError):
+            pass
+    elif system == "Linux":
+        try:
+            for line in Path("/proc/cpuinfo").read_text(encoding="utf-8").splitlines():
+                if line.startswith(("model name", "Model")):
+                    found = line.split(":", 1)[1].strip()
+                    if found:
+                        return found
+        except OSError:
+            pass
+    return platform.processor() or platform.machine() or "unknown"
 
 
 def aggregate(runs: list[Run]) -> list[Run]:
@@ -168,6 +203,7 @@ def as_json(runs: list[Run], material: str = "", indent: int = 2) -> str:
             "machine": {
                 "platform": platform.platform(),
                 "processor": platform.processor() or platform.machine(),
+                "cpu": cpu_name(),
             },
             "runs": [asdict(run) for run in runs],
         },
@@ -202,7 +238,11 @@ def scoreboard(files: list) -> str:
     rows: list[tuple[str, str, str, dict]] = []
     for name in files:
         data = _json.loads(_Path(name).read_text(encoding="utf-8"))
-        machine = data.get("machine", {}).get("processor", "?")
+        recorded = data.get("machine", {})
+        # Results stored before the CPU was recorded only have ``processor``,
+        # and dropping them from the summary would lose every number measured
+        # so far. They stay, labelled with what they actually carry.
+        machine = recorded.get("cpu") or recorded.get("processor", "?")
         merged = aggregate([_run_from(r) for r in data.get("runs", [])])
         for run in merged:
             if run.damage == "sweep" or run.skipped or run.failed:
