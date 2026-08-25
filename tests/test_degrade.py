@@ -169,3 +169,34 @@ def test_the_platform_recipe_has_the_signature_it_was_built_from():
     assert 10 * np.log10(py[stop].mean() / px[stop].mean()) < -30, "no ceiling"
     assert abs(10 * np.log10(py[passband].mean() / px[passband].mean())) < 3, \
         "the speech band was not left alone"
+
+
+@pytest.mark.parametrize("recipe", [r for r in degrade.RECIPES if not r.needs],
+                         ids=lambda r: r.name)
+def test_a_recipe_is_damage_and_not_a_fader(recipe, clean):
+    """A degradation must not smuggle a large level change in with it.
+
+    ``room`` applied -28.1 dB along with the reverberation, because reverb()
+    normalised its impulse response by L1 sum and a 0.6 s noise tail spreads
+    that over 28,800 samples. A live room does not make a speaker twenty
+    times quieter; that is a different damage, and modelling two at once
+    means no probe can say which one an engine failed at.
+
+    The recipes that level deliberately are exempt: autogain exists to move
+    the level, and band-limiting removes real energy.
+    """
+    allowed = {
+        "narrowband-voip": 12.0,   # band_limit to 3.4 kHz plus autogain
+        "wideband-voip": 12.0,     # band_limit to 8 kHz plus autogain
+        "platform-upload": 6.0,    # the gate removes the pauses
+    }.get(recipe.name, 3.0)
+
+    out = recipe.apply(clean, RATE)
+    def level(a):
+        return 20 * np.log10(np.sqrt(np.mean(np.asarray(a, dtype=np.float64) ** 2)) + 1e-12)
+
+    moved = level(out) - level(clean)
+    assert abs(moved) < allowed, (
+        f"{recipe.name} moved the level {moved:+.1f} dB, more than the "
+        f"{allowed:.0f} dB this recipe is allowed"
+    )

@@ -98,6 +98,30 @@ BANDS: tuple[tuple[str, float, float], ...] = (
 )
 
 
+def warm_up(loaded: Loaded, rate: int = 48000, seconds: float = 1.0) -> None:
+    """Call the engine once, untimed, so the first timed call is not the cold one.
+
+    ``realtime`` is meant to be a property of the engine and the machine, and
+    without this it is mostly a property of when the measurement happened.
+    Measured here with LavaSR on one fixed 10 s buffer: cold calls ran 6.9x
+    to 15x realtime and warmed ones 23x to 50x, and the same engine on the
+    same machine read 6-13x, 10-23x and 26-46x across three bench runs.
+    Pinning the ONNX thread count did not account for it — the spread stayed
+    between 1.5x and 2.7x at one, two, four and automatic threads — so the
+    cost is the first call itself: allocation, graph optimisation, and the
+    scheduler deciding this is real work.
+
+    Failures are swallowed on purpose. This buys accuracy in a number, and an
+    engine that cannot process a second of silence will say so clearly enough
+    when it is actually measured.
+    """
+    try:
+        silence = np.zeros(int(rate * seconds), dtype=np.float32)
+        loaded.engine.process(silence, rate)
+    except Exception:
+        pass
+
+
 def run_all(
     loaded: Loaded,
     clean: np.ndarray,

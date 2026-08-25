@@ -97,7 +97,13 @@ def reverb(x: np.ndarray, rate: int, rt60: float = 0.6, seed: int = 0):
     rng = np.random.default_rng(seed)
     ir = rng.normal(0.0, 1.0, length) * np.exp(-np.arange(length) / (rt60 * rate / 6.9))
     ir[0] += 3.0
-    ir /= np.abs(ir).sum() / 3.0
+    # Normalise by energy, not by absolute sum. The L1 version spread the
+    # gain over all 28,800 samples of a 0.6 s tail and cost 28.1 dB, so the
+    # recipe was moving the speaker twenty times further from the microphone
+    # as well as putting them in a live room. Two damages in one recipe means
+    # no probe can say which of them an engine failed at. Convolving with an
+    # IR of unit energy leaves an uncorrelated signal's level where it was.
+    ir /= np.sqrt(np.sum(ir**2))
     return signal.fftconvolve(x, ir)[: len(x)].astype(np.float32)
 
 

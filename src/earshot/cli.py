@@ -210,6 +210,13 @@ def _bench(args) -> int:
     out_dir = Path(args.out) if args.out else None
     sections: list[str] = []
     every: list[probes.Run] = []
+
+    # One untimed call each, before anything is measured. Without it the
+    # first engine to be timed pays for allocation and graph optimisation
+    # and reports a speed two to four times below its own steady state.
+    for _, item in loaded:
+        probes.warm_up(item, pieces[0].rate)
+
     for recipe in recipes:
         runs: list[probes.Run] = []
         for piece in pieces:
