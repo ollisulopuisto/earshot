@@ -171,7 +171,7 @@ remote guest on a telephone codec is exactly the wrong one.
 | engine | approach | licence | status |
 |---|---|---|---|
 | [LavaSR](https://github.com/ysharma3501/LavaSR) | Vocos, bandwidth extension + denoise, 56 MB | Apache-2.0 | **measured** — see below |
-| [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) | real-time denoise only, very fast | MIT/Apache-2.0 | queued — needs a decision, see below |
+| [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) | denoise only, native 48 kHz | MIT/Apache-2.0 | **measured** |
 | [Sidon](https://arxiv.org/html/2509.17052v1) | w2v-BERT + HiFi-GAN resynthesis, 250M params | CC BY 4.0 | queued |
 | [Resemble Enhance](https://github.com/resemble-ai/resemble-enhance) | denoiser + enhancer | MIT | queued |
 
@@ -276,6 +276,15 @@ one rather than in a comment nobody can find again. Each file records the
 earshot version and the machine, because `throughput` means nothing without
 the latter and a probe changing its definition is the obvious way for two
 numbers to stop being comparable without anyone noticing.
+
+## Where this is going
+
+A [bridge plugin](https://github.com/ollisulopuisto/earshot/issues/8) — a thin
+VST3/AU that hands the host's selection to earshot and takes the result back,
+the way RX Connect does. Not a real-time plugin: everything here is offline by
+construction, which is the contract the bench rests on, and a plugin that sees
+512 samples at a time cannot keep it. Not yet, either — the engines are still
+moving, and freezing a moving target into C++ means porting it twice.
 
 ## State
 

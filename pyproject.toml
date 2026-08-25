@@ -23,6 +23,10 @@ perceptual = ["pesq>=0.0.4", "pystoi>=0.4"]
 # LavaSR. onnxruntime only -- the inference itself is vendored numpy, and
 # the weights are fetched and checksummed rather than shipped.
 lavasr = ["onnxruntime>=1.17", "pyyaml>=6.0"]
+# DeepFilterNet's own code, which needs PyTorch. Heavy, and deliberately so:
+# its inference is stateful and hand-porting it would turn a bug into a
+# quality difference rather than a crash.
+deepfilternet = ["deepfilternet>=0.5", "torch>=2.0", "torchaudio>=2.0"]
 dev = ["pytest>=8.0"]
 
 [project.scripts]
