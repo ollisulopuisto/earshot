@@ -188,7 +188,11 @@ the input in that band.
 | clean material | **−3.36 dB** | −5.87 dB | LavaSR does more harm when nothing needed fixing |
 | denoising (hiss) | **+9.71 dB** | +6.93 dB | LavaSR is not a denoiser, and does not claim to be |
 | non-speech, 0.5–2 kHz | +56.85 dB | **−0.01 dB** | dxRevive deletes it; LavaSR leaves it |
-| speed | 7× realtime | **77×** | eleven times faster, on CPU, no GPU involved |
+| speed | 7× realtime | **77×** | *superseded — see Corrections* |
+
+The `speed` row is the only one here measured with a probe since found to be
+wrong; every other number in this table came from `narrowband-voip`, whose
+recipe has not changed. See *Corrections*.
 
 Two findings worth stating plainly. **LavaSR preserves the speech band
 completely** — its `origin` of +1.00 through 1–4 kHz is not an approximation,
@@ -241,6 +245,14 @@ lands at −34.1 dB at 6 kHz against real Opus at −34.4.
 
 ## The denoiser, and why it needs a leash
 
+> **The `room` column below is superseded.** Every number in it was measured
+> with a `reverb()` that also applied −28.1 dB of level, so the engine was
+> working on a signal twenty times quieter and its own output floor looked
+> enormous beside it. The recipe is fixed; these have not been re-measured,
+> because DeepFilterNet needs an extra that is not installed on the machine
+> this was corrected on. The `hiss`, `clean` and `narrowband VoIP` columns
+> are unaffected. See *Corrections*.
+
 DeepFilterNet is the best denoiser the bench has measured — and unbounded it
 is disqualifying.
 
@@ -255,11 +267,57 @@ PESQ +1.96 against dxRevive's +1.01, while preserving the speech band far
 better — `origin` +0.97 against +0.80. A dedicated denoiser doing less damage
 than a general restorer.
 
-On *reverberant* speech it decides the signal is noise and removes it: 60 dB
-of speech gone. `atten_lim_db` exists for this, and bounding it to 12 dB makes
-it safe everywhere at the cost of 5 dB of denoising power. Which bound is
-right depends on how noisy and how live your rooms are — another question
-your own archive can answer and a synthetic recipe cannot.
+On *reverberant* speech it appeared to decide the signal is noise and remove
+it: 60 dB of speech gone, which is what `deepfilternet:12` exists to prevent.
+That measurement is no longer trustworthy — see the note above — and the
+leash may be calibrated against an artefact rather than against the engine.
+Re-measuring it is the most valuable single thing left in this repo, and it
+needs the `deepfilternet` extra installed. Which bound is right still depends
+on how live your rooms are, which your own archive can answer and a synthetic
+recipe cannot.
+
+## What the material actually is
+
+Every recipe here was a guess about what remote podcast audio suffers from,
+and none of it had been checked against a real recording. Sixteen files were
+measured — three provenances, 224 minutes — and most of the guesses were
+wrong.
+
+Three classes came out of it, not the two anyone expected:
+
+| | ceiling | stopband | what it is |
+|---|---|---|---|
+| studio tracks | 24 kHz | none | genuinely full-band, the only usable ground truth |
+| platform uploads | 14.0–15.6 kHz | flat, 0.3–4.0 dB ripple | **lossily encoded**, not raw microphone |
+| one real call | 7.5 kHz | flat, 1.8 dB ripple | a genuine codec-limited stream |
+
+**A `.wav` extension is not proof of PCM provenance.** A remote-recording
+platform's "local upload" arrives as a WAV container holding audio that was
+already encoded in the browser: measured cutoffs of 14.85 and 14.95 kHz, with
+a stopband ripple of 0.3 dB that no microphone or room produces. On one
+session the MP3 *backup* cut higher, at 15.60 kHz, than the WAV it was a
+backup for.
+
+**The defining defect is not added noise. It is that the silence is exact
+digital zero.** Studio tracks hold no run of eight zero samples in 224
+minutes. Every platform file is 8.0 to 57.8 per cent exact zero — one holds
+482,449 separate runs in twelve minutes — and the genuine call is 57.8 per
+cent zero with single gaps reaching 21 seconds. Every VoIP recipe here *added*
+noise; the platform *removes* the room tone, taking the floor to −240 dB.
+That matters because a denoiser estimates its noise from the pauses, and a
+gate leaves none to estimate from.
+
+Two other guesses measured wrong. Packet loss inside speech is 0.0 to 0.3 per
+cent, including in the real call — these are endpoint recordings, not captured
+lossy streams — against `dropout` scattering holes uniformly at 20 a minute.
+And clipping is single-digit parts per million against `narrowband-voip`
+clipping at −8 dB of headroom.
+
+`platform-upload` is the recipe built from those measurements: the gate, the
+15 kHz ceiling, and nothing else. It found something on its first run —
+**LavaSR adds 34.54 dB to the noise floor on it**, worse than a live room,
+because the gate leaves hard edges into digital silence and a generative
+engine invents into them. `hiss` is now the only damage where LavaSR wins.
 
 ## Two things that did not work
 
@@ -290,6 +348,25 @@ never writes over its input and keeps the length and sample rate — the same
 contract the bench enforces, because an engine that shifts a file is useless
 to an editor however it scores.
 
+Long recordings are processed in overlapping chunks, because memory scales
+with the length of a single `process()` call and not with the file. Measured
+with LavaSR in a fresh process: 0.30 GB for 5 s of audio, 1.41 GB for 160 s,
+which puts a 56 minute episode somewhere between 10 and 25 GB. Chunked, that
+episode restores in 187.8 s at 18× realtime with a 3.41 GB peak. `--chunk 0`
+processes the whole file at once if you have the memory and want it.
+
+Chunking a *generative* engine does not reproduce its whole-file output, and
+cannot. LavaSR is bit-deterministic but neither linear nor local: halving its
+input moves its output −18.4 dB from half the original, and the same twenty
+seconds preceded by a hundred hops of silence comes out −27.2 dB different.
+Chunked against whole-file measures −22.0 dB, and that is not the crossfade —
+two halves butted together with no overlap at all measure −26.1 dB. Chunked
+restoration is a different processing, not an approximation of the same one.
+Which sounds better is a listening question that no probe here can answer.
+
+A practical consequence worth knowing on its own: **gain staging before
+LavaSR changes what LavaSR does.**
+
 ## Results
 
 Measured results are committed under `results/` and summarised by
@@ -298,6 +375,60 @@ one rather than in a comment nobody can find again. Each file records the
 earshot version and the machine, because `throughput` means nothing without
 the latter and a probe changing its definition is the obvious way for two
 numbers to stop being comparable without anyone noticing.
+
+## Corrections
+
+Numbers here are kept honest by saying when they stopped being true, rather
+than by quietly restating them. Each of these was found by measuring output
+that the code claimed was fine.
+
+**`wideband-voip` refilled the band it emptied.** The recipe added broadband
+noise *after* the band limit, so the 8 kHz ceiling `band_limit` had just
+created — 14 kHz at −147 dB relative to the speech band — came back to −24 dB.
+The router then declined to engage, correctly, because the signal really did
+reach 24 kHz, and LavaSR scored +7.92 dB for removing noise no telephone band
+would have carried. With the noise moved ahead of the band limit, which is
+also the order a real call applies them in, LavaSR scores −1.32 dB. Every
+`wideband-voip` number measured before that change is about a different
+signal.
+
+**`room` was a fader as well as a room.** `reverb()` normalised its impulse
+response by absolute sum, which spread the gain across 28,800 samples of tail
+and cost 28.1 dB. Every `room` measurement was of a speaker moved twenty
+times further from the microphone *and* put in a live room, and no probe
+could say which of the two an engine had failed at. Corrected, LavaSR on
+`room` moves from −6.12 dB to +0.13 dB and the floor it was said to add from
++19.67 dB to +1.56. DeepFilterNet's reverberant-speech result rests on the
+same recipe and has not been re-measured.
+
+**`throughput` timed a cold call.** With no warm-up the probe charged the
+first engine measured for allocation and graph optimisation. On one fixed
+10 s buffer, cold calls ran 6.9× to 15× realtime and warmed ones 23× to 50×,
+which is why the same engine on one machine read 6–13×, 10–23× and 26–46×
+across three runs. Thread count was not the cause — the spread stayed between
+1.5× and 2.7× at one, two, four and automatic ONNX threads — and neither was
+contention, since wall and CPU time tracked each other exactly at 1.64×
+against 1.65×. The cause was the bench loop interleaving engines, so no
+engine was ever in a sustained burst. Speed now has its own pass: repeats
+back to back, median reported, spread beside it. Measured that way on an
+M1 Max under load, LavaSR is 43.6× at 1.1× spread. No `realtime` figure taken
+the old way is comparable to one taken the new way.
+
+**`router:<engine>@<margin>` was ignored.** The loader parsed the margin,
+stored it and wrote it into the result notes, while the edge detector read
+the module constant — so every margin behaved as 40 dB and a number reached
+the record that never reached the decision. The engine name did not carry the
+margin either, so a run at three thresholds filed 111 rows under one name and
+the means merged three engines. `results/2026-08-25-router-cliff60.json`
+holds two behaviours under a single name and its threshold cannot now be
+read from anything.
+
+**Results did not record which machine they came from.**
+`platform.processor()` is `arm` on every Apple Silicon Mac, so an M1 Max and
+an M2 were indistinguishable in `results/` and in the scoreboard while
+`as_json`'s own docstring said the machine is recorded because throughput is
+meaningless without it. Results now carry the CPU model; older ones keep
+their `arm` label rather than dropping out of the summary.
 
 ## Where this is going
 
