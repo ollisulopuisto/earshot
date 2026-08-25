@@ -184,3 +184,63 @@ def test_two_margins_are_two_names():
     assert R.RouterEngine(inner, R.CLIFF_DB).name == "router(lavasr)"
     assert R.RouterEngine(inner, 60.0).name != R.RouterEngine(inner, 25.0).name
     assert "60" in R.RouterEngine(inner, 60.0).name
+
+
+def test_silence_does_not_drag_the_edge_up():
+    """Gated pauses were pulling the crossover into the band it should fill.
+
+    Silent frames are parked at the ceiling so the router will not invent a
+    voice into them, and then the edge is smoothed in time. The smoothing
+    averaged those ceiling values into the speech frames beside them, so the
+    more silence a recording had, the higher the router put its crossover.
+
+    It matters most on exactly the material this is for. Measured on the one
+    genuine 7.5 kHz call in hand, which is 40.7 per cent silent by frame: the
+    raw edge on speech frames is 7195 Hz, the smoothed edge 9754 Hz, and
+    smoothing over speech frames alone 7162 Hz. The router was declining to
+    fill 2.6 kHz of the band that carries presence.
+    """
+    import numpy as np
+    from scipy import signal as sig
+
+    from earshot import probes
+    from earshot.engines import router as R
+
+    rate = 48000
+    cutoff = 7000.0
+
+    # Band-limited speech in bursts, with hard digital silence between them,
+    # which is what a gated call actually looks like.
+    speech = probes.default_material(rate, 12.0)
+    speech = sig.sosfilt(
+        sig.butter(10, cutoff, "low", fs=rate, output="sos"), speech
+    ).astype(np.float32)
+    gated = np.zeros_like(speech)
+    burst, pause = int(0.8 * rate), int(0.8 * rate)
+    at = 0
+    while at + burst < len(speech):
+        gated[at:at + burst] = speech[at:at + burst]
+        at += burst + pause
+
+    from types import SimpleNamespace
+
+    class Inner:
+        name = "inner"
+
+        def process(self, audio, rate):
+            return np.asarray(audio, dtype=np.float32)
+
+    engine = R.RouterEngine(SimpleNamespace(engine=Inner()), R.CLIFF_DB)
+    engine.process(gated, rate)
+    edges = np.array(engine.edges)
+
+    ceiling = min(R.EDGE_CEILING_HZ, rate / 2 * 0.95)
+    acting = edges[edges < ceiling * 0.999]
+    assert len(acting) > 0, "the router declined to act on band-limited speech"
+
+    # The crossover should sit near the real cutoff, not be dragged toward
+    # the ceiling by the pauses.
+    assert np.median(acting) < cutoff * 1.5, (
+        f"crossover at {np.median(acting):.0f} Hz for a {cutoff:.0f} Hz "
+        f"cutoff — the silence pulled it up"
+    )

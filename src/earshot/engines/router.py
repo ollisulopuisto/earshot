@@ -195,8 +195,28 @@ class RouterEngine:
         # between syllables.
         span = max(1, int(EDGE_SMOOTH_S * rate / HOP))
         kernel = np.ones(span) / span
-        padded = np.pad(edge, (span, span), mode="edge")
-        smoothed = np.convolve(padded, kernel, mode="same")[span:-span]
+
+        # Average over speech frames only. Silent frames are parked at the
+        # ceiling above so the router will not invent a voice into them, and
+        # a plain moving average then spread that ceiling into the speech
+        # beside them — so the more silence a recording held, the higher the
+        # crossover went. That is backwards for this material: platform audio
+        # is 8 to 58 per cent exact digital zero, and the one real 7.5 kHz
+        # call in hand is 40.7 per cent silent by frame. Measured on it, the
+        # raw edge on speech frames is 7195 Hz, the plain-smoothed edge
+        # 9754 Hz, and this weighted version 7162 Hz. The router was
+        # declining to fill 2.6 kHz of the band that carries presence.
+        voiced = (~silent).astype(np.float64)
+        def _smooth(values: np.ndarray) -> np.ndarray:
+            padded = np.pad(values, (span, span), mode="edge")
+            return np.convolve(padded, kernel, mode="same")[span:-span]
+
+        weight = _smooth(voiced)
+        smoothed = np.where(
+            weight > 1e-9,
+            _smooth(edge * voiced) / np.maximum(weight, 1e-9),
+            ceiling,
+        )
         # Smoothing must not drag a silent frame back down into inventing.
         smoothed[silent] = ceiling
         # Nothing to fill: either no speech, or speech that already reaches
