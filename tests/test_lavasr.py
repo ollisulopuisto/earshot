@@ -2,8 +2,9 @@
 
 CI has no models and no network, so what is testable here is everything
 around the inference: the spec parsing, the option handling, and the length
-arithmetic that the engine contract turns on. The model itself is exercised
-by `assert_engine_contract` on a machine that has it.
+arithmetic that the engine contract turns on. The model itself is exercised by
+`test_the_real_model_keeps_the_contract` below, which runs where the extra
+and the weights are present and skips with a reason where they are not.
 """
 
 import numpy as np
@@ -75,3 +76,26 @@ def test_the_resampler_round_trip_keeps_the_length_within_a_few_samples():
             np.zeros(len(down) * 3, dtype=np.float32), lavasr.OUTPUT_RATE, rate
         )
         assert abs(len(back) - n) < 0.01 * rate, rate
+
+
+def test_the_real_model_keeps_the_contract():
+    """The assertion the file header has always claimed was happening somewhere.
+
+    ``AGENTS.md`` calls this call not optional — it is how the contract stays
+    true without a reviewer holding it in their head — but it was only ever
+    run against passthrough, chain:passthrough+passthrough and
+    router:passthrough. Both model engines carried a docstring saying the
+    model itself is exercised "on a machine that has it", and no test did it
+    on any machine.
+
+    It skips with a stated reason where the extra or the weights are missing,
+    which is every CI run, and does the real thing where they are present.
+    """
+    try:
+        loaded = engines.load("lavasr")
+    except engines.EngineError as exc:
+        pytest.skip(f"lavasr unavailable here: {exc}")
+
+    from earshot.testing import assert_engine_contract
+
+    assert_engine_contract(loaded.engine)
