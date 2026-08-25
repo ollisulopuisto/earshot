@@ -62,3 +62,38 @@ def test_the_cold_call_does_not_set_the_reported_speed():
         f"warmed {speed:.0f}x vs cold {cold_speed:.0f}x — the warm-up "
         f"did not take the first-call cost out of the measurement"
     )
+
+
+def test_speed_is_measured_in_a_burst_not_between_other_work():
+    """Interleaving is why the number moved between runs.
+
+    The bench alternates engines, applies damage and computes PESQ between
+    calls, so an engine is never in a sustained burst and every timed call is
+    semi-cold. Measured on this machine: LavaSR warmed and called back to
+    back holds 46x with a 1.64x spread, while the same engine inside the
+    bench loop read 5x to 20x. CPU time does not rescue it — wall and CPU
+    tracked each other exactly (spread 1.64x against 1.65x), because CPU time
+    counts time on a core and so absorbs frequency and core assignment too.
+
+    So speed gets its own pass: repeats back to back, and the median.
+    """
+    rate = 48000
+    engine = SlowFirstCall(cold_iters=4_000_000, warm_iters=100_000)
+    run = probes.throughput(Loaded(engine), rate, seconds=1.0, repeats=5)
+
+    assert run.damage == "speed"
+    assert engine.calls > 5, "did not repeat"
+
+    speed = run.value("throughput", "realtime")
+    spread = run.value("throughput", "spread")
+    assert speed is not None and speed > 0
+    assert spread is not None and spread >= 1.0
+
+    # The median of a burst must not be dragged down by the one cold call.
+    single = probes.run_all(
+        Loaded(SlowFirstCall()), probes.default_material(rate, 1.0), rate,
+        degrade.by_name("clean"),
+    )
+    lone = single.value("throughput", "realtime")
+    if lone is not None:
+        assert speed > lone * 2, f"burst {speed:.0f}x vs single cold call {lone:.0f}x"

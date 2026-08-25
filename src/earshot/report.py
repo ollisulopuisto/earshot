@@ -245,7 +245,7 @@ def scoreboard(files: list) -> str:
         machine = recorded.get("cpu") or recorded.get("processor", "?")
         merged = aggregate([_run_from(r) for r in data.get("runs", [])])
         for run in merged:
-            if run.damage == "sweep" or run.skipped or run.failed:
+            if run.damage in ("sweep", "speed") or run.skipped or run.failed:
                 continue
             values = {}
             for probe, metric, _ in HEADLINE:

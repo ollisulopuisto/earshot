@@ -234,6 +234,10 @@ def _bench(args) -> int:
             first = pieces[0]
             _write_audio(out_dir / recipe.name, first.audio, first.rate, recipe, loaded)
 
+    speed = [probes.throughput(item, pieces[0].rate) for _, item in loaded]
+    every += speed
+    sections.append(report.render(speed, "speed — repeats back to back, median of five"))
+
     sweep = [probes.preservation(item, pieces[0].rate) for _, item in loaded]
     every += sweep
     sections.append(

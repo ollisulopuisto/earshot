@@ -122,6 +122,63 @@ def warm_up(loaded: Loaded, rate: int = 48000, seconds: float = 1.0) -> None:
         pass
 
 
+def throughput(
+    loaded: Loaded,
+    rate: int = 48000,
+    seconds: float = 10.0,
+    repeats: int = 5,
+) -> Run:
+    """How fast the engine is, measured in a burst instead of between chores.
+
+    Speed cannot be read off the quality pass. That loop alternates engines
+    and computes damage and PESQ between calls, so an engine is never in a
+    sustained burst and every timed call is semi-cold. Measured here: LavaSR
+    warmed and called back to back holds 46x realtime with a 1.64x spread,
+    while the same engine inside the bench loop read 5x to 20x across runs.
+
+    CPU time is not the answer either — wall and CPU tracked each other
+    exactly, 1.64x against 1.65x, because CPU time counts time *on* a core
+    and so absorbs frequency scaling and core assignment along with the work.
+
+    So: repeats back to back, and the median. The spread goes in beside it,
+    because on a contended machine a speed without a spread is a guess with
+    a decimal point. This machine runs a VM and local models that hold
+    20.7 GB wired, and the numbers have to be readable anyway.
+    """
+    run = Run(engine=loaded.engine.name, damage="speed")
+    signal = default_material(rate, seconds)
+
+    warm_up(loaded, rate)
+    times: list[float] = []
+    cpu_total = 0.0
+    for _ in range(max(1, repeats)):
+        started = time.perf_counter()
+        cpu_before = _cpu_seconds()
+        try:
+            loaded.engine.process(signal, rate)
+        except Exception as exc:
+            run.failed = str(exc)
+            return run
+        times.append(time.perf_counter() - started)
+        cpu_total += _cpu_seconds() - cpu_before
+
+    times.sort()
+    middle = times[len(times) // 2]
+    run.results.append(
+        Result("throughput", "realtime", seconds / max(middle, 1e-6), "x", "higher")
+    )
+    run.results.append(
+        Result("throughput", "spread", times[-1] / max(times[0], 1e-9), "x", "lower")
+    )
+    run.results.append(
+        Result("throughput", "cores", cpu_total / max(sum(times), 1e-6), "", "")
+    )
+    run.results.append(
+        Result("throughput", "load", loaded.load_seconds, "s", "lower")
+    )
+    return run
+
+
 def run_all(
     loaded: Loaded,
     clean: np.ndarray,
