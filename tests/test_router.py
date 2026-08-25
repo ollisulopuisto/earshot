@@ -127,3 +127,60 @@ def test_the_margin_can_be_set_and_is_checked():
     assert engines.load("router:passthrough@12").engine.margin_db == 12.0
     with pytest.raises(engines.EngineError):
         engines.load("router:passthrough@loud")
+
+
+def test_the_margin_the_loader_accepts_actually_moves_the_edge():
+    """``router:<engine>@<margin>`` was parsed, stored and recorded in the
+    result notes, but the edge detector read the module constant instead, so
+    every margin behaved as 40 dB. A parameter that is accepted and silently
+    ignored puts a number in the record that never reached the code.
+    """
+    from types import SimpleNamespace
+
+    import numpy as np
+    from scipy import signal as sig
+
+    from earshot.engines import router as R
+
+    rate, n = 48000, 48000 * 3
+    rng = np.random.default_rng(0)
+    band_limited = sig.sosfilt(
+        sig.butter(8, 8000, "low", fs=rate, output="sos"),
+        rng.standard_normal(n) * 0.1,
+    ).astype(np.float32)
+    tone = (0.05 * np.sin(2 * np.pi * 14000 * np.arange(n) / rate)).astype(np.float32)
+
+    class Inner:
+        name = "marker"
+
+        def process(self, audio, rate):
+            return np.asarray(audio, dtype=np.float32) + tone
+
+    inner = SimpleNamespace(engine=Inner())
+
+    edges = {}
+    for margin in (10.0, 90.0):
+        engine = R.RouterEngine(inner, margin)
+        engine.process(band_limited, rate)
+        edges[margin] = float(np.median(engine.edges))
+
+    # A stricter margin admits less as content, so the edge sits lower.
+    assert edges[10.0] < edges[90.0], (
+        f"margin ignored: 10 dB and 90 dB both put the edge at {edges[10.0]:.0f} Hz"
+    )
+
+
+def test_two_margins_are_two_names():
+    """A bench run with two thresholds produced 111 rows under one name, so
+    the means merged three engines and the record could not say which
+    threshold produced which number. The default keeps its bare name, or
+    every result measured before this would stop being comparable.
+    """
+    from types import SimpleNamespace
+
+    from earshot.engines import router as R
+
+    inner = SimpleNamespace(engine=SimpleNamespace(name="lavasr"))
+    assert R.RouterEngine(inner, R.CLIFF_DB).name == "router(lavasr)"
+    assert R.RouterEngine(inner, 60.0).name != R.RouterEngine(inner, 25.0).name
+    assert "60" in R.RouterEngine(inner, 60.0).name

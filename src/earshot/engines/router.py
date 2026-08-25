@@ -110,7 +110,15 @@ class RouterEngine:
     def __init__(self, inner, margin_db: float = CLIFF_DB):
         self.inner = inner
         self.margin_db = margin_db
-        self.name = f"router({inner.engine.name})"
+        # The margin belongs in the name: a bench run at two thresholds
+        # otherwise files every row under one engine and the means merge
+        # them. The default keeps the bare name so results measured before
+        # the threshold was nameable stay comparable.
+        self.name = (
+            f"router({inner.engine.name})"
+            if margin_db == CLIFF_DB
+            else f"router({inner.engine.name}@{margin_db:g}dB)"
+        )
         self.edges: list[float] = []  # viimeisimmän ajon reunat, mittausta varten
 
     def process(self, audio: np.ndarray, rate: int) -> np.ndarray:
@@ -173,7 +181,7 @@ class RouterEngine:
         # digital silence.
         silent = reference < -80.0
 
-        occupied = power > (reference - CLIFF_DB)[None, :]
+        occupied = power > (reference - self.margin_db)[None, :]
         index = np.where(
             occupied.any(axis=0),
             occupied.shape[0] - 1 - np.argmax(occupied[::-1], axis=0),
