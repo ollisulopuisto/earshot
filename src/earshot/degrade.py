@@ -80,6 +80,59 @@ def noise(x: np.ndarray, rate: int, snr_db: float = 20.0, seed: int = 0):
     return (x + n).astype(np.float32)
 
 
+def hum(
+    x: np.ndarray,
+    rate: int,
+    level_db: float = -30.0,
+    mains_hz: float = 50.0,
+    harmonics: int = 6,
+    drift_hz: float = 0.05,
+    seed: int = 0,
+):
+    """A ground loop: a mains fundamental and its harmonics, and nothing else.
+
+    The bench modelled broadband hiss and nothing narrowband, while a buzz
+    from a ground loop is the complaint that actually reaches a producer. It
+    is a different problem for an engine: a wideband denoiser has to notice
+    that a handful of bins are the enemy, and a notch filter that knows the
+    mains frequency removes it outright.
+
+    ``level_db`` is relative to the speech, not to full scale, because the
+    material arrives at every level. The default of -30 dB is an audible
+    ground loop rather than a measurement of this project's material: in the
+    owner's own recordings the 50 Hz family sits 32 to 51 dB below speech,
+    which is at or below the room tone and inaudible. Calibrating to that
+    would have modelled a problem nobody has.
+
+    Mains frequency drifts by a few hundredths of a hertz as grid load
+    changes, which is why a fixed notch leaves a residue and why the drift is
+    modelled rather than assumed away. 50 Hz is Europe; pass 60 for the US.
+    """
+    n = len(x)
+    t = np.arange(n) / rate
+    rng = np.random.default_rng(seed)
+
+    # A slow random walk in frequency, integrated into phase.
+    if drift_hz > 0:
+        steps = rng.normal(0.0, 1.0, n // rate + 2)
+        walk = np.interp(t, np.arange(len(steps)) * 1.0, np.cumsum(steps))
+        walk = drift_hz * walk / (np.abs(walk).max() + 1e-12)
+    else:
+        walk = np.zeros(n)
+
+    buzz = np.zeros(n)
+    for k in range(1, harmonics + 1):
+        # Harmonics fall away, and the odd ones sit higher: that is what a
+        # transformer-coupled loop looks like on an analyser.
+        weight = (1.0 / k) * (1.0 if k % 2 else 0.6)
+        phase = 2 * np.pi * (mains_hz * k * t + k * np.cumsum(walk) / rate)
+        buzz += weight * np.sin(phase + rng.uniform(0, 2 * np.pi))
+
+    buzz /= np.sqrt(np.mean(buzz**2)) + 1e-12
+    buzz *= _speech_rms(x, rate) * 10 ** (level_db / 20)
+    return (x + buzz).astype(np.float32)
+
+
 def clip(x: np.ndarray, rate: int, headroom_db: float = -6.0):
     """Hard clipping at a threshold below the signal's own peak."""
     ceiling = np.abs(x).max() * 10 ** (headroom_db / 20)
@@ -316,6 +369,11 @@ RECIPES: tuple[Damage, ...] = (
         "hiss",
         "broadband noise at 20 dB SNR: a fan, a preamp, a street",
         ((noise, {"snr_db": 20.0}),),
+    ),
+    Damage(
+        "ground-loop",
+        "a mains buzz: 50 Hz and its harmonics, 30 dB under the speech",
+        ((hum, {}),),
     ),
     Damage(
         "room",

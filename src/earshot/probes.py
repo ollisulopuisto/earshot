@@ -371,8 +371,9 @@ def _damaged_band(damage: degrade.Damage, rate: int) -> tuple[float, float]:
     """Which band to score recovery in, given what the damage did.
 
     Band-limiting removes a specific region and that is where the question
-    lies. Everything else damages the whole signal, so the whole signal is
-    the band.
+    lies. A mains hum is narrower still and sits below where the default band
+    even starts. Everything else damages the whole signal, so the whole signal
+    is the band.
     """
     ceiling = min(16000.0, rate / 2 * 0.95)
     for function, options in damage.steps:
@@ -380,6 +381,15 @@ def _damaged_band(damage: degrade.Damage, rate: int) -> tuple[float, float]:
             high = float(options.get("high") or 0)
             if 0 < high < ceiling:
                 return high, ceiling
+        if function is degrade.hum:
+            # The fundamental is the loudest part and the default floor of
+            # 100 Hz sat above it, so the damage was outside the measurement
+            # and an engine that removed 21 to 37 dB of hum scored +0.00.
+            # The top follows the harmonics rather than the spectrum: scored
+            # to 16 kHz, a narrowband change is diluted into nothing.
+            mains = float(options.get("mains_hz") or 50.0)
+            count = int(options.get("harmonics") or 6)
+            return mains * 0.4, min(mains * (count + 1), ceiling)
     return 100.0, ceiling
 
 
