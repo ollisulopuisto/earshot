@@ -25,6 +25,8 @@ decision at least once:
                   Here for comparability with published claims, not because
                   they are the truth: both are referenced and both were
                   designed for telephony.
+``tonal``         On hum and buzz only: how much is left at the mains
+                  harmonics. The only way to see hum; LSD averages it away.
 ``throughput``    How much faster than realtime, and on how many cores.
 
 Every probe returns ``Result`` objects with ``better`` set, so the report
@@ -230,6 +232,25 @@ def run_all(
                    f"{low:.0f}–{high:.0f} Hz, restored vs clean"),
             Result("recovery", "gained", before - after, "dB", "higher",
                    "positive means closer to the original than the damage was"),
+        ]
+
+    # --- tonal: what is left at the mains harmonics, when the damage put
+    # something there. Hum lives in a few narrow bins, and a log-spectral
+    # distance averaged over the whole band does not see it: measured on six
+    # EARS excerpts, a subtraction that took one excerpt's error from -61.3
+    # to -67.7 dBFS scored +0.01 dB of `gained`.
+    if any(step is degrade.hum for step, _ in damage.steps):
+        fundamental = next(o.get("fundamental", 50.0) for f, o in damage.steps
+                           if f is degrade.hum)
+        before = metrics.line_residue(broken - clean, clean, rate, fundamental)
+        after = metrics.line_residue(restored - clean, clean, rate, fundamental)
+        run.results += [
+            Result("tonal", "before", before, "dB", "lower",
+                   "error at the mains harmonics, relative to the speech"),
+            Result("tonal", "after", after, "dB", "lower",
+                   "the same after the engine"),
+            Result("tonal", "removed", before - after, "dB", "higher",
+                   "positive means less hum than the damage left"),
         ]
 
     # --- perceptual: the literature's numbers, for comparison with papers

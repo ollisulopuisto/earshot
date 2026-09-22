@@ -266,19 +266,23 @@ class DehumEngine:
         # Neighbours for the second, local prominence test, in Hz either
         # side of a harmonic: beyond the notch, inside the same critical band.
         offsets = (-4.0, -2.5, 2.5, 4.0)
-        t = np.arange(n) / rate
-        sides = [np.exp(-2j * np.pi * offset * t) for offset in offsets]
+        # The neighbours are rotated on the decimated baseband rather than at
+        # the full rate: four offsets of a few hertz sit far inside the
+        # 100 Hz block rate, and doing it here made the engine four times
+        # cheaper per harmonic, where it had run at 3x realtime on buzz.
+        t_blocks = positions / rate
+        sides = [np.exp(-2j * np.pi * offset * t_blocks) for offset in offsets]
 
         estimate = np.zeros(n)
         treated = []
         for k in harmonics:
             rotation = np.exp(-1j * k * phase)
             shifted = centred * rotation
-            steady = _smooth(_blocks(shifted, block), self.bandwidth_hz, block_rate)
+            blocks = _blocks(shifted, block)
+            steady = _smooth(blocks, self.bandwidth_hz, block_rate)
             level = np.median(np.abs(steady))
             around = [
-                np.median(np.abs(_smooth(_blocks(shifted * side, block),
-                                         self.bandwidth_hz, block_rate)))
+                np.median(np.abs(_smooth(blocks * side, self.bandwidth_hz, block_rate)))
                 for side in sides
             ]
             floor = float(np.median(around)) + 1e-12

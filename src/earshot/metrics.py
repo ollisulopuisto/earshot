@@ -244,3 +244,26 @@ def perceptual(reference: np.ndarray, degraded: np.ndarray, rate: int) -> dict:
     except Exception:
         pass
     return out
+
+
+def line_residue(error: np.ndarray, reference: np.ndarray, rate: int,
+                 fundamental: float = 50.0, top: float = 6000.0) -> float:
+    """Energy of ``error`` at the harmonics of ``fundamental``, in dB of speech.
+
+    Each harmonic's window widens with its number, because drift of a few
+    tenths of a hertz at the fundamental is k times that at the k-th
+    harmonic. What falls between the harmonics is not counted: that is the
+    voice, and other probes answer for it.
+    """
+    e = np.asarray(error, dtype=np.float64)
+    r = np.asarray(reference, dtype=np.float64)
+    window = np.hanning(len(e))
+    spectrum = np.abs(np.fft.rfft(e * window)) ** 2
+    freqs = np.fft.rfftfreq(len(e), 1 / rate)
+    lines = np.zeros_like(freqs, dtype=bool)
+    k = 1
+    while k * fundamental < min(top, rate / 2 * 0.95):
+        lines |= np.abs(freqs - k * fundamental) <= 1.0 + 0.3 * k
+        k += 1
+    speech = np.sum(np.abs(np.fft.rfft(r * window)) ** 2) + 1e-30
+    return float(10 * np.log10(spectrum[lines].sum() / speech + 1e-30))

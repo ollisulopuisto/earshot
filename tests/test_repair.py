@@ -119,3 +119,22 @@ def test_the_new_recipes_do_what_they_say():
     assert f[np.argmax(p)] in (49.0, 50.0, 51.0)
     clipped = degrade.by_name("clipped").apply(clean, RATE)
     assert np.abs(clipped).max() < np.abs(clean).max() * 0.6
+
+
+def test_line_residue_sees_hum_that_lsd_cannot():
+    from earshot import metrics
+
+    clean = probes.default_material(RATE, 4.0)
+    hummed = degrade.hum(clean, RATE, level_db=-30.0)
+    with_hum = metrics.line_residue(hummed - clean, clean, RATE)
+    without = metrics.line_residue(np.zeros_like(clean), clean, RATE)
+    assert with_hum > -45 and without < -200
+
+
+def test_the_tonal_probe_runs_only_where_there_is_hum():
+    loaded = engines.load("passthrough")
+    clean = probes.default_material(RATE, 3.0)
+    hum_run = probes.run_all(loaded, clean, RATE, degrade.by_name("hum"))
+    clean_run = probes.run_all(loaded, clean, RATE, degrade.by_name("clean"))
+    assert hum_run.value("tonal", "removed") == 0.0
+    assert clean_run.value("tonal", "removed") is None
