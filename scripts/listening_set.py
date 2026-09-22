@@ -30,6 +30,20 @@ SECONDS = 8.0
 ORIGINAL = ("Alkuperäinen", "EARS-studioäänitys sellaisenaan: tähän verrataan")
 DAMAGED = ("Vaurioitettu", "")
 
+# The platform recipe's gate sits 18 dB under the speech, calibrated on
+# podcast studio tracks whose room tone is about 22 dB down. EARS pauses sit
+# only about 18 dB under its speech, so on EARS freeform speech that gate
+# closed for 0.0 per cent of the time and `platform-upload` was a plain
+# 15 kHz low-pass. For listening, the gate is set where it gives this read
+# passage 25 per cent exact zero, inside the 8-58 per cent measured on real
+# platform files.
+PLATFORM_EARS = degrade.Damage(
+    "platform-upload",
+    "gated silence (-14 dB gate, 25 % exact zero) and a 15 kHz ceiling",
+    ((degrade.gate, {"threshold_db": -14.0}),
+     (degrade.band_limit, {"low": 0.0, "high": 15000.0})),
+)
+
 # (folder, speaker file, start s, recipe, title, what to listen for,
 #  [(engine spec, label, note)])
 PLAN = [
@@ -88,11 +102,12 @@ PLAN = [
       ("deepfilternet:12", "DeepFilterNet, max 12 dB", ""),
       ("lavasr", "LavaSR", "ei ole kohinanpoistaja"),
       ("chain:deepfilternet:12+router:lavasr", "DFN 12 → reititin(LavaSR)", "")]),
-    ("07-alusta", "p002 freeform 02.wav", 40.0, "platform-upload",
+    ("07-alusta", "../ears-sent/p008/rainbow_03_regular.wav", 0.0, PLATFORM_EARS,
      "Etätallennusalusta: tauot digitaalista nollaa, kaista 15 kHz:iin",
-     "Oikean alustamateriaalin pääasiallinen vika on portitus. LavaSR lisäsi "
-     "vanhassa mittauksessa lattiatasoon 34,5 dB. Kuuntele taukojen reunoja: "
-     "sihiseekö vai napsuuko?",
+     "Oikean alustamateriaalin pääasiallinen vika on portitus: tässä 29,7 % "
+     "näytteistä on nollaa. Tauoissa LavaSR jättää −74,8 dBFS, sama "
+     "hiljaisuus palautettuna −96,1, reititin −117,2 ja DeepFilterNet −90,2. "
+     "Kuuntele taukojen reunoja: sihiseekö vai napsuuko?",
      [("lavasr", "LavaSR", ""),
       ("keepzero:lavasr", "LavaSR, hiljaisuus palautettu", "nollat takaisin nolliksi"),
       ("router:lavasr", "LavaSR reitittimen kautta", ""),
@@ -121,14 +136,18 @@ PLAN = [
 ]
 
 
-def main(source: Path, target: Path) -> None:
+def main(source: Path, target: Path, only: set[str] | None = None) -> None:
     cache: dict[str, engines.Loaded] = {}
     target.mkdir(parents=True, exist_ok=True)
     for folder, speaker_file, start, recipe_name, title, listen_for, takes in PLAN:
+        if only and folder not in only:
+            continue
         started = time.time()
         clean, rate = sf.read(source / speaker_file, dtype="float32",
                               start=int(start * 48000), frames=int(SECONDS * 48000))
-        recipe = degrade.by_name(recipe_name)
+        recipe = (recipe_name if isinstance(recipe_name, degrade.Damage)
+                  else degrade.by_name(recipe_name))
+        recipe_name = recipe.name
         damaged = recipe.apply(clean, rate)
         out = target / folder
         out.mkdir(parents=True, exist_ok=True)
@@ -152,7 +171,7 @@ def main(source: Path, target: Path) -> None:
             safe = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in engine.name)
             write(index, safe, restored, label, note)
             index += 1
-        speaker = speaker_file.split()[0]
+        speaker = Path(speaker_file).parent.name or speaker_file.split()[0]
         (out / "about.json").write_text(json.dumps({
             "title": title,
             "listen_for": f"{listen_for} Puhuja {speaker}, {start:g}–{start + SECONDS:g} s.",
@@ -180,4 +199,4 @@ arviointiin eikä sitä ole viety repoon.</p>
 
 
 if __name__ == "__main__":
-    main(Path(sys.argv[1]), Path(sys.argv[2]))
+    main(Path(sys.argv[1]), Path(sys.argv[2]), set(sys.argv[3:]) or None)

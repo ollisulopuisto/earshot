@@ -34,6 +34,20 @@ from . import EngineError, Loaded, check_contract, register
 # in 224 minutes, every platform file holds hundreds of thousands.
 MIN_ZEROS = 8
 
+# "Zero" is anything at or below -120 dBFS, not only exact zero. A gate
+# followed by any filter — the platform's own resampler, or this bench's
+# band limit — leaves the edges of each gap ringing down through values like
+# 1e-9 rather than jumping to 0.0. Measured on one gated EARS passage (8 s,
+# 28.5 per cent exact zero, 29.7 per cent at or below 1e-6), energy in the
+# gaps: LavaSR alone -74.8 dBFS; wrapped, counting exact zeros only, -87.1;
+# counting everything at or below 1e-6, -96.1. Eight samples in a row this
+# quiet do not happen in a recording that was not silenced digitally.
+#
+# For comparison, router(lavasr) on the same passage leaves -117.2 dBFS in
+# the gaps, because it passes silent frames through whole. Where the router
+# is used, this wrapper adds nothing; it exists for an engine used alone.
+SILENT = 1e-6
+
 # The fade at each edge of a restored silence.
 FADE_S = 0.005
 
@@ -49,7 +63,7 @@ class KeepZeroEngine:
             check_contract(x, self.inner.engine.process(x, rate), self.inner.engine.name),
             dtype=np.float32, copy=True,
         )
-        zero = x == 0.0
+        zero = np.abs(x) <= SILENT
         if not zero.any():
             return y
         edges = np.diff(np.concatenate(([0], zero.astype(np.int8), [0])))

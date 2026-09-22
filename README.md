@@ -424,14 +424,37 @@ than measured ones, and every number below is from EARS studio speech
   plateaus.
 - **The hum column says almost nothing, and that is the metric's fault.**
   Hum lives in a few narrow bins, which a log-spectral distance averaged over
-  the whole band barely sees; measured directly on one excerpt, `dehum`
-  takes the error from −61.3 to −67.7 dBFS. A probe for tonal residue is
-  the missing piece. The listening page is the check until then.
-- **On buzz, the model wins.** DeepFilterNet at a 12 dB bound recovers
-  +1.09 dB where `dehum` does nothing measurable: `dehum` only treats
-  harmonics that stand out of the long-term spectrum, and under a voice most
-  buzz harmonics do not. The spec's guess that stable interference needs no
-  network holds for hum and not, on this evidence, for buzz.
+  the whole band barely sees. So there is now a `tonal` probe, run only on
+  recipes that add hum: the error left at the mains harmonics, relative to
+  the speech (`results/2026-09-22-hum-tonal-ears.json`):
+
+  | `tonal/removed`, dB | hum | buzz |
+  |---|---|---|
+  | `dehum:50` | +6.57 ±1.43 | +1.78 ±0.18 |
+  | `dehum:50@2` | +6.80 ±0.99 | +1.83 ±0.05 |
+  | `deepfilternet:12` | +3.10 ±1.69 | +1.79 ±1.10 |
+  | `chain:dehum:50+deepfilternet:12` | **+7.19 ±1.53** | **+3.08 ±1.45** |
+
+  On hum, the subtraction removes twice what the denoiser does and costs
+  the speech nothing (−0.01 dB against DFN's −0.64). Only one to three of
+  the recipe's six harmonics clear the detector on a voice; loosening the
+  threshold was swept and found only voice harmonics, removing *less*.
+- **On buzz, the model wins the LSD column and ties on the lines.**
+  DeepFilterNet at a 12 dB bound recovers +1.09 dB of LSD and the same
+  1.8 dB of line residue as `dehum`, whose detector sees few buzz harmonics
+  under a voice. Chained, the two take out 3.08 dB. The spec's guess that
+  stable interference needs no network holds for hum and not, on this
+  evidence, for buzz.
+
+**`platform-upload` measures nothing on EARS.** Its gate sits 18 dB under
+the speech, calibrated on podcast studio tracks whose room tone is about
+22 dB down; EARS pauses sit about 18 dB down, so on EARS freeform speech the
+gate closed 0.0 per cent of the time and the recipe was a plain 15 kHz
+low-pass. A bench run on it was discarded. For the listening set the gate
+was set to −14 dB on a read passage (29.7 per cent silenced), where the
+energy left in the gaps is: LavaSR −74.8 dBFS, `keepzero:lavasr` −96.1,
+DeepFilterNet@12 −90.2, `router:lavasr` −117.2. The router already passes
+silence through whole; `keepzero` is only for an engine used alone.
 
 ## Listening
 
