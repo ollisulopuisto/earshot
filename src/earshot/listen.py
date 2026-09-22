@@ -89,7 +89,9 @@ def build(directory: Path, title: str = "Earshot-kuuntelu", intro: str = "") -> 
     return target
 
 
-TEMPLATE = r"""<title>__TITLE__</title>
+TEMPLATE = r"""<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>__TITLE__</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -148,7 +150,8 @@ body {
   padding: 0 16px;
   padding-block: 0 48px;
 }
-.wrap { max-width: 780px; margin: 0 auto; }
+.wrap { max-width: 780px; margin: 0 auto; min-width: 0; }
+html, body { overflow-x: hidden; }
 header.top {
   position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
   background: var(--ground);
@@ -185,13 +188,13 @@ section.cmp.playing { border-color: var(--live); }
 }
 .play[data-state="loading"] { opacity: 0.6; }
 .bar {
-  flex: 1; height: 28px; position: relative; cursor: pointer;
+  flex: 1; min-width: 0; height: 28px; position: relative; cursor: pointer;
   background: var(--sunk); border: 1px solid var(--line); border-radius: 4px; overflow: hidden;
 }
 .bar .fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--live-soft); }
 .bar .head { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--live); left: 0; }
-.time { flex: none; font: 12px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; min-width: 84px; text-align: right; }
-.takes { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+.time { flex: none; font: 12px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+.takes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(210px, 100%), 1fr)); gap: 8px; }
 .take {
   text-align: left; cursor: pointer; font: inherit; color: inherit;
   border: 1px solid var(--line); background: var(--sunk); border-radius: 4px;
