@@ -202,6 +202,7 @@ benchmarks has not been tested on what actually arrives.
 | [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) | denoise only, native 48 kHz | MIT/Apache-2.0 | **measured** |
 | [Sidon](https://arxiv.org/html/2509.17052v1) | w2v-BERT + HiFi-GAN resynthesis, 250M params | CC BY 4.0 | queued |
 | [Resemble Enhance](https://github.com/resemble-ai/resemble-enhance) | denoiser + enhancer | MIT | queued |
+| `dehum`, `deplosive`, `declip`, `keepzero` | deterministic repairs, no model | Apache-2.0 (this repo) | **measured** on EARS; see *Repairs that need no model* |
 | [ClearerVoice-Studio](https://github.com/modelscope/ClearerVoice-Studio) | speech super-resolution to 48 kHz, numpy in/out | Apache-2.0 | queued, with a caveat |
 
 ClearerVoice-Studio is the closest fit on paper — Apache-2.0, outputs 48 kHz,
@@ -393,6 +394,57 @@ Opus at that rate is wideband, so there is no missing band to restore — only
 quantisation noise — and both engines rewrite a top that was already present.
 Bandwidth extension is the answer to band limiting, not to codecs in general,
 and the recipe name was misleading us.
+
+## Repairs that need no model
+
+A planning spec for this project asked for deterministic repairs of hum,
+plosives and sparse clipping before any generative model. They are here as
+engines, each with a recipe to test it. None of those damages has been found
+in this project's own archive yet, so the recipes are textbook models rather
+than measured ones, and every number below is from EARS studio speech
+(`results/2026-09-22-repairs-ears.json`, six 10 s excerpts, three speakers):
+
+| `gained`, dB | clean | hum | buzz | plosive | clipped |
+|---|---|---|---|---|---|
+| `dehum:50` | **±0.00** | +0.01 | ±0.00 | ±0.00 | ±0.00 |
+| `deplosive` | −0.10 | ±0.00 | −0.01 | **+0.16** | −0.01 |
+| `highpass:80` | −0.80 | −0.48 | −0.50 | −0.52 | −0.48 |
+| `declip` | **±0.00** | ±0.00 | ±0.00 | ±0.00 | **+0.63** |
+| `deepfilternet:12` | −0.73 | −0.06 | **+1.09** | −0.54 | −0.18 |
+
+- **Nothing leaves clean material entirely alone except `dehum` and
+  `declip`**, which return it bit for bit because they find nothing to do.
+  `deplosive` costs a tenth of a decibel, the global high-pass eight times
+  that. For a podcast whose microphones are mostly good, that row is the
+  one that decides.
+- **`deplosive` beats the high-pass it was built to beat**, +0.16 against
+  −0.52, and the high-pass loses on every recipe, including the one it is
+  usually prescribed for.
+- **`declip` recovers +0.63 dB** on 6 dB of hard clipping, touching only the
+  plateaus.
+- **The hum column says almost nothing, and that is the metric's fault.**
+  Hum lives in a few narrow bins, which a log-spectral distance averaged over
+  the whole band barely sees; measured directly on one excerpt, `dehum`
+  takes the error from −61.3 to −67.7 dBFS. A probe for tonal residue is
+  the missing piece. The listening page is the check until then.
+- **On buzz, the model wins.** DeepFilterNet at a 12 dB bound recovers
+  +1.09 dB where `dehum` does nothing measurable: `dehum` only treats
+  harmonics that stand out of the long-term spectrum, and under a voice most
+  buzz harmonics do not. The spec's guess that stable interference needs no
+  network holds for hum and not, on this evidence, for buzz.
+
+## Listening
+
+```bash
+uv run python scripts/listening_set.py material/local/ears out/kuuntelu
+earshot listen out/kuuntelu        # rebuild the page for any folder set
+```
+
+One folder per comparison, the untouched original first; the page plays
+every take in sync so a switch lands mid-syllable, matches every take's
+speech level to the original, and has a blind mode that shuffles and hides
+the names. It exists because every table above has a column that a
+listener could overrule.
 
 ## Restoring a real file
 
