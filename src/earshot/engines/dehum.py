@@ -48,9 +48,18 @@ BLOCK_S = 0.01
 # second at the fundamental.
 DEFAULT_BANDWIDTH_HZ = 1.0
 
-# How far a harmonic must stand above its neighbourhood to be treated. Six
-# decibels is a guess: loud enough that speech energy, which is spread, does
-# not qualify on its own.
+# How far a harmonic must stand above its neighbourhood to be treated.
+# Swept on six 10 s EARS excerpts (three speakers), survey/local threshold
+# against false harmonics found on the clean excerpts and the mean `tonal`
+# residue removed on `hum` and `buzz`:
+#
+#     6/6 dB:  0 false,  6.3 dB hum,  1.6 dB buzz
+#     4/4 dB:  7 false,  6.0 dB,      1.4 dB
+#     3/3 dB: 25 false,  4.7 dB,      0.2 dB
+#     4/2 dB: 47 false,  3.7 dB,     -0.1 dB
+#
+# Looser thresholds do not even buy more removal: the extra "harmonics" are
+# the voice, and subtracting them adds error at the lines being measured.
 PROMINENCE_DB = 6.0
 
 # The second test, per harmonic on the tracked baseband, after the survey.
