@@ -285,10 +285,9 @@ lands at −34.1 dB at 6 kHz against real Opus at −34.4.
 > **The `room` column below is superseded.** Every number in it was measured
 > with a `reverb()` that also applied −28.1 dB of level, so the engine was
 > working on a signal twenty times quieter and its own output floor looked
-> enormous beside it. The recipe is fixed; these have not been re-measured,
-> because DeepFilterNet needs an extra that is not installed on the machine
-> this was corrected on. The `hiss`, `clean` and `narrowband VoIP` columns
-> are unaffected. See *Corrections*.
+> enormous beside it. The recipe is fixed and the column has been
+> re-measured; the new numbers follow the table. The `hiss`, `clean` and
+> `narrowband VoIP` columns are unaffected. See *Corrections*.
 
 DeepFilterNet is the best denoiser the bench has measured — and unbounded it
 is disqualifying.
@@ -308,10 +307,32 @@ On *reverberant* speech it appeared to decide the signal is noise and remove
 it: 60 dB of speech gone, which is what `deepfilternet:12` exists to prevent.
 That measurement is no longer trustworthy — see the note above — and the
 leash may be calibrated against an artefact rather than against the engine.
-Re-measuring it is the most valuable single thing left in this repo, and it
-needs the `deepfilternet` extra installed. Which bound is right still depends
-on how live your rooms are, which your own archive can answer and a synthetic
-recipe cannot.
+
+**Re-measured with the corrected recipe: the 60 dB was the artefact.** Six
+10 s excerpts of three EARS studio speakers (not podcast material; see
+*Material for a second opinion* below),
+`results/2026-09-22-room-remeasure-ears.json`:
+
+| `room`, corrected | gained | speech | floor | `origin` mid |
+|---|---|---|---|---|
+| DFN, unbounded | +0.27 ±0.90 dB | −5.00 dB | −18.91 dB | +0.74 |
+| **DFN @ 20 dB** | **+0.81 ±0.31 dB** | −4.45 dB | −11.51 dB | +0.85 |
+| DFN @ 12 dB | +0.71 ±0.21 dB | −3.63 dB | −7.35 dB | +0.93 |
+| LavaSR | +0.02 dB | +0.01 dB | −0.02 dB | +0.99 |
+
+Unbounded, it takes 5 dB of the voice with the tail rather than sixty, and
+it is also the only setting that made one speaker worse (p002, −0.82 dB). The
+leash is still worth having, but for a milder reason than the one it was
+introduced for: the bound moves what DFN removes from the voice by about a
+decibel and what it removes from the tail by eleven. On this material the
+20 dB bound recovers the most. Nothing here does real dereverberation: the
+best result is under a decibel of LSD.
+
+On `clean` the same run puts the leash's cost at −0.73 dB (12), −0.97 (20)
+and −1.17 (unbounded), and on `hiss` the unbounded engine recovers +9.42 dB
+with PESQ +1.70, the 20 dB bound +9.34 dB. So on hiss the 20 dB bound gives up
+next to nothing against the unbounded engine and costs less on clean
+material.
 
 ## What the material actually is
 
