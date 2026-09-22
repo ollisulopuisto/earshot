@@ -191,6 +191,21 @@ applied −28.1 dB along with the reverberation. Every recipe is now checked by
 `test_a_recipe_is_damage_and_not_a_fader`, which asserts no recipe smuggles a
 level change past the ones that level on purpose.
 
+**A recipe calibrated on one material can do nothing on another.** The
+`platform-upload` gate sits 18 dB under the speech because podcast room tone
+sits 22 dB under; EARS pauses sit 18 dB under, and on EARS the gate never
+closed. The bench ran, produced a full table, and measured a 15 kHz
+low-pass. Check that a damage did what its name says (here: the fraction of
+exact zeros) before reading a table about it.
+
+**LSD cannot see hum.** A few narrow bins vanish into a band average: dehum
+scored +0.01 dB of `gained` while removing 6.6 dB at the harmonics. The
+`tonal` probe measures the lines themselves.
+
+**Synthetic material fools the hum detector.** `probes.default_material` is a
+pulse train that dwells near 450 Hz long enough to look like a ninth
+harmonic. Tests that need "no hum" use a gliding tone instead.
+
 **Fading a chunk in place rewrites the caller's array.** An engine that
 returns its input unchanged returns a *view*. This nearly shipped in
 `process_in_chunks` and would have damaged the file being restored, with 0.38
