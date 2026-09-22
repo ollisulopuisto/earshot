@@ -195,6 +195,108 @@ def autogain(
     return (x * np.clip(gain, 0.0, 100.0)).astype(np.float32)
 
 
+def hum(
+    x: np.ndarray,
+    rate: int,
+    fundamental: float = 50.0,
+    level_db: float = -30.0,
+    harmonics: int = 6,
+    slope_db: float = -6.0,
+    odd_only: bool = False,
+    drift_hz: float = 0.15,
+    seed: int = 0,
+):
+    """Mains interference: a fundamental and its harmonics, drifting slowly.
+
+    Not measured on this project's material yet — no hum has been found in
+    the studio tracks, and the same-room recordings where a spec expects it
+    have not been through the bench. The shape is the textbook one: a
+    ground loop gives mostly 50 Hz and its low harmonics; a switched supply
+    or a rectifier gives a buzz whose harmonics reach several kHz, stronger
+    on the odd ones. European mains wander by a few tenths of a hertz, which
+    is what makes a fixed notch comb miss and why ``drift_hz`` is here.
+
+    ``level_db`` is the fundamental relative to the speech level, so the
+    same recipe is equally audible on a hot file and a quiet one. Harmonic
+    *n* sits ``slope_db`` per octave below it.
+    """
+    n = len(x)
+    rng = np.random.default_rng(seed)
+    t = np.arange(n) / rate
+    # A slow wander of the mains frequency: one full swing over roughly
+    # half a minute, which is the order of what grid frequency does.
+    wobble = drift_hz * np.sin(2 * np.pi * t / 27.0 + rng.uniform(0, 2 * np.pi))
+    phase = 2 * np.pi * np.cumsum(fundamental + wobble) / rate
+    speech = _speech_rms(x, rate)
+    base = speech * 10 ** (level_db / 20) * np.sqrt(2)
+    y = np.zeros(n)
+    for k in range(1, harmonics + 1):
+        if odd_only and k > 1 and k % 2 == 0:
+            continue
+        if k * fundamental >= rate / 2 * 0.9:
+            break
+        amplitude = base * 10 ** (slope_db * np.log2(k) / 20)
+        y += amplitude * np.sin(k * phase + rng.uniform(0, 2 * np.pi))
+    return (x + y).astype(np.float32)
+
+
+def plosive(
+    x: np.ndarray,
+    rate: int,
+    per_minute: float = 12.0,
+    level_db: float = 0.0,
+    seed: int = 0,
+):
+    """Breath hitting the capsule at the start of a word: a low thump.
+
+    A plosive pop is a pressure wave, not a sound: most of its energy sits
+    below 150 Hz, it lasts a few tens of milliseconds, and it lands on a
+    speech onset — a /p/ or /b/ — rather than at random. Its peak can exceed
+    the speech peak, which is why it clips as often as it thumps.
+
+    Modelled as a damped low-frequency swing starting at onsets picked from
+    the speech envelope: a rise of a few milliseconds, then a decay of
+    30–80 ms at 25–70 Hz. Not fitted to measured pops yet; the podcast
+    archive has not been searched for them. ``level_db`` is the pop's peak
+    relative to the speech's own 99.9th-percentile peak.
+    """
+    n = len(x)
+    rng = np.random.default_rng(seed)
+    y = x.astype(np.float64).copy()
+    envelope = _envelope(np.abs(x), rate, attack_ms=2.0, release_ms=60.0)
+    # The envelope follows peaks, so it is compared against its own loud
+    # level rather than against an RMS: against a quarter of the speech RMS,
+    # a fluent speaker was "loud" in 99.997 per cent of samples and had no
+    # onsets at all.
+    loud = envelope > 0.2 * np.percentile(envelope, 90)
+    # Onsets: where the envelope crosses into speech after at least 60 ms
+    # below it, so the pop lands on the start of a word. Longer rests found
+    # no onsets at all in twelve seconds of a fluent speaker.
+    rest = int(0.06 * rate)
+    counts = np.concatenate(([0], np.cumsum(~loud)))
+    quiet_run = (counts[1:] - counts[np.maximum(0, np.arange(1, n + 1) - rest)]) >= rest
+    onsets = np.flatnonzero(loud[1:] & ~loud[:-1] & quiet_run[:-1]) + 1
+    if not len(onsets):
+        return y.astype(np.float32)
+    wanted = max(1, int(round(per_minute * n / rate / 60)))
+    picked = rng.choice(onsets, size=min(wanted, len(onsets)), replace=False)
+    peak = float(np.percentile(np.abs(x), 99.9)) * 10 ** (level_db / 20)
+    for start in np.sort(picked):
+        # A few ms before the vowel: the release of the stop, not the vowel.
+        start = max(0, int(start - rng.uniform(0.0, 0.01) * rate))
+        decay = rng.uniform(0.03, 0.08)
+        frequency = rng.uniform(25.0, 70.0)
+        length = min(n - start, int(decay * 5 * rate))
+        if length <= 0:
+            continue
+        t = np.arange(length) / rate
+        shape = (1 - np.exp(-t / 0.003)) * np.exp(-t / decay)
+        burst = shape * np.sin(2 * np.pi * frequency * t)
+        burst *= peak / (np.max(np.abs(burst)) + 1e-12)
+        y[start : start + length] += burst * rng.choice((-1.0, 1.0))
+    return y.astype(np.float32)
+
+
 def codec(x: np.ndarray, rate: int, bitrate_kbps: int = 16, name: str = "opus"):
     """A real codec round trip through ffmpeg, when ffmpeg is available.
 
@@ -366,6 +468,32 @@ RECIPES: tuple[Damage, ...] = (
             (dropout, {"rate_per_minute": 20.0}),
             (autogain, {"target_db": -20.0}),
         ),
+    ),
+    Damage(
+        "hum",
+        "mains hum: 50 Hz and five harmonics, -30 dB under the speech, drifting",
+        ((hum, {"fundamental": 50.0, "level_db": -30.0, "harmonics": 6}),),
+    ),
+    Damage(
+        "buzz",
+        "supply buzz: odd-heavy 50 Hz harmonics up to 4 kHz, -36 dB",
+        (
+            # Harmonics to 4 kHz at -3 dB per octave: a rectifier's spike
+            # train is broadband, which is what separates buzz from hum and
+            # what defeats a notch comb that stops at the fifth harmonic.
+            (hum, {"fundamental": 50.0, "level_db": -36.0, "harmonics": 80,
+                   "slope_db": -3.0, "odd_only": True}),
+        ),
+    ),
+    Damage(
+        "plosive",
+        "breath pops on word onsets: 12 a minute, peaking at the speech peak",
+        ((plosive, {"per_minute": 12.0, "level_db": 0.0}),),
+    ),
+    Damage(
+        "clipped",
+        "hard clipping 6 dB under the peak, and nothing else",
+        ((clip, {"headroom_db": -6.0}),),
     ),
     Damage(
         "opus-16k",

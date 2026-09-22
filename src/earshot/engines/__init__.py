@@ -183,8 +183,12 @@ def check_contract(before: np.ndarray, after: np.ndarray, name: str) -> np.ndarr
 
 
 from . import chain as _chain  # noqa: E402,F401
+from . import declip as _declip  # noqa: E402,F401
 from . import deepfilternet as _deepfilternet  # noqa: E402,F401
+from . import dehum as _dehum  # noqa: E402,F401
+from . import keepzero as _keepzero  # noqa: E402,F401
 from . import lavasr as _lavasr  # noqa: E402,F401
 from . import passthrough as _passthrough  # noqa: E402,F401  (registers itself)
+from . import plosive as _plosive  # noqa: E402,F401
 from . import router as _router  # noqa: E402,F401
 from . import vst3 as _vst3  # noqa: E402,F401
