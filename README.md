@@ -309,8 +309,8 @@ That measurement is no longer trustworthy — see the note above — and the
 leash may be calibrated against an artefact rather than against the engine.
 
 **Re-measured with the corrected recipe: the 60 dB was the artefact.** Six
-10 s excerpts of three EARS studio speakers (not podcast material; see
-*Material for a second opinion* below),
+10 s excerpts of three EARS studio speakers (not podcast material;
+`docs/handover.md` says where it came from),
 `results/2026-09-22-room-remeasure-ears.json`:
 
 | `room`, corrected | gained | speech | floor | `origin` mid |
