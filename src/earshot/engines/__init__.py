@@ -188,6 +188,7 @@ from . import deepfilternet as _deepfilternet  # noqa: E402,F401
 from . import dehum as _dehum  # noqa: E402,F401
 from . import keepzero as _keepzero  # noqa: E402,F401
 from . import lavasr as _lavasr  # noqa: E402,F401
+from . import notch as _notch  # noqa: E402,F401
 from . import passthrough as _passthrough  # noqa: E402,F401  (registers itself)
 from . import plosive as _plosive  # noqa: E402,F401
 from . import router as _router  # noqa: E402,F401
