@@ -16,8 +16,10 @@ carry. The page applies the loudness match itself, so no file is gained.
 from __future__ import annotations
 
 import json
+import argparse
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -46,7 +48,7 @@ PLATFORM_EARS = degrade.Damage(
 
 # (folder, speaker file, start s, recipe, title, what to listen for,
 #  [(engine spec, label, note)])
-PLAN = [
+EARS = [
     ("01-puhdas", "p008 freeform 01.wav", 42.0, "clean",
      "Puhdas matala miesääni: saako mikään koskea tähän?",
      "Mitään ei ole rikottu. Paras otto on se, jota ei erota alkuperäisestä. "
@@ -136,10 +138,76 @@ PLAN = [
 ]
 
 
-def main(source: Path, target: Path, only: set[str] | None = None) -> None:
+@dataclass(frozen=True)
+class Plan:
+    comparisons: list
+    original: tuple[str, str]
+    intro: str
+    title: str
+
+
+EARS_INTRO = """
+<p>Kymmenen vertailua, joissa jokainen kokeilu on arvaus. Materiaali on
+EARS-korpuksen studioäänitystä (kolme englanninkielistä puhujaa, 48 kHz),
+ johon vauriot on tehty tarkoituksella. Siksi alkuperäinen on aina tallessa
+ensimmäisenä.</p>
+<p>Otot soivat samanaikaisesti, ja valinta vaihtaa vain kuuluvan oton, joten
+vertailu tapahtuu kesken tavun. <b>Tasoitus</b> säätää kaikki otot
+alkuperäisen puhetasolle, jotta kovempi ei voita vain siksi, että se on
+kovempi. <b>Sokko</b> sekoittaa ottojen järjestyksen ja piilottaa nimet.</p>
+<p>EARS on lisensoitu CC BY-NC 4.0 -ehdoin. Aineisto on tarkoitettu vain
+arviointiin eikä sitä ole viety repoon.</p>
+"""
+
+PODCAST = [
+    ("01-puhdas", "nyman a.wav", 15.6, "clean", "Puhdas lähimikrofoni",
+     "Alkuperäinen on jo puhdas. Kuuntele, säilyvätkö matala ääni ja ilmavuus.",
+     [("dehum:50", "Hurinanpoisto", ""), ("notch:50", "50 Hz lovi", ""),
+      ("deplosive", "Plosiivirajoitin", ""), ("highpass:80", "Ylipäästö 80 Hz", ""),
+      ("deepfilternet:12", "DeepFilterNet 12 dB", "")]),
+    ("02-lovi-wancke", "wancke b.wav", 20.0, "clean", "Lovi etävieraan äänessä",
+     "Tässä lovi heikensi PESQ-tulosta 0,56. Kuuntele äänen ohentumista.",
+     [("notch:50", "50 Hz lovi", ""), ("dehum:50", "Hurinanpoisto", "")]),
+    ("03-huone-nyman", "nyman b.wav", 4.0, "room", "Huonekaiku, Nyman",
+     "Poistuuko kaiku puheen mukana?", [("deepfilternet", "DeepFilterNet", ""),
+      ("deepfilternet:20", "DeepFilterNet 20 dB", ""), ("deepfilternet:12", "DeepFilterNet 12 dB", "")]),
+    ("04-huone-wancke", "wancke a.wav", 51.6, "room", "Huonekaiku, Wancke",
+     "Poistuuko kaiku puheen mukana?", [("deepfilternet", "DeepFilterNet", ""),
+      ("deepfilternet:20", "DeepFilterNet 20 dB", ""), ("deepfilternet:12", "DeepFilterNet 12 dB", "")]),
+    ("05-hurina", "nyman a.wav", 23.6, "hum", "Verkkohurina",
+     "Kuuntele taukoja ja matalia vokaaleja.", [("dehum:50", "Hurinanpoisto", ""),
+      ("notch:50", "50 Hz lovi", ""), ("highpass:80", "Ylipäästö 80 Hz", ""),
+      ("deepfilternet:12", "DeepFilterNet 12 dB", "")]),
+    ("06-maadoitus", "wancke b.wav", 12.0, "ground-loop", "Maadoitussilmukka",
+     "Kuuntele hurinan lisäksi puheen rungon säilymistä.", [("notch:50", "50 Hz lovi", ""),
+      ("dehum:50", "Hurinanpoisto", ""), ("deepfilternet:12", "DeepFilterNet 12 dB", "")]),
+    ("07-kohina", "nyman b.wav", 50.8, "hiss", "Laajakaistainen kohina",
+     "Kuuntele, säilyykö puhe luonnollisena.", [("deepfilternet", "DeepFilterNet", ""),
+      ("deepfilternet:20", "DeepFilterNet 20 dB", ""), ("deepfilternet:12", "DeepFilterNet 12 dB", "")]),
+    ("08-plosiivit", "wancke a.wav", 1.2, "plosive", "Plosiivit",
+     "Kuuntele pamauksia ja niiden välistä ääntä.", [("deplosive", "Plosiivirajoitin", ""),
+      ("highpass:80", "Ylipäästö 80 Hz", "")]),
+    ("09-klippaus", "nyman a.wav", 33.6, "clipped", "Klippaus",
+     "Kuuluuko särö, ja auttaako de-clip?", [("declip", "Declip", "")]),
+]
+
+PODCAST_INTRO = """
+<p>Vertailut on tehty pp53-podcastin nyman- ja wancke-äänitteistä.
+Tämä on yksityistä aineistoa: kuuntelusettiä ei saa julkaista eikä jakaa.</p>
+<p>Otot soivat samanaikaisesti. <b>Tasoitus</b> säätää niiden tason vertailua
+varten ja <b>Sokko</b> piilottaa nimet.</p>
+"""
+
+SETS = {
+    "ears": Plan(EARS, ("Alkuperäinen", "EARS-studioäänitys sellaisenaan: tähän verrataan"), EARS_INTRO, "Earshot-kuuntelu"),
+    "podcast": Plan(PODCAST, ("Alkuperäinen", "pp53-podcastin puhdas äänite"), PODCAST_INTRO, "Podcast-kuuntelu (yksityinen)"),
+}
+
+
+def main(source: Path, target: Path, plan: Plan, only: set[str] | None = None) -> None:
     cache: dict[str, engines.Loaded] = {}
     target.mkdir(parents=True, exist_ok=True)
-    for folder, speaker_file, start, recipe_name, title, listen_for, takes in PLAN:
+    for folder, speaker_file, start, recipe_name, title, listen_for, takes in plan.comparisons:
         if only and folder not in only:
             continue
         started = time.time()
@@ -158,7 +226,7 @@ def main(source: Path, target: Path, only: set[str] | None = None) -> None:
             sf.write(out / filename, np.clip(audio, -1, 1), rate, subtype="PCM_16")
             labels[filename] = {"label": label, "note": note}
 
-        write(0, "alkuperainen", clean, *ORIGINAL)
+        write(0, "alkuperainen", clean, *plan.original)
         index = 1
         if recipe_name != "clean":
             write(1, "vaurio", damaged, DAMAGED[0], recipe.describe)
@@ -179,24 +247,15 @@ def main(source: Path, target: Path, only: set[str] | None = None) -> None:
         }, ensure_ascii=False, indent=1), encoding="utf-8")
         print(f"{folder}: {index} takes in {time.time() - started:.1f} s", flush=True)
 
-    intro = INTRO
-    listen.build(target, title="Earshot-kuuntelu", intro=intro)
+    listen.build(target, title=plan.title, intro=plan.intro)
     print(f"wrote {target / 'index.html'}")
 
 
-INTRO = """
-<p>Kymmenen vertailua, joissa jokainen kokeilu on arvaus. Materiaali on
-EARS-korpuksen studioäänitystä (kolme englanninkielistä puhujaa, 48 kHz),
-johon vauriot on tehty tarkoituksella. Siksi alkuperäinen on aina tallessa
-ensimmäisenä.</p>
-<p>Otot soivat samanaikaisesti, ja valinta vaihtaa vain kuuluvan oton, joten
-vertailu tapahtuu kesken tavun. <b>Tasoitus</b> säätää kaikki otot
-alkuperäisen puhetasolle, jotta kovempi ei voita vain siksi, että se on
-kovempi. <b>Sokko</b> sekoittaa ottojen järjestyksen ja piilottaa nimet.</p>
-<p>EARS on lisensoitu CC BY-NC 4.0 -ehdoin. Aineisto on tarkoitettu vain
-arviointiin eikä sitä ole viety repoon.</p>
-"""
-
-
 if __name__ == "__main__":
-    main(Path(sys.argv[1]), Path(sys.argv[2]), set(sys.argv[3:]) or None)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--set", choices=SETS, default="ears")
+    parser.add_argument("source", type=Path)
+    parser.add_argument("target", type=Path)
+    parser.add_argument("only", nargs="*")
+    args = parser.parse_args()
+    main(args.source, args.target, SETS[args.set], set(args.only) or None)
