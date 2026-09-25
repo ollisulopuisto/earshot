@@ -25,6 +25,11 @@ material on an Apple M2, not from a vendor's claim or a paper.
 | `deepfilternet` | denoise only, PyTorch, `:N` bounds attenuation | yes |
 | `chain:a+b` | engines in series, contract checked between stages | yes |
 | `router:e` | the adaptive one: engine only where the input is empty | yes |
+| `dehum[:50\|60][@bw]` | mains hum and buzz, subtracted per harmonic | on EARS |
+| `deplosive[:corner]` | dynamic low band against the speaker's own balance | on EARS |
+| `highpass:N` | the global filter `deplosive` has to beat | on EARS |
+| `declip` | cubic redraw of short plateaus | on EARS |
+| `keepzero:e` | puts a gate's digital silence back after `e` | listening only |
 
 Seven result sets in `results/`, summarised by `earshot scoreboard`.
 
@@ -54,8 +59,11 @@ was measured on `hiss`, which has not changed.
 > have been. Corrected, LavaSR's `room` numbers moved from −6.12 dB to
 > +0.13 dB and its apparent +19.67 dB of added floor to +1.56. DeepFilterNet
 > was not re-measured — it needs an extra that is not installed — so
-> `deepfilternet:12` may be a leash on an artefact. **This is the most
-> valuable single thing left to re-run in this repo.**
+> `deepfilternet:12` may be a leash on an artefact. ~~This is the most
+> valuable single thing left to re-run in this repo.~~ **Re-run 22 September
+> on EARS: it was the artefact.** Unbounded DFN takes 5.0 dB of speech on
+> the corrected `room`, not 60; @20 dB takes 4.45 and recovers the most,
+> +0.81 dB. Still to repeat on the podcast material.
 
 **The router does what it was built to do, conservatively.** On material that
 needs nothing it changes nothing at all — `origin` +1.00 in every band,
@@ -74,6 +82,35 @@ always-on engine does (+0.35 against +0.42) while holding `origin` far higher.
 −6.12 dB on clean against dxRevive's −3.78: the second generative stage
 overwrites the first's work with its own guess. Routing the second stage
 fixes it exactly.
+
+## 22 September 2026: repairs, EARS, and a listening page
+
+Picked up from a planning spec written without knowledge of this repo. What
+was taken from it, and what was not, is in the PR that added this section
+(#9). In short: the spec's model-free repairs (hum, plosives, sparse
+clipping) were built as engines; its architecture (DAG scheduler, device
+workers, remote queue) was not, because nothing measured here needs it yet.
+
+**The DeepFilterNet re-measure is done.** Corrected `room`, unbounded DFN
+takes 5.0 dB of speech, not 60; the 20 dB bound recovers most (+0.81 dB).
+Numbers in the README under *The denoiser*.
+
+**Second-opinion material.** The session had no podcast audio, so it used
+EARS (Meta, CC BY-NC 4.0): anechoic studio speech, 48 kHz, 107 speakers,
+fetched from GitHub releases. Three speakers are in `material/local/ears/`
+on the machine that ran it and nowhere else. It is English and anechoic,
+which makes it good ground truth and a poor stand-in for a Finnish podcast
+room. Do not commit it: NC is not compatible with this repo's licence.
+
+**Listening.** `earshot listen DIR` builds the synced, loudness-matched page;
+`scripts/listening_set.py` renders ten comparisons into `out/kuuntelu/`.
+The set from this session is published as a private artifact for the owner.
+
+**Blocked, not tried.** AP-BWE (Google Drive), FlashSR, Resemble Enhance,
+VoiceFixer and ClearerVoice (Hugging Face) all host weights where the cloud
+session could not reach. DeepFilterNet's own download URL also returned 403
+there; its weights were taken from a sparse git checkout of the upstream
+repository instead, which is the same file.
 
 ## What is not known, in priority order
 
@@ -153,6 +190,21 @@ that names it.
 applied −28.1 dB along with the reverberation. Every recipe is now checked by
 `test_a_recipe_is_damage_and_not_a_fader`, which asserts no recipe smuggles a
 level change past the ones that level on purpose.
+
+**A recipe calibrated on one material can do nothing on another.** The
+`platform-upload` gate sits 18 dB under the speech because podcast room tone
+sits 22 dB under; EARS pauses sit 18 dB under, and on EARS the gate never
+closed. The bench ran, produced a full table, and measured a 15 kHz
+low-pass. Check that a damage did what its name says (here: the fraction of
+exact zeros) before reading a table about it.
+
+**LSD cannot see hum.** A few narrow bins vanish into a band average: dehum
+scored +0.01 dB of `gained` while removing 6.6 dB at the harmonics. The
+`tonal` probe measures the lines themselves.
+
+**Synthetic material fools the hum detector.** `probes.default_material` is a
+pulse train that dwells near 450 Hz long enough to look like a ninth
+harmonic. Tests that need "no hum" use a gliding tone instead.
 
 **Fading a chunk in place rewrites the caller's array.** An engine that
 returns its input unchanged returns a *view*. This nearly shipped in

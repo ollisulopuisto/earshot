@@ -202,6 +202,7 @@ benchmarks has not been tested on what actually arrives.
 | [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) | denoise only, native 48 kHz | MIT/Apache-2.0 | **measured** |
 | [Sidon](https://arxiv.org/html/2509.17052v1) | w2v-BERT + HiFi-GAN resynthesis, 250M params | CC BY 4.0 | queued |
 | [Resemble Enhance](https://github.com/resemble-ai/resemble-enhance) | denoiser + enhancer | MIT | queued |
+| `dehum`, `deplosive`, `declip`, `keepzero` | deterministic repairs, no model | Apache-2.0 (this repo) | **measured** on EARS; see *Repairs that need no model* |
 | [ClearerVoice-Studio](https://github.com/modelscope/ClearerVoice-Studio) | speech super-resolution to 48 kHz, numpy in/out | Apache-2.0 | queued, with a caveat |
 
 ClearerVoice-Studio is the closest fit on paper — Apache-2.0, outputs 48 kHz,
@@ -285,10 +286,9 @@ lands at −34.1 dB at 6 kHz against real Opus at −34.4.
 > **The `room` column below is superseded.** Every number in it was measured
 > with a `reverb()` that also applied −28.1 dB of level, so the engine was
 > working on a signal twenty times quieter and its own output floor looked
-> enormous beside it. The recipe is fixed; these have not been re-measured,
-> because DeepFilterNet needs an extra that is not installed on the machine
-> this was corrected on. The `hiss`, `clean` and `narrowband VoIP` columns
-> are unaffected. See *Corrections*.
+> enormous beside it. The recipe is fixed and the column has been
+> re-measured; the new numbers follow the table. The `hiss`, `clean` and
+> `narrowband VoIP` columns are unaffected. See *Corrections*.
 
 DeepFilterNet is the best denoiser the bench has measured — and unbounded it
 is disqualifying.
@@ -308,10 +308,32 @@ On *reverberant* speech it appeared to decide the signal is noise and remove
 it: 60 dB of speech gone, which is what `deepfilternet:12` exists to prevent.
 That measurement is no longer trustworthy — see the note above — and the
 leash may be calibrated against an artefact rather than against the engine.
-Re-measuring it is the most valuable single thing left in this repo, and it
-needs the `deepfilternet` extra installed. Which bound is right still depends
-on how live your rooms are, which your own archive can answer and a synthetic
-recipe cannot.
+
+**Re-measured with the corrected recipe: the 60 dB was the artefact.** Six
+10 s excerpts of three EARS studio speakers (not podcast material;
+`docs/handover.md` says where it came from),
+`results/2026-09-22-room-remeasure-ears.json`:
+
+| `room`, corrected | gained | speech | floor | `origin` mid |
+|---|---|---|---|---|
+| DFN, unbounded | +0.27 ±0.90 dB | −5.00 dB | −18.91 dB | +0.74 |
+| **DFN @ 20 dB** | **+0.81 ±0.31 dB** | −4.45 dB | −11.51 dB | +0.85 |
+| DFN @ 12 dB | +0.71 ±0.21 dB | −3.63 dB | −7.35 dB | +0.93 |
+| LavaSR | +0.02 dB | +0.01 dB | −0.02 dB | +0.99 |
+
+Unbounded, it takes 5 dB of the voice with the tail rather than sixty, and
+it is also the only setting that made one speaker worse (p002, −0.82 dB). The
+leash is still worth having, but for a milder reason than the one it was
+introduced for: the bound moves what DFN removes from the voice by about a
+decibel and what it removes from the tail by eleven. On this material the
+20 dB bound recovers the most. Nothing here does real dereverberation: the
+best result is under a decibel of LSD.
+
+On `clean` the same run puts the leash's cost at −0.73 dB (12), −0.97 (20)
+and −1.17 (unbounded), and on `hiss` the unbounded engine recovers +9.42 dB
+with PESQ +1.70, the 20 dB bound +9.34 dB. So on hiss the 20 dB bound gives up
+next to nothing against the unbounded engine and costs less on clean
+material.
 
 ## What the material actually is
 
@@ -372,6 +394,80 @@ Opus at that rate is wideband, so there is no missing band to restore — only
 quantisation noise — and both engines rewrite a top that was already present.
 Bandwidth extension is the answer to band limiting, not to codecs in general,
 and the recipe name was misleading us.
+
+## Repairs that need no model
+
+A planning spec for this project asked for deterministic repairs of hum,
+plosives and sparse clipping before any generative model. They are here as
+engines, each with a recipe to test it. None of those damages has been found
+in this project's own archive yet, so the recipes are textbook models rather
+than measured ones, and every number below is from EARS studio speech
+(`results/2026-09-22-repairs-ears.json`, six 10 s excerpts, three speakers):
+
+| `gained`, dB | clean | hum | buzz | plosive | clipped |
+|---|---|---|---|---|---|
+| `dehum:50` | **±0.00** | +0.01 | ±0.00 | ±0.00 | ±0.00 |
+| `deplosive` | −0.10 | ±0.00 | −0.01 | **+0.16** | −0.01 |
+| `highpass:80` | −0.80 | −0.48 | −0.50 | −0.52 | −0.48 |
+| `declip` | **±0.00** | ±0.00 | ±0.00 | ±0.00 | **+0.63** |
+| `deepfilternet:12` | −0.73 | −0.06 | **+1.09** | −0.54 | −0.18 |
+
+- **Nothing leaves clean material entirely alone except `dehum` and
+  `declip`**, which return it bit for bit because they find nothing to do.
+  `deplosive` costs a tenth of a decibel, the global high-pass eight times
+  that. For a podcast whose microphones are mostly good, that row is the
+  one that decides.
+- **`deplosive` beats the high-pass it was built to beat**, +0.16 against
+  −0.52, and the high-pass loses on every recipe, including the one it is
+  usually prescribed for.
+- **`declip` recovers +0.63 dB** on 6 dB of hard clipping, touching only the
+  plateaus.
+- **The hum column says almost nothing, and that is the metric's fault.**
+  Hum lives in a few narrow bins, which a log-spectral distance averaged over
+  the whole band barely sees. So there is now a `tonal` probe, run only on
+  recipes that add hum: the error left at the mains harmonics, relative to
+  the speech (`results/2026-09-22-hum-tonal-ears.json`):
+
+  | `tonal/removed`, dB | hum | buzz |
+  |---|---|---|
+  | `dehum:50` | +6.57 ±1.43 | +1.78 ±0.18 |
+  | `dehum:50@2` | +6.80 ±0.99 | +1.83 ±0.05 |
+  | `deepfilternet:12` | +3.10 ±1.69 | +1.79 ±1.10 |
+  | `chain:dehum:50+deepfilternet:12` | **+7.19 ±1.53** | **+3.08 ±1.45** |
+
+  On hum, the subtraction removes twice what the denoiser does and costs
+  the speech nothing (−0.01 dB against DFN's −0.64). Only one to three of
+  the recipe's six harmonics clear the detector on a voice; loosening the
+  threshold was swept and found only voice harmonics, removing *less*.
+- **On buzz, the model wins the LSD column and ties on the lines.**
+  DeepFilterNet at a 12 dB bound recovers +1.09 dB of LSD and the same
+  1.8 dB of line residue as `dehum`, whose detector sees few buzz harmonics
+  under a voice. Chained, the two take out 3.08 dB. The spec's guess that
+  stable interference needs no network holds for hum and not, on this
+  evidence, for buzz.
+
+**`platform-upload` measures nothing on EARS.** Its gate sits 18 dB under
+the speech, calibrated on podcast studio tracks whose room tone is about
+22 dB down; EARS pauses sit about 18 dB down, so on EARS freeform speech the
+gate closed 0.0 per cent of the time and the recipe was a plain 15 kHz
+low-pass. A bench run on it was discarded. For the listening set the gate
+was set to −14 dB on a read passage (29.7 per cent silenced), where the
+energy left in the gaps is: LavaSR −74.8 dBFS, `keepzero:lavasr` −96.1,
+DeepFilterNet@12 −90.2, `router:lavasr` −117.2. The router already passes
+silence through whole; `keepzero` is only for an engine used alone.
+
+## Listening
+
+```bash
+uv run python scripts/listening_set.py material/local/ears out/kuuntelu
+earshot listen out/kuuntelu        # rebuild the page for any folder set
+```
+
+One folder per comparison, the untouched original first; the page plays
+every take in sync so a switch lands mid-syllable, matches every take's
+speech level to the original, and has a blind mode that shuffles and hides
+the names. It exists because every table above has a column that a
+listener could overrule.
 
 ## Restoring a real file
 

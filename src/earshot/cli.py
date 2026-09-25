@@ -93,6 +93,15 @@ def main(argv: list[str] | None = None) -> int:
     listing = sub.add_parser("damages", help="list the damage recipes")
     listing.set_defaults(func=_damages)
 
+    listen = sub.add_parser(
+        "listen", help="build a synced, loudness-matched listening page for a "
+                       "directory of comparison folders",
+    )
+    listen.add_argument("directory", metavar="DIR",
+                        help="one sub-folder of WAV files per comparison")
+    listen.add_argument("--title", default="Earshot-kuuntelu")
+    listen.set_defaults(func=_listen)
+
     board = sub.add_parser(
         "scoreboard", help="one table across stored results (default results/*.json)"
     )
@@ -173,6 +182,14 @@ def _restore(args) -> int:
             f"  speech {before.speech:+.1f} -> {after.speech:+.1f} dBFS, "
             f"floor {before.floor:+.1f} -> {after.floor:+.1f} dBFS"
         )
+    return 0
+
+
+def _listen(args) -> int:
+    from . import listen
+
+    target = listen.build(Path(args.directory), title=args.title)
+    print(f"wrote {target}")
     return 0
 
 

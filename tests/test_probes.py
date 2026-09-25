@@ -87,3 +87,28 @@ def test_preservation_measures_non_speech():
     run = probes.preservation(engines.load("passthrough"), RATE, 3.0)
     assert abs(run.value("preservation", "overall")) < 1e-6
     assert run.value("preservation", "500-2000Hz") is not None
+
+
+def test_recovery_is_scored_where_a_hum_actually_lives():
+    """The band the probe looks in has to be the band the damage hit.
+
+    ``ground-loop`` puts its energy at 50 Hz and a few harmonics, and the
+    default recovery band starts at 100 Hz — so the fundamental, the loudest
+    part of it, was outside the measurement entirely, and the harmonics that
+    were inside got diluted across 100 Hz to 16 kHz. An engine that removed
+    21 to 37 dB of hum scored +0.00 dB of recovery.
+    """
+    from earshot import degrade, engines, probes
+
+    rate = 48000
+    low, high = probes._damaged_band(degrade.by_name("ground-loop"), rate)
+    assert low < 50.0, f"band starts at {low:.0f} Hz, above the mains fundamental"
+    assert high < 2000.0, f"band reaches {high:.0f} Hz and dilutes the hum away"
+
+    clean = probes.default_material(rate, 8.0)
+    run = probes.run_all(engines.load("notch:50"), clean, rate,
+                         degrade.by_name("ground-loop"))
+    gained = run.value("recovery", "gained")
+    assert gained is not None and gained > 1.0, (
+        f"a notch that removes the hum scored {gained} dB of recovery"
+    )

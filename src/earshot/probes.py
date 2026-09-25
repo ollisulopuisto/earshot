@@ -25,6 +25,8 @@ decision at least once:
                   Here for comparability with published claims, not because
                   they are the truth: both are referenced and both were
                   designed for telephony.
+``tonal``         On hum and buzz only: how much is left at the mains
+                  harmonics. The only way to see hum; LSD averages it away.
 ``throughput``    How much faster than realtime, and on how many cores.
 
 Every probe returns ``Result`` objects with ``better`` set, so the report
@@ -232,6 +234,25 @@ def run_all(
                    "positive means closer to the original than the damage was"),
         ]
 
+    # --- tonal: what is left at the mains harmonics, when the damage put
+    # something there. Hum lives in a few narrow bins, and a log-spectral
+    # distance averaged over the whole band does not see it: measured on six
+    # EARS excerpts, a subtraction that took one excerpt's error from -61.3
+    # to -67.7 dBFS scored +0.01 dB of `gained`.
+    tonal = [o for f, o in damage.steps if f in (degrade.hum, degrade.mains)]
+    if tonal:
+        fundamental = float(tonal[0].get("mains_hz", 50.0))
+        before = metrics.line_residue(broken - clean, clean, rate, fundamental)
+        after = metrics.line_residue(restored - clean, clean, rate, fundamental)
+        run.results += [
+            Result("tonal", "before", before, "dB", "lower",
+                   "error at the mains harmonics, relative to the speech"),
+            Result("tonal", "after", after, "dB", "lower",
+                   "the same after the engine"),
+            Result("tonal", "removed", before - after, "dB", "higher",
+                   "positive means less hum than the damage left"),
+        ]
+
     # --- perceptual: the literature's numbers, for comparison with papers
     before_scores = metrics.perceptual(clean, broken, rate)
     after_scores = metrics.perceptual(clean, restored, rate)
@@ -371,8 +392,9 @@ def _damaged_band(damage: degrade.Damage, rate: int) -> tuple[float, float]:
     """Which band to score recovery in, given what the damage did.
 
     Band-limiting removes a specific region and that is where the question
-    lies. Everything else damages the whole signal, so the whole signal is
-    the band.
+    lies. A mains hum is narrower still and sits below where the default band
+    even starts. Everything else damages the whole signal, so the whole signal
+    is the band.
     """
     ceiling = min(16000.0, rate / 2 * 0.95)
     for function, options in damage.steps:
@@ -380,6 +402,15 @@ def _damaged_band(damage: degrade.Damage, rate: int) -> tuple[float, float]:
             high = float(options.get("high") or 0)
             if 0 < high < ceiling:
                 return high, ceiling
+        if function is degrade.hum:
+            # The fundamental is the loudest part and the default floor of
+            # 100 Hz sat above it, so the damage was outside the measurement
+            # and an engine that removed 21 to 37 dB of hum scored +0.00.
+            # The top follows the harmonics rather than the spectrum: scored
+            # to 16 kHz, a narrowband change is diluted into nothing.
+            mains = float(options.get("mains_hz") or 50.0)
+            count = int(options.get("harmonics") or 6)
+            return mains * 0.4, min(mains * (count + 1), ceiling)
     return 100.0, ceiling
 
 
