@@ -36,6 +36,9 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from colab_job import RESULT_TAR, UPLOAD_TAR  # noqa: E402
 
 JOB = ROOT / "scripts" / "colab_job.py"
+# No deepfilternet: deepfilterlib has no wheel for Colab's Python 3.13 and
+# needs a Rust build there (first run, 2026-10-02). Ask for it explicitly.
+DEFAULT_EXTRAS = "universr,unipase,novasr,lavasr"
 # Six hours: past any bench run here, and short of leaving a GPU billed
 # overnight if something hangs.
 TIMEOUT_S = 6 * 3600
@@ -111,7 +114,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--session", default="earshot")
     parser.add_argument("--gpu", default="T4")
-    parser.add_argument("--extras", default="universr,unipase,novasr,lavasr,deepfilternet")
+    parser.add_argument("--extras", default=DEFAULT_EXTRAS)
     parser.add_argument("--ears", default="p001,p002,p008",
                         help="EARS speakers fetched on the VM; empty for none")
     parser.add_argument(

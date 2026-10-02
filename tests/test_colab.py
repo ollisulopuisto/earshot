@@ -131,3 +131,21 @@ def test_a_failed_step_still_stops_the_vm(monkeypatch):
     assert colab.execute(_plan(), session="earshot", keep=False) == 1
     assert _verb(ran[-1]) == "stop"
     assert not any(_verb(c) == "download" for c in ran)
+
+
+def test_a_stale_result_cannot_pass_for_a_new_one(tmp_path, monkeypatch):
+    """`colab exec` returns success even when the job raises — the kernel
+    swallows the exit — so the result file is what proves a run finished.
+    One left by an earlier run on the same VM must be gone before this run
+    starts, or a failed run downloads it as if it were new."""
+    stale = tmp_path / "result.tar"
+    stale.write_bytes(b"old")
+    monkeypatch.setattr(job, "RESULT_TAR", str(stale))
+    job.clear_result()
+    assert not stale.exists()
+
+
+def test_the_default_extras_install_on_colab():
+    """deepfilterlib has no wheel for Colab's Python 3.13 and needs a Rust
+    build there (measured on the first run, 2026-10-02)."""
+    assert "deepfilternet" not in colab.DEFAULT_EXTRAS

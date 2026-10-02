@@ -80,6 +80,13 @@ def _fetch_ears(speakers: list[str]) -> None:
     print(f"EARS: {len(speakers)} speakers, {renamed} freeform files", flush=True)
 
 
+def clear_result() -> None:
+    """`colab exec` reports success even when this script fails (the kernel
+    swallows the exit), so the result file is the proof a run finished. One
+    left by an earlier run on the same VM must not pass for this one's."""
+    Path(RESULT_TAR).unlink(missing_ok=True)
+
+
 def main() -> None:
     commit = os.environ["EARSHOT_COMMIT"]
     extras = [e for e in os.environ.get("EARSHOT_EXTRAS", "").split(",") if e]
@@ -87,6 +94,7 @@ def main() -> None:
     run = os.environ["EARSHOT_RUN"]
     result = os.environ["EARSHOT_RESULT"]
     started = time.time()
+    clear_result()
 
     _sh("nvidia-smi --query-gpu=name,memory.total --format=csv,noheader || true")
     if not CHECKOUT.exists():
