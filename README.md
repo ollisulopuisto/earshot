@@ -204,6 +204,7 @@ benchmarks has not been tested on what actually arrives.
 | [Resemble Enhance](https://github.com/resemble-ai/resemble-enhance) | denoiser + enhancer | MIT | queued |
 | `dehum`, `deplosive`, `declip`, `keepzero` | deterministic repairs, no model | Apache-2.0 (this repo) | **measured** on EARS; see *Repairs that need no model* |
 | [ClearerVoice-Studio](https://github.com/modelscope/ClearerVoice-Studio) | speech super-resolution to 48 kHz, numpy in/out | Apache-2.0 | queued, with a caveat |
+| [SAM-Audio](https://github.com/facebookresearch/sam-audio) | prompted source separation (text, time span, video); generates and reranks candidates | SAM License (custom); weights gated on Hugging Face | parked: separation, not repair; needs CUDA and a bleed/crosstalk degradation to measure against |
 
 ClearerVoice-Studio is the closest fit on paper — Apache-2.0, outputs 48 kHz,
 and takes and returns a numpy array, which is the interface an engine here
