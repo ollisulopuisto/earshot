@@ -13,6 +13,21 @@ from [ysharma3501/LavaSR](https://github.com/ysharma3501/LavaSR).
 Model weights are **not** here — they are fetched on first use and verified
 against a digest.
 
+## UniPASE — MIT, with Apache-2.0 parts
+
+The inference tree under `unipase/` — eighteen files from `models/` of
+[xiaobin-rong/unipase](https://github.com/xiaobin-rong/unipase) at commit
+`857b60a`, taken 2026-10-02; each pin records its upstream path. Training
+code and discriminators are left out. Licence: `LICENSE-unipase` (MIT), and
+`LICENSE-unipase-*` for the code it derives from in turn (Cisco's PASE and
+ESPnet under Apache-2.0, WavLM, Vocos/WavTokenizer and others).
+
+The post-net imports espnet for one base class and one lookup.
+`earshot.engines.unipase` supplies both at the call site instead of
+installing espnet; the files here are untouched.
+
+The four weight files (2.2 GB) are fetched and verified like any other.
+
 ## Updating
 
 Deliberately, never automatically:

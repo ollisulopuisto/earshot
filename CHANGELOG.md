@@ -4,6 +4,15 @@ What each version contains, for whoever runs the bench or restores a file
 with it. Versions are CalVer (`vYY.MM.DD.N`). Entries up to v26.10.02.1 were
 written afterwards from `git log`; the commit messages carry the numbers.
 
+## [v26.10.02.3] - 2026-10-02
+
+- `unipase` engine (and `unipase:noplc`): denoising, bandwidth extension and
+  packet loss concealment in one resynthesising model, inference vendored
+  and pinned, 2.2 GB of weights fetched on first use. It turns digital
+  silence into −32.8 dBFS of sound, so use `keepzero:unipase` on gated
+  platform audio.
+- UniPASE added to the `bwe` listening set.
+
 ## [v26.10.02.2] - 2026-10-02
 
 - Two new engines, each behind its own extra: `universr` (flow-matching

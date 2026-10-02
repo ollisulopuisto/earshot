@@ -207,6 +207,15 @@ BWE_TAKES = [
     ("router:universr", "UniverSR reitittimen kautta", ""),
     ("novasr", "NovaSR", "53 kt, kaikki 16 kHz:n kautta"),
     ("router:novasr", "NovaSR reitittimen kautta", ""),
+    ("unipase", "UniPASE", "puhuu kaiken uudelleen: kohinanpoisto, kaista, pakettihäviö"),
+    ("router:unipase", "UniPASE reitittimen kautta", ""),
+]
+
+# Gated platform audio is partly exact zero, and UniPASE speaks into digital
+# silence at −32.8 dBFS (its contract test), so these also get the version
+# that puts the zeros back.
+BWE_TAKES_GATED = BWE_TAKES + [
+    ("keepzero:unipase", "UniPASE, hiljaisuus palautettu", "nollat takaisin nolliksi"),
 ]
 
 BWE = [
@@ -226,15 +235,15 @@ BWE = [
     ("05-alusta", "nyman a.wav", 23.6, "platform-upload",
      "Etätallennusalusta: kaista 15 kHz:iin, tauot nollaa",
      "Lähes täysikaistainen. UniverSR leikkaa syötteen 12 kHz:iin ennen "
-     "keksimistä; reititin palauttaa sen, mikä oli tallessa.", BWE_TAKES),
+     "keksimistä; reititin palauttaa sen, mikä oli tallessa.", BWE_TAKES_GATED),
     ("06-aito-puhelu", "../../../material/local/jussi-recording-4_2026-02-24_16-03-42.wav",
      675.6, "clean", "Aito puhelu, kaista 7,5 kHz:iin",
      "Ainoa aidosti koodekin rajaama äänite. Alkuperäistä ei ole, joten "
-     "ensimmäinen otto on puhelu sellaisenaan.", BWE_TAKES),
+     "ensimmäinen otto on puhelu sellaisenaan.", BWE_TAKES_GATED),
 ]
 
 BWE_INTRO = """
-<p>Kaistanlaajennus: kolme mallia, kukin yksin ja reitittimen takana.
+<p>Kaistanlaajennus: neljä mallia, kukin yksin ja reitittimen takana.
 Vertailut on tehty pp53-podcastin nyman- ja wancke-äänitteistä sekä yhdestä
 aidosta puhelusta. Yksityistä aineistoa: ei julkaista eikä jaeta.</p>
 <p>Otot soivat samanaikaisesti. <b>Tasoitus</b> säätää niiden tason vertailua

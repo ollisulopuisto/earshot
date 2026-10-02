@@ -40,6 +40,10 @@ novasr = [
     "torch>=2.0",
     "torchaudio>=2.0",
 ]
+# UniPASE. The inference is vendored (earshot/vendor/unipase); espnet, which
+# it imports for one base class and one lookup, is replaced at the call site
+# rather than installed.
+unipase = ["torch>=2.0", "torchaudio>=2.0", "omegaconf>=2.3", "einops>=0.7"]
 dev = ["pytest>=8.0"]
 
 [project.scripts]
