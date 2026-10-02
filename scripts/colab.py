@@ -55,15 +55,20 @@ class Options:
     keep: bool = False
 
 
+# The tool's default login asks for a code pasted from a browser, which an
+# unattended run cannot give. This machine authenticates with Google ADC.
+COLAB = ["colab", "--auth", "adc"]
+
+
 def plan(o: Options) -> list[list[str]]:
     """Every command of the run, first to last."""
     local_upload = str(Path(tempfile.gettempdir()) / f"earshot-{o.session}-upload.tar")
     local_result = str(Path(tempfile.gettempdir()) / f"earshot-{o.session}-result.tar")
-    commands = [["colab", "new", "-s", o.session, "--gpu", o.gpu]]
+    commands = [[*COLAB, "new", "-s", o.session, "--gpu", o.gpu]]
     if o.upload:
         commands += [
             ["tar", "-cf", local_upload, "-C", str(ROOT), *map(str, o.upload)],
-            ["colab", "upload", "-s", o.session, local_upload, UPLOAD_TAR],
+            [*COLAB, "upload", "-s", o.session, local_upload, UPLOAD_TAR],
         ]
     env = {
         "EARSHOT_COMMIT": o.commit,
@@ -72,17 +77,17 @@ def plan(o: Options) -> list[list[str]]:
         "EARSHOT_RUN": o.run,
         "EARSHOT_RESULT": o.result,
     }
-    job = ["colab", "exec", "-s", o.session, "-f", str(JOB), "--timeout", str(TIMEOUT_S)]
+    job = [*COLAB, "exec", "-s", o.session, "-f", str(JOB), "--timeout", str(TIMEOUT_S)]
     for key, value in env.items():
         job += ["--env", f"{key}={value}"]
     commands += [
         job,
-        ["colab", "download", "-s", o.session, RESULT_TAR, local_result],
+        [*COLAB, "download", "-s", o.session, RESULT_TAR, local_result],
         ["mkdir", "-p", str(o.out)],
         ["tar", "-xf", local_result, "-C", str(o.out)],
     ]
     if not o.keep:
-        commands.append(["colab", "stop", "-s", o.session])
+        commands.append([*COLAB, "stop", "-s", o.session])
     return commands
 
 
@@ -138,15 +143,25 @@ def main() -> int:
         return 0
 
     check_pushed(sha)
+    status = execute(commands, session=args.session, keep=args.keep)
+    if not status:
+        print(f"result in {args.out / args.result}", file=sys.stderr)
+    return status
+
+
+def execute(commands: list[list[str]], session: str, keep: bool) -> int:
+    """Run the plan in order; on a failure, stop the VM unless told to keep it.
+
+    A VM left running holds the free tier's one session, and after
+    ``--upload`` it also holds the owner's audio.
+    """
     for command in commands:
         print(f"$ {shlex.join(command)}", file=sys.stderr, flush=True)
         if subprocess.run(command, cwd=ROOT).returncode:
-            print(
-                f"failed. The VM may still be running: colab stop -s {args.session}",
-                file=sys.stderr,
-            )
+            print(f"failed: {shlex.join(command)}", file=sys.stderr)
+            if not keep:
+                subprocess.run([*COLAB, "stop", "-s", session], cwd=ROOT)
             return 1
-    print(f"result in {args.out / args.result}", file=sys.stderr)
     return 0
 
 

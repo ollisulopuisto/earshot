@@ -40,26 +40,31 @@ def _plan(**overrides):
     return colab.plan(colab.Options(**options))
 
 
+def _verb(command):
+    """The colab subcommand, after the global options."""
+    return command[3] if command[0] == "colab" else None
+
+
 def _flat(commands):
     return [" ".join(map(str, c)) for c in commands]
 
 
 def test_a_vm_is_made_first_and_stopped_last():
     commands = _plan()
-    assert commands[0][:2] == ["colab", "new"] and "T4" in commands[0]
-    assert commands[-1][:2] == ["colab", "stop"]
+    assert _verb(commands[0]) == "new" and "T4" in commands[0]
+    assert _verb(commands[-1]) == "stop"
 
 
 def test_keep_leaves_the_vm_running():
-    assert all(c[:2] != ["colab", "stop"] for c in _plan(keep=True))
+    assert all(_verb(c) != "stop" for c in _plan(keep=True))
 
 
 def test_nothing_is_uploaded_unless_named():
     """The default material is EARS, fetched on the VM from its public
     release. The owner's voices go up only when listed with --upload."""
-    assert not any(c[:2] == ["colab", "upload"] for c in _plan())
+    assert not any(_verb(c) == "upload" for c in _plan())
     uploading = _plan(upload=(Path("material/local/x.wav"),))
-    assert any(c[:2] == ["colab", "upload"] for c in uploading)
+    assert any(_verb(c) == "upload" for c in uploading)
 
 
 def test_the_vm_is_told_the_commit_not_the_branch():
@@ -68,7 +73,7 @@ def test_the_vm_is_told_the_commit_not_the_branch():
 
 
 def test_the_job_gets_its_settings_and_a_long_timeout():
-    (job_call,) = [c for c in _plan() if c[:2] == ["colab", "exec"]]
+    (job_call,) = [c for c in _plan() if _verb(c) == "exec"]
     assert job_call[job_call.index("-f") + 1].endswith("colab_job.py")
     assert float(job_call[job_call.index("--timeout") + 1]) >= 3600
     envs = {job_call[i + 1].split("=", 1)[0] for i, a in enumerate(job_call) if a == "--env"}
@@ -77,7 +82,7 @@ def test_the_job_gets_its_settings_and_a_long_timeout():
 
 
 def test_results_come_back_as_one_file():
-    downloads = [c for c in _plan() if c[:2] == ["colab", "download"]]
+    downloads = [c for c in _plan() if _verb(c) == "download"]
     assert len(downloads) == 1
     assert downloads[0][-2] == job.RESULT_TAR
 
@@ -102,3 +107,27 @@ def test_an_unpushed_commit_is_refused(monkeypatch):
 )
 def test_ears_files_get_the_names_the_listening_plan_uses(found, expected):
     assert job.freeform_name(found) == expected
+
+
+def test_every_colab_call_uses_application_default_credentials():
+    """The tool's default login wants a code pasted from a browser, which an
+    unattended run cannot give; this machine's colab use goes through ADC."""
+    for command in _plan(upload=(Path("x"),)):
+        if command[0] == "colab":
+            assert command[1:3] == ["--auth", "adc"], command
+
+
+def test_a_failed_step_still_stops_the_vm(monkeypatch):
+    """A VM left running holds the GPU quota, and with --upload it holds the
+    owner's audio too."""
+    ran = []
+
+    def fake_run(command, **_):
+        ran.append(command)
+        failed = _verb(command) == "exec"
+        return type("Done", (), {"returncode": 1 if failed else 0})()
+
+    monkeypatch.setattr(colab.subprocess, "run", fake_run)
+    assert colab.execute(_plan(), session="earshot", keep=False) == 1
+    assert _verb(ran[-1]) == "stop"
+    assert not any(_verb(c) == "download" for c in ran)
