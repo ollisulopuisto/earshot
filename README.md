@@ -205,8 +205,8 @@ benchmarks has not been tested on what actually arrives.
 | `dehum`, `deplosive`, `declip`, `keepzero` | deterministic repairs, no model | Apache-2.0 (this repo) | **measured** on EARS; see *Repairs that need no model* |
 | [ClearerVoice-Studio](https://github.com/modelscope/ClearerVoice-Studio) | speech super-resolution to 48 kHz, numpy in/out | Apache-2.0 | queued, with a caveat |
 | [UniPASE](https://github.com/xiaobin-rong/unipase) | WavLM-based resynthesis: denoise, bandwidth extension and packet loss concealment in one model, through 48 kHz | MIT code, Apache-2.0 weights | queued: the only candidate that claims packet loss |
-| [UniverSR](https://github.com/woongzip1/UniverSR) | flow matching in the complex STFT domain, no vocoder; 8/12/16/24 → 48 kHz, speech-only checkpoint | MIT code, CC BY 4.0 weights | queued: takes a 48 kHz file with a lower ceiling directly, as the 7.5 kHz call is |
-| [NovaSR](https://github.com/ysharma3501/NovaSR) | 52 KB upsampler, 16 kHz in only | Apache-2.0 | queued for completeness; its author calls it superseded by LavaSR |
+| [UniverSR](https://github.com/woongzip1/UniverSR) | flow matching in the complex STFT domain, no vocoder; 8/12/16/24 → 48 kHz, speech-only checkpoint | MIT code, CC BY 4.0 weights | **wired** (`universr`, or `universr:16` for a fixed band); in the `bwe` listening set, not yet benched. About 12 min per 8 s on an M1 Max CPU |
+| [NovaSR](https://github.com/ysharma3501/NovaSR) | 52 KB upsampler, 16 kHz in only | Apache-2.0 | **wired** (`novasr`); in the `bwe` listening set, not yet benched. Its author calls it superseded by LavaSR |
 | [SAM-Audio](https://github.com/facebookresearch/sam-audio) | prompted source separation (text, time span, video); generates and reranks candidates | SAM License (custom); weights gated on Hugging Face | parked: separation, not repair; needs CUDA and a bleed/crosstalk degradation to measure against |
 
 ClearerVoice-Studio is the closest fit on paper — Apache-2.0, outputs 48 kHz,

@@ -38,7 +38,7 @@ def _specs(spec):
         yield scheme
 
 
-@pytest.mark.parametrize("name", ["ears", "podcast"])
+@pytest.mark.parametrize("name", ["ears", "podcast", "bwe"])
 def test_every_plan_resolves(name):
     plan = _script().SETS[name]
     assert plan.comparisons

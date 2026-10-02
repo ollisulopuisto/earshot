@@ -4,6 +4,16 @@ What each version contains, for whoever runs the bench or restores a file
 with it. Versions are CalVer (`vYY.MM.DD.N`). Entries up to v26.10.02.1 were
 written afterwards from `git log`; the commit messages carry the numbers.
 
+## [v26.10.02.2] - 2026-10-02
+
+- Two new engines, each behind its own extra: `universr` (flow-matching
+  bandwidth extension to 48 kHz; reads the input's band itself and passes
+  full-band audio through untouched) and `novasr` (a 53 KB upsampler).
+  UniverSR is slow on a CPU: about 12 minutes per 8 seconds on an M1 Max.
+- `scripts/listening_set.py --set bwe`: six bandwidth-extension comparisons
+  on the pp53 voices and the one real 7.5 kHz call, each extender alone and
+  behind the router.
+
 ## [v26.10.02.1] - 2026-10-02
 
 - SAM-Audio (Meta, prompted source separation) added to the README's

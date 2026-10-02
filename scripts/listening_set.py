@@ -198,9 +198,53 @@ Tämä on yksityistä aineistoa: kuuntelusettiä ei saa julkaista eikä jakaa.</
 varten ja <b>Sokko</b> piilottaa nimet.</p>
 """
 
+# Every bandwidth extender twice: alone, and behind the router, which keeps
+# the input wherever it still has content and lets the engine fill only above.
+BWE_TAKES = [
+    ("lavasr", "LavaSR", "jo mitattu vertailukohta"),
+    ("router:lavasr", "LavaSR reitittimen kautta", ""),
+    ("universr", "UniverSR", "kaista luetaan syötteestä, täysikaistainen ohitetaan"),
+    ("router:universr", "UniverSR reitittimen kautta", ""),
+    ("novasr", "NovaSR", "53 kt, kaikki 16 kHz:n kautta"),
+    ("router:novasr", "NovaSR reitittimen kautta", ""),
+]
+
+BWE = [
+    ("01-puhdas", "nyman a.wav", 15.6, "clean", "Puhdas lähimikrofoni: saako kukaan koskea?",
+     "Mitään ei puutu. Paras otto on se, jota ei erota alkuperäisestä. "
+     "Kuuntele ilmavuutta ja ässiä.", BWE_TAKES),
+    ("02-puhelin-nyman", "nyman b.wav", 50.8, "narrowband-voip",
+     "Huono puhelu, Nyman: 300–3400 Hz, klippaus, pakettihäviö",
+     "Keksiminen on ainoa keino. Kuulostaako keksitty yläpää samalta "
+     "ihmiseltä kuin alkuperäinen?", BWE_TAKES),
+    ("03-puhelin-wancke", "wancke a.wav", 51.6, "narrowband-voip",
+     "Huono puhelu, Wancke", "Sama vaurio toisella äänellä.", BWE_TAKES),
+    ("04-laajakaista", "wancke b.wav", 20.0, "wideband-voip",
+     "Kohtuullinen puhelu: kaista 8 kHz:iin",
+     "Tavallisin etävieras. Ässät ja ilmavuus puuttuvat, puhe on kunnossa.",
+     BWE_TAKES),
+    ("05-alusta", "nyman a.wav", 23.6, "platform-upload",
+     "Etätallennusalusta: kaista 15 kHz:iin, tauot nollaa",
+     "Lähes täysikaistainen. UniverSR leikkaa syötteen 12 kHz:iin ennen "
+     "keksimistä; reititin palauttaa sen, mikä oli tallessa.", BWE_TAKES),
+    ("06-aito-puhelu", "../../../material/local/jussi-recording-4_2026-02-24_16-03-42.wav",
+     675.6, "clean", "Aito puhelu, kaista 7,5 kHz:iin",
+     "Ainoa aidosti koodekin rajaama äänite. Alkuperäistä ei ole, joten "
+     "ensimmäinen otto on puhelu sellaisenaan.", BWE_TAKES),
+]
+
+BWE_INTRO = """
+<p>Kaistanlaajennus: kolme mallia, kukin yksin ja reitittimen takana.
+Vertailut on tehty pp53-podcastin nyman- ja wancke-äänitteistä sekä yhdestä
+aidosta puhelusta. Yksityistä aineistoa: ei julkaista eikä jaeta.</p>
+<p>Otot soivat samanaikaisesti. <b>Tasoitus</b> säätää niiden tason vertailua
+varten ja <b>Sokko</b> piilottaa nimet.</p>
+"""
+
 SETS = {
     "ears": Plan(EARS, ("Alkuperäinen", "EARS-studioäänitys sellaisenaan: tähän verrataan"), EARS_INTRO, "Earshot-kuuntelu"),
     "podcast": Plan(PODCAST, ("Alkuperäinen", "pp53-podcastin puhdas äänite"), PODCAST_INTRO, "Podcast-kuuntelu (yksityinen)"),
+    "bwe": Plan(BWE, ("Alkuperäinen", "ennen vauriota; aidossa puhelussa puhelu itse"), BWE_INTRO, "Kaistanlaajennus (yksityinen)"),
 }
 
 
