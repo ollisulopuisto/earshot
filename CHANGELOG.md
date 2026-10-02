@@ -10,6 +10,7 @@ written afterwards from `git log`; the commit messages carry the numbers.
   candidates as parked: it separates voices rather than repairing one, and
   needs CUDA and gated weights. Worth testing once there is a bleed or
   crosstalk degradation to measure it against.
+- UniPASE, UniverSR and NovaSR queued as candidates.
 - This changelog.
 
 ## [v26.09.23.1] - 2026-09-23
