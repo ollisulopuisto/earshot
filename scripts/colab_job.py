@@ -28,6 +28,9 @@ REPO_URL = "https://github.com/ollisulopuisto/earshot"
 CHECKOUT = Path("/content/earshot")
 UPLOAD_TAR = "/content/upload.tar"
 RESULT_TAR = "/content/result.tar"
+# The second T4 run died of fragmentation: 3.44 GiB reserved by PyTorch but
+# unallocated when 2.2 GiB was asked for.
+GPU_ENV = {"EARSHOT_DEVICE": "cuda", "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"}
 EARS_RELEASE = "https://github.com/facebookresearch/ears_dataset/releases/download/dataset"
 
 
@@ -112,7 +115,8 @@ def main() -> None:
         _sh(f"tar -xf {UPLOAD_TAR} -C {CHECKOUT}")
     _fetch_ears(speakers)
 
-    os.environ.setdefault("EARSHOT_DEVICE", "cuda")
+    for key, value in GPU_ENV.items():
+        os.environ.setdefault(key, value)
     _sh(run, cwd=CHECKOUT)
     _sh(f"tar -cf {RESULT_TAR} {result}", cwd=CHECKOUT)
     print(f"done in {time.time() - started:.0f} s, result in {RESULT_TAR}", flush=True)

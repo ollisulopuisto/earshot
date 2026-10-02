@@ -109,3 +109,24 @@ def test_the_real_model_keeps_the_contract():
     from earshot.testing import assert_engine_contract
 
     assert_engine_contract(engine)
+
+
+def test_gpu_memory_is_released_after_each_call(monkeypatch):
+    """On a Colab T4 the second comparison ran out of memory with 3.44 GiB
+    reserved by PyTorch but unallocated: every engine of a listening set
+    stays loaded, and UniverSR's activations on 8 s are gigabytes."""
+    torch = pytest.importorskip("torch")
+    released = []
+    monkeypatch.setattr(torch.cuda, "empty_cache", lambda: released.append(1))
+
+    class Model:
+        _device = "cuda"
+
+        def enhance(self, x, **_):
+            return x.clone()
+
+    engine = universr.UniverSREngine.__new__(universr.UniverSREngine)
+    engine.model, engine.fixed_rate, engine.name = Model(), 16000, "universr@16k"
+    engine.ode_steps, engine.guidance, engine.ode_method = 1, None, "euler"
+    engine.process(np.zeros(RATE, dtype=np.float32), RATE)
+    assert released

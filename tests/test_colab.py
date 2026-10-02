@@ -149,3 +149,9 @@ def test_the_default_extras_install_on_colab():
     """deepfilterlib has no wheel for Colab's Python 3.13 and needs a Rust
     build there (measured on the first run, 2026-10-02)."""
     assert "deepfilternet" not in colab.DEFAULT_EXTRAS
+
+
+def test_the_vm_uses_the_allocator_that_does_not_fragment():
+    """The second T4 run died of fragmentation: 3.44 GiB reserved but
+    unallocated, 2.2 GiB asked for, 0.86 GiB free."""
+    assert job.GPU_ENV["PYTORCH_CUDA_ALLOC_CONF"] == "expandable_segments:True"

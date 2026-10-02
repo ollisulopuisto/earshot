@@ -173,6 +173,12 @@ class UniverSREngine:
             )
         except Exception as exc:
             raise EngineError(f"UniverSR failed: {exc}") from exc
+        finally:
+            # A listening set keeps every engine loaded, and the cached
+            # blocks of one 8 s call fragmented a T4 until the next asked
+            # for 2.2 GiB with 3.44 GiB reserved and unusable.
+            if str(getattr(self.model, "_device", "cpu")).startswith("cuda"):
+                torch.cuda.empty_cache()
         out = np.asarray(out.reshape(-1).cpu().numpy(), dtype=np.float32)
         if rate != MODEL_RATE:
             out = _resample(out, MODEL_RATE, rate)
