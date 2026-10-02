@@ -36,7 +36,7 @@ from pathlib import Path
 import numpy as np
 
 from ..fetch import Asset, ensure_all
-from . import EngineError, Loaded, register
+from . import EngineError, Loaded, register, torch_device
 from .router import CLIFF_DB, REFERENCE_BAND_HZ
 
 # Pinned to a commit of the Hugging Face repository, not to main: the digest
@@ -124,7 +124,7 @@ class UniverSREngine:
     def __init__(
         self,
         fixed_rate: int | None = None,
-        device: str = "cpu",
+        device: str | None = None,
         ode_steps: int = ODE_STEPS,
         guidance: float | None = GUIDANCE,
         ode_method: str = "midpoint",
@@ -140,7 +140,7 @@ class UniverSREngine:
         paths = ensure_all(ASSETS)
         folder = Path(paths[0]).parent
         try:
-            self.model = UniverSR.from_pretrained(str(folder), device=device)
+            self.model = UniverSR.from_pretrained(str(folder), device=device or torch_device())
         except Exception as exc:
             raise EngineError(f"could not start UniverSR: {exc}") from exc
         self.fixed_rate = fixed_rate

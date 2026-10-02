@@ -242,6 +242,25 @@ BWE = [
      "ensimmäinen otto on puhelu sellaisenaan.", BWE_TAKES_GATED),
 ]
 
+# The same comparison on EARS, which can be fetched anywhere — what a Colab
+# run renders, since the pp53 voices stay on the owner's machine.
+BWE_EARS = [
+    ("01-puhdas", "p008 freeform 01.wav", 42.0, "clean", "Puhdas studioääni: saako kukaan koskea?",
+     "Mitään ei puutu. Kuuntele ilmavuutta ja ässiä.", BWE_TAKES),
+    ("02-puhelin-p001", "p001 freeform 01.wav", 75.0, "narrowband-voip",
+     "Huono puhelu: 300–3400 Hz, klippaus, pakettihäviö",
+     "Kuulostaako keksitty yläpää samalta ihmiseltä kuin alkuperäinen?", BWE_TAKES),
+    ("03-puhelin-p002", "p002 freeform 01.wav", 50.0, "narrowband-voip",
+     "Huono puhelu, toinen ääni", "Sama vaurio toisella äänellä.", BWE_TAKES),
+    ("04-laajakaista", "p008 freeform 02.wav", 30.0, "wideband-voip",
+     "Kohtuullinen puhelu: kaista 8 kHz:iin",
+     "Ässät ja ilmavuus puuttuvat, puhe on kunnossa.", BWE_TAKES),
+    ("05-alusta", "p001 freeform 02.wav", 60.0, PLATFORM_EARS,
+     "Etätallennusalusta: kaista 15 kHz:iin, tauot nollaa",
+     "UniverSR leikkaa syötteen 12 kHz:iin ennen keksimistä; reititin "
+     "palauttaa sen, mikä oli tallessa.", BWE_TAKES_GATED),
+]
+
 BWE_INTRO = """
 <p>Kaistanlaajennus: neljä mallia, kukin yksin ja reitittimen takana.
 Vertailut on tehty pp53-podcastin nyman- ja wancke-äänitteistä sekä yhdestä
@@ -253,6 +272,7 @@ varten ja <b>Sokko</b> piilottaa nimet.</p>
 SETS = {
     "ears": Plan(EARS, ("Alkuperäinen", "EARS-studioäänitys sellaisenaan: tähän verrataan"), EARS_INTRO, "Earshot-kuuntelu"),
     "podcast": Plan(PODCAST, ("Alkuperäinen", "pp53-podcastin puhdas äänite"), PODCAST_INTRO, "Podcast-kuuntelu (yksityinen)"),
+    "bwe-ears": Plan(BWE_EARS, ORIGINAL, EARS_INTRO, "Kaistanlaajennus, EARS"),
     "bwe": Plan(BWE, ("Alkuperäinen", "ennen vauriota; aidossa puhelussa puhelu itse"), BWE_INTRO, "Kaistanlaajennus (yksityinen)"),
 }
 

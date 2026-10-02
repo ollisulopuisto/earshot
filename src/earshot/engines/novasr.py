@@ -70,7 +70,11 @@ class NovaSREngine:
         down = _resample(x, rate, MODEL_RATE)
         try:
             out = self.model.infer(
-                torch.from_numpy(np.ascontiguousarray(down)).view(1, 1, -1)
+                # FastSR moves itself to CUDA when it sees one; the input
+                # has to follow it there.
+                torch.from_numpy(np.ascontiguousarray(down))
+                .view(1, 1, -1)
+                .to(self.model.device)
             )
         except Exception as exc:
             raise EngineError(f"NovaSR failed: {exc}") from exc

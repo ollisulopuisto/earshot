@@ -4,6 +4,16 @@ What each version contains, for whoever runs the bench or restores a file
 with it. Versions are CalVer (`vYY.MM.DD.N`). Entries up to v26.10.02.1 were
 written afterwards from `git log`; the commit messages carry the numbers.
 
+## [v26.10.02.4] - 2026-10-02
+
+- `scripts/colab.py`: runs an earshot command on a Colab GPU and brings the
+  result back (`--dry-run` shows every command first). By default it
+  renders the new `bwe-ears` listening set on EARS voices fetched on the
+  VM, so nothing private leaves the machine; your own audio goes up only
+  when named with `--upload`. The VM runs the exact pushed commit.
+- `EARSHOT_DEVICE` picks where the PyTorch engines run; unset, CUDA is used
+  when present. The Apple GPU is used only when asked for.
+
 ## [v26.10.02.3] - 2026-10-02
 
 - `unipase` engine (and `unipase:noplc`): denoising, bandwidth extension and

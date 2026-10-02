@@ -37,7 +37,7 @@ import types
 import numpy as np
 
 from ..fetch import Asset, ensure_all
-from . import EngineError, Loaded, register
+from . import EngineError, Loaded, register, torch_device
 
 _REVISION = "f0b4d4c4411fe08fc2dddbf2d9f33260c27ac4a0"
 _BASE = f"https://huggingface.co/Xiaobin-Rong/unipase/resolve/{_REVISION}/"
@@ -134,9 +134,10 @@ class UniPASEEngine:
                 adapter_ckpt_path=str(paths["unipase/Adapter.pt"]),
                 vocoder_ckpt_path=str(paths["unipase/Vocoder_DWO-L1.pt"]),
                 postnet_ckpt_path=str(paths["unipase/PostNet.pt"]),
-            ).eval()
+            ).to(torch_device()).eval()
         except Exception as exc:
             raise EngineError(f"could not start UniPASE: {exc}") from exc
+        self.device = next(self.model.parameters()).device
         self.plc = plc
         self.name = "unipase" if plc else "unipase-noplc"
 
@@ -156,7 +157,7 @@ class UniPASEEngine:
         try:
             with torch.inference_mode():
                 out = self.model(
-                    torch.from_numpy(np.ascontiguousarray(source)).unsqueeze(0),
+                    torch.from_numpy(np.ascontiguousarray(source)).unsqueeze(0).to(self.device),
                     sr_in=rate,
                     sr_out=rate,
                     enable_plc=self.plc,
