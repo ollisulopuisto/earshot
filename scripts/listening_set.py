@@ -331,6 +331,33 @@ BODY = [
      "Body lisää sitä 7,8 dB.", BODY_TAKES),
 ]
 
+# Sidon against UniPASE on the podcast voices (2026-10-04): the bench has
+# Sidon ahead on every call-like damage and behind on room, overload and
+# clean audio. These are the comparisons where the two disagree most.
+VERSUS_TAKES = [
+    ("unipase", "UniPASE", ""),
+    ("sidon", "Sidon", ""),
+]
+VERSUS = [
+    ("01-puhdas", "nyman a.wav", 15.6, "clean", "Puhdas lähimikrofoni",
+     "Kumpikin heikentää puhdasta mittarilla. Kuuluuko se?", VERSUS_TAKES),
+    ("02-puhelin", "nyman b.wav", 50.8, "narrowband-voip", "Huono puhelu",
+     "Sidon palauttaa alapään, UniPASE ei.", VERSUS_TAKES),
+    ("03-voip", "wancke a.wav", 51.6, "voip-call", "VoIP-puhelu, purskeinen pakettihäviö",
+     "Mittarilla Sidon selvästi edellä.", VERSUS_TAKES),
+    ("04-lankapuhelin", "wancke b.wav", 20.0, "landline", "Lankapuhelin",
+     "Sidon palauttaa rungon mutta muuttaa ääntä eniten.", VERSUS_TAKES),
+    ("05-huone", "nyman b.wav", 4.0, "room", "Huonekaiku",
+     "Mittarilla UniPASE edellä.", VERSUS_TAKES),
+    ("06-ylikuormitus", "nyman a.wav", 23.6, "overload", "Ylikuormitettu tulo",
+     "Mittarilla UniPASE edellä.", VERSUS_TAKES),
+    ("07-ylikuormitus-puhelu", "wancke a.wav", 30.0, "overload-call",
+     "Ylikuormitettu mikrofoni puhelussa", "Mittarilla Sidon edellä.", VERSUS_TAKES),
+    ("08-aito-puhelu", "../../../material/local/jussi-recording-4_2026-02-24_16-03-42.wav",
+     675.6, "clean", "Aito puhelu", "Alkuperäistä ei ole: ensimmäinen otto on puhelu itse.",
+     VERSUS_TAKES),
+]
+
 BWE_INTRO = """
 <p>Kaistanlaajennus: neljä mallia, kukin yksin ja reitittimen takana.
 Vertailut on tehty pp53-podcastin nyman- ja wancke-äänitteistä sekä yhdestä
@@ -345,6 +372,7 @@ SETS = {
     "bwe-ears": Plan(BWE_EARS, ORIGINAL, EARS_INTRO, "Kaistanlaajennus, EARS"),
     "calls-ears": Plan(CALLS_EARS, ORIGINAL, EARS_INTRO, "Puhelut ja ylikuormitus, EARS"),
     "body": Plan(BODY, ("Alkuperäinen", "ennen vauriota; aidossa puhelussa puhelu itse"), BWE_INTRO, "Runko takaisin (yksityinen)"),
+    "versus": Plan(VERSUS, ("Alkuperäinen", "ennen vauriota; aidossa puhelussa puhelu itse"), BWE_INTRO, "Sidon vai UniPASE (yksityinen)"),
     "bwe": Plan(BWE, ("Alkuperäinen", "ennen vauriota; aidossa puhelussa puhelu itse"), BWE_INTRO, "Kaistanlaajennus (yksityinen)"),
 }
 
