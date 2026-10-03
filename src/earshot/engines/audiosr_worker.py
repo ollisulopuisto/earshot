@@ -17,6 +17,7 @@ site, by the file earshot fetched and verified against a pinned digest.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 
 
@@ -28,6 +29,12 @@ def main() -> None:
     parser.add_argument("--guidance", type=float, default=3.5)
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
+
+    # Run as a script, this file's folder leads sys.path, and that folder
+    # holds earshot's own engine module called audiosr.py — which the first
+    # Colab run imported instead of the library.
+    here = os.path.dirname(os.path.abspath(__file__))
+    sys.path[:] = [p for p in sys.path if os.path.abspath(p or ".") != here]
 
     import audiosr.pipeline
     import soundfile as sf

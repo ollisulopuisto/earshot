@@ -70,3 +70,28 @@ def test_the_pipe_keeps_the_contract(tmp_path, monkeypatch):
     finally:
         engine.close()
     assert engine.process_handle is None
+
+
+def test_the_worker_imports_the_library_not_the_engine_beside_it(tmp_path):
+    """The worker lives in earshot/engines/, next to the engine module also
+    called audiosr.py. Run as a script, its own folder comes first on the
+    path, and on the first Colab run `import audiosr.pipeline` found the
+    engine and failed with a relative-import error."""
+    import subprocess
+
+    package = tmp_path / "site" / "audiosr"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text("")
+    (package / "pipeline.py").write_text(
+        "def download_checkpoint(name): raise AssertionError('should be replaced')\n"
+        "def build_model(model_name): return object()\n"
+        "def super_resolution(model, source, **kw):\n"
+        "    import soundfile as sf\n"
+        "    return sf.read(source, dtype='float32')[0]\n"
+    )
+    done = subprocess.run(
+        [sys.executable, str(audiosr.WORKER), "--ckpt", "x"],
+        input="", capture_output=True, text=True, timeout=60,
+        env={"PYTHONPATH": str(tmp_path / "site"), "PATH": "/usr/bin:/bin"},
+    )
+    assert "ready" in done.stdout, done.stderr
