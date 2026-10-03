@@ -217,7 +217,7 @@ button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
     <h1>__TITLE__</h1>
     <div class="switches">
       <button class="switch" id="sw-match" aria-pressed="true">Tasoitus</button>
-      <button class="switch" id="sw-blind" aria-pressed="false">Sokko</button>
+      <button class="switch" id="sw-blind" aria-pressed="true">Sokko</button>
       <button class="switch" id="sw-loop" aria-pressed="true">Silmukka</button>
     </div>
   </header>
@@ -228,7 +228,7 @@ button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 <script>
 const DATA = __DATA__;
-const state = { match: true, blind: false, loop: true, active: null };
+const state = { match: true, blind: true, loop: true, active: null };
 let ctx = null;
 
 function store(key, value) { try { localStorage.setItem("earshot." + key, value); } catch (e) {} }
@@ -378,18 +378,20 @@ class Comparison {
 const views = DATA.map((c, i) => new Comparison(c, i));
 views.forEach(v => document.getElementById("list").appendChild(v.el));
 
-function bindSwitch(id, key) {
+function bindSwitch(id, key, storeAs = key) {
   const el = document.getElementById(id);
-  const saved = recall(key);
+  const saved = recall(storeAs);
   if (saved !== null) state[key] = saved === "1";
   el.setAttribute("aria-pressed", String(state[key]));
   el.onclick = () => {
-    state[key] = !state[key]; store(key, state[key] ? "1" : "0");
+    state[key] = !state[key]; store(storeAs, state[key] ? "1" : "0");
     el.setAttribute("aria-pressed", String(state[key]));
     views.forEach(v => { v.render(); if (v.playing && (key === "loop")) v.play(); if (v.playing && key === "match") v.select(v.selected); });
   };
 }
-bindSwitch("sw-match", "match"); bindSwitch("sw-blind", "blind"); bindSwitch("sw-loop", "loop");
+// Blind is stored under a key no earlier page used, so a browser that
+// remembered "off" before blind became the default starts blind once too.
+bindSwitch("sw-match", "match"); bindSwitch("sw-blind", "blind", "blind-default-on"); bindSwitch("sw-loop", "loop");
 views.forEach(v => v.render());
 
 document.addEventListener("keydown", (e) => {

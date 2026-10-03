@@ -41,3 +41,15 @@ def test_the_page_carries_the_manifest(tmp_path):
     assert "<title>Koe</title>" in page
     assert "hum/01-quieter.wav" in page
     assert "__DATA__" not in page
+
+
+def test_the_page_starts_blind(tmp_path):
+    """Takes are heard before they are named: a label is a bias, and the
+    first impressions of the new candidates were taken with names showing
+    (2026-10-03). Sokko starts on, under a storage key no earlier page used,
+    so a browser that remembered "off" from before starts blind too."""
+    assert main(["listen", str(_set(tmp_path))]) == 0
+    page = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert 'id="sw-blind" aria-pressed="true"' in page
+    assert "blind: true" in page
+    assert 'bindSwitch("sw-blind", "blind", "blind-default-on")' in page
