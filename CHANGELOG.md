@@ -4,6 +4,22 @@ What each version contains, for whoever runs the bench or restores a file
 with it. Versions are CalVer (`vYY.MM.DD.N`). Entries up to v26.10.02.1 were
 written afterwards from `git log`; the commit messages carry the numbers.
 
+## [v26.10.04.1] - 2026-10-04
+
+- `route`: measures each input and sends each kind of damage to the engine
+  that measured best on it; clean audio passes through untouched. On ten
+  kinds of damage it recovers more than UniPASE or Sidon alone and changes
+  voices about a quarter as much.
+- `gate:<engine>`: the same detection in front of any single engine.
+- New engines: `sidon` (48 kHz restoration), `wpe` (dereverberation that
+  keeps the voice), `mossformer2` (48 kHz voice isolation that keeps the
+  speaker's own waveform).
+- New damage: realistic rooms (`room-laptop`, `room-near`) and recorded
+  backgrounds (`office`, `kitchen`, `cafeteria`, from DEMAND). The old
+  `room` turned out to model a distant microphone in a hall.
+- The `versus` listening set: UniPASE, Sidon and the route on the pp53
+  voices.
+
 ## [v26.10.03.5] - 2026-10-03
 
 - A `speaker` probe in the bench: does the restored voice still sound like
