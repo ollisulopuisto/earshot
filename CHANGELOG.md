@@ -4,6 +4,15 @@ What each version contains, for whoever runs the bench or restores a file
 with it. Versions are CalVer (`vYY.MM.DD.N`). Entries up to v26.10.02.1 were
 written afterwards from `git log`; the commit messages carry the numbers.
 
+## [v26.10.03.5] - 2026-10-03
+
+- A `speaker` probe in the bench: does the restored voice still sound like
+  its owner (speaker-embedding similarity to the original). Needs the
+  `speaker` extra; left out without it.
+- Listening pages: a Huonoin (worst) button beside Paras, and no buttons on
+  the reference.
+- UniPASE added to the room comparisons of the podcast set.
+
 ## [v26.10.03.4] - 2026-10-03
 
 - Listening pages open in blind mode (Sokko) by default.

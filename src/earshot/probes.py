@@ -269,6 +269,24 @@ def run_all(
                "positive means nearer the original's balance than the damage was"),
     ]
 
+    # --- speaker: is the take still its owner's voice? UniPASE, the owner's
+    # blind favourite (7 of 8 picks, 2026-10-03), re-speaks everything and
+    # keeps no input sample, so `origin` cannot say; this can. Optional, like
+    # the perceptual scores: without the model it is left out, not guessed.
+    from . import speaker as _speaker
+
+    if _speaker.available():
+        before = metrics.speaker_similarity(clean, broken, rate)
+        after = metrics.speaker_similarity(clean, restored, rate)
+        run.results += [
+            Result("speaker", "before", before, "cos", "higher",
+                   "damaged against clean; 1 is the same voice"),
+            Result("speaker", "after", after, "cos", "higher",
+                   "restored against clean"),
+            Result("speaker", "change", after - before, "cos", "higher",
+                   "negative means the engine moved the voice away from its owner"),
+        ]
+
     # --- perceptual: the literature's numbers, for comparison with papers
     before_scores = metrics.perceptual(clean, broken, rate)
     after_scores = metrics.perceptual(clean, restored, rate)

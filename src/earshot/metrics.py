@@ -185,6 +185,17 @@ def body(x: np.ndarray, rate: int) -> float:
     return float(10 * np.log10((low + 1e-30) / (mid + 1e-30)))
 
 
+def speaker_similarity(a: np.ndarray, b: np.ndarray, rate: int) -> float:
+    """Cosine between speaker embeddings of ``a`` and ``b``; 1 is one voice.
+
+    Raises EngineError when the speaker model is unavailable, so a caller
+    reports a skip rather than a number about nothing.
+    """
+    from . import speaker
+
+    return float(np.dot(speaker.embed(a, rate), speaker.embed(b, rate)))
+
+
 def repeatability(first: np.ndarray, second: np.ndarray) -> float:
     """How far below the signal the difference between two runs sits, in dB.
 

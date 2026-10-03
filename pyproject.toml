@@ -44,6 +44,9 @@ novasr = [
 # it imports for one base class and one lookup, is replaced at the call site
 # rather than installed.
 unipase = ["torch>=2.0", "torchaudio>=2.0", "omegaconf>=2.3", "einops>=0.7"]
+# Speaker similarity (WeSpeaker ResNet34, ONNX). torchaudio for the Kaldi
+# filterbanks the model was trained on.
+speaker = ["onnxruntime>=1.17", "torch>=2.0", "torchaudio>=2.0"]
 dev = ["pytest>=8.0"]
 
 [project.scripts]

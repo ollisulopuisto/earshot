@@ -176,6 +176,18 @@ missing low end (−20 → −5..−8 dB); the ear did not prefer it. Unknown
 whether the synthesised harmonics sound artificial, or whether UniPASE's
 own low end was already enough — untested.
 
+**Speaker similarity says the opposite of the ear** (`earshot.speaker`,
+WeSpeaker ResNet34, cosine to the clean original, each take minus the
+damaged input of the same comparison, all rendered sets): plain UniPASE
+−0.041 median, worse than the damage it was given in 13 of 16
+comparisons (worst −0.179); UniPASE behind the router +0.001, better in 11
+of 13; LavaSR −0.026; UniPASE → Body −0.052. The owner's blind favourite
+is the take that moves the voice furthest from its owner — the trade the
+project's rule is about. The router keeps the speaker's own signal below
+the band edge and with it the identity. One embedding model, few
+comparisons per engine: a strong lead, not a verdict. The broken UniverSR
+scored −0.81, so the probe sees a voice that is gone.
+
 **Every UniverSR take in that first listen was broken** (fixed in ceab298).
 The engine handed upstream's `enhance()` 48 kHz audio labelled with the
 band's rate; upstream takes an array to be at that rate, so speech came out

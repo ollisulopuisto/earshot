@@ -459,6 +459,11 @@ perceptual = [
     { name = "pesq" },
     { name = "pystoi" },
 ]
+speaker = [
+    { name = "onnxruntime" },
+    { name = "torch" },
+    { name = "torchaudio" },
+]
 unipase = [
     { name = "einops" },
     { name = "omegaconf" },
@@ -482,6 +487,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.26" },
     { name = "omegaconf", marker = "extra == 'unipase'", specifier = ">=2.3" },
     { name = "onnxruntime", marker = "extra == 'lavasr'", specifier = ">=1.17" },
+    { name = "onnxruntime", marker = "extra == 'speaker'", specifier = ">=1.17" },
     { name = "pedalboard", marker = "extra == 'vst3'", specifier = ">=0.9" },
     { name = "pesq", marker = "extra == 'perceptual'", specifier = ">=0.0.4" },
     { name = "pystoi", marker = "extra == 'perceptual'", specifier = ">=0.4" },
@@ -491,15 +497,17 @@ requires-dist = [
     { name = "soundfile", specifier = ">=0.12" },
     { name = "torch", marker = "extra == 'deepfilternet'", specifier = ">=2.0" },
     { name = "torch", marker = "extra == 'novasr'", specifier = ">=2.0" },
+    { name = "torch", marker = "extra == 'speaker'", specifier = ">=2.0" },
     { name = "torch", marker = "extra == 'unipase'", specifier = ">=2.0" },
     { name = "torch", marker = "extra == 'universr'", specifier = ">=2.0" },
     { name = "torchaudio", marker = "extra == 'deepfilternet'", specifier = ">=2.0" },
     { name = "torchaudio", marker = "extra == 'novasr'", specifier = ">=2.0" },
+    { name = "torchaudio", marker = "extra == 'speaker'", specifier = ">=2.0" },
     { name = "torchaudio", marker = "extra == 'unipase'", specifier = ">=2.0" },
     { name = "torchaudio", marker = "extra == 'universr'", specifier = ">=2.0" },
     { name = "universr", marker = "extra == 'universr'", git = "https://github.com/woongzip1/UniverSR?rev=d8636623fe0c0704296239c1d3d3c5b911ecb2e0" },
 ]
-provides-extras = ["vst3", "perceptual", "lavasr", "deepfilternet", "universr", "novasr", "unipase", "dev"]
+provides-extras = ["vst3", "perceptual", "lavasr", "deepfilternet", "universr", "novasr", "unipase", "speaker", "dev"]
 
 [[package]]
 name = "einops"
