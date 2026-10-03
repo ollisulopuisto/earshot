@@ -67,6 +67,31 @@ ZERO_PERCENT = 1.0
 # Five excerpts is few; these move when more material is measured.
 SIG_BELOW = 2.45
 BAK_BELOW = 3.50
+# Hiss without a model: in the quietest tenth of frames, 1-12 kHz, hiss is
+# spectrally flat. Measured 2026-10-04: hiss at 20 dB SNR 0.555-0.567;
+# clean EARS at most 0.519, clean pp53 at most 0.462; rooms and calls lower
+# still. Thin margin on EARS, and only white-ish hiss reads this flat.
+HISS_FLATNESS = 0.54
+
+
+def quiet_flatness(x: np.ndarray, rate: int) -> float:
+    """Median spectral flatness, 1–12 kHz, of the quietest tenth of frames
+    (exact zeros excluded); NaN when there are too few frames."""
+    from scipy import signal
+
+    x = np.asarray(x, dtype=np.float64).reshape(-1)
+    if len(x) < 2048 * 11:  # fewer than ten frames: no verdict
+        return float("nan")
+    f, _, z = signal.stft(x, rate, nperseg=2048, noverlap=1024)
+    power = np.abs(z) ** 2
+    band = (f >= 1000) & (f <= min(12000, rate / 2 * 0.95))
+    energy = power[band].sum(axis=0)
+    keep = energy > 0
+    if keep.sum() < 10:
+        return float("nan")
+    quietest = np.argsort(energy[keep])[: max(5, int(0.1 * keep.sum()))]
+    q = power[band][:, keep][:, quietest] + 1e-20
+    return float(np.median(np.exp(np.mean(np.log(q), axis=0)) / np.mean(q, axis=0)))
 
 
 def findings(audio: np.ndarray, rate: int) -> list[tuple[str, str]]:
@@ -87,6 +112,9 @@ def findings(audio: np.ndarray, rate: int) -> list[tuple[str, str]]:
     zeros = 100.0 * float(np.mean(x == 0.0))
     if zeros >= ZERO_PERCENT:
         found.append(("zero", f"{zeros:.1f} % exact zero"))
+    flatness = quiet_flatness(x, rate)
+    if flatness == flatness and flatness >= HISS_FLATNESS:
+        found.append(("bak", f"hiss: quiet frames {flatness:.2f} flat"))
     from .. import quality
 
     if quality.available():

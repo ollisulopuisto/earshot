@@ -38,7 +38,11 @@ def _voice(seconds=4.0):
     # to 12.9 kHz; real pp53 speech under the same damage reads 4.3-6.4 kHz.
     x = sum(np.sin(2 * np.pi * k * 130 * t) / k**2 for k in range(1, 120) if k * 130 < 20000)
     x = x * (0.6 + 0.4 * np.sin(2 * np.pi * 3 * t))
-    x = x + 0.002 * rng.standard_normal(len(t))  # a room tone, so nothing is empty
+    # A room tone, so nothing is empty: low-passed, as a real room's is. White
+    # noise here would be hiss, which the gate now detects by its flatness.
+    tone = signal.sosfilt(signal.butter(2, 400.0, fs=RATE, output="sos"),
+                          rng.standard_normal(len(t)))
+    x = x + 0.002 * tone / np.std(tone)
     return (0.1 * x / np.abs(x).max()).astype(np.float32)
 
 
@@ -179,3 +183,12 @@ def test_route_keeps_the_contract():
     from earshot.testing import assert_engine_contract
 
     assert_engine_contract(engines.load("route:band=passthrough").engine)
+
+
+def test_white_hiss_is_found_without_a_model():
+    """In the quietest frames hiss is flat: 0.555-0.567 measured, against at
+    most 0.519 for clean EARS and 0.462 for clean pp53 (2026-10-04). DNSMOS's
+    background score overlapped there (EARS hiss 3.42-3.70, clean 3.52-4.11)."""
+    x = _voice(6.0)
+    gate_reasons = gate.reasons(degrade.noise(x, RATE, snr_db=20.0), RATE)
+    assert any("hiss" in r for r in gate_reasons)

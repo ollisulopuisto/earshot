@@ -1,0 +1,212 @@
+[
+ {
+  "engine": "route",
+  "damage": "clean",
+  "lsd_gain": 0.0,
+  "speaker_change": 0.0,
+  "ovrl_change": 0.0
+ },
+ {
+  "engine": "route",
+  "damage": "hiss",
+  "lsd_gain": 3.3544900894165037,
+  "speaker_change": -0.02650916576385498,
+  "ovrl_change": 0.1298946345146291
+ },
+ {
+  "engine": "route",
+  "damage": "room-laptop",
+  "lsd_gain": 0.8374967575073242,
+  "speaker_change": -0.004590237140655517,
+  "ovrl_change": 0.5625931504533566
+ },
+ {
+  "engine": "route",
+  "damage": "room-near",
+  "lsd_gain": 0.5293177127838135,
+  "speaker_change": 2.3365020751953127e-06,
+  "ovrl_change": 0.15776141320957082
+ },
+ {
+  "engine": "route",
+  "damage": "wideband-voip",
+  "lsd_gain": 5.142827987670898,
+  "speaker_change": -0.06932148933410645,
+  "ovrl_change": 0.6131689000232411
+ },
+ {
+  "engine": "route",
+  "damage": "narrowband-voip",
+  "lsd_gain": 2.9051671981811524,
+  "speaker_change": 0.04432117938995361,
+  "ovrl_change": 0.6870380113299701
+ },
+ {
+  "engine": "route",
+  "damage": "voip-call",
+  "lsd_gain": 0.7100902557373047,
+  "speaker_change": -0.05411959886550903,
+  "ovrl_change": 0.18252728970992393
+ },
+ {
+  "engine": "route",
+  "damage": "landline",
+  "lsd_gain": 1.6944969177246094,
+  "speaker_change": -0.025867784023284913,
+  "ovrl_change": 0.26452723873607387
+ },
+ {
+  "engine": "route",
+  "damage": "overload",
+  "lsd_gain": 1.6223227739334107,
+  "speaker_change": 0.01704888343811035,
+  "ovrl_change": 0.028533322711278952
+ },
+ {
+  "engine": "route",
+  "damage": "overload-call",
+  "lsd_gain": 1.312704372406006,
+  "speaker_change": -0.021244585514068604,
+  "ovrl_change": 0.2418384723052367
+ },
+ {
+  "engine": "unipase",
+  "damage": "clean",
+  "lsd_gain": -3.8450490951538088,
+  "speaker_change": -0.08150391578674317,
+  "ovrl_change": 0.1545946614050071
+ },
+ {
+  "engine": "unipase",
+  "damage": "hiss",
+  "lsd_gain": 8.634643268585204,
+  "speaker_change": -0.035117173194885255,
+  "ovrl_change": 0.42048009048245694
+ },
+ {
+  "engine": "unipase",
+  "damage": "room-laptop",
+  "lsd_gain": 1.1118611335754394,
+  "speaker_change": -0.1122901439666748,
+  "ovrl_change": 1.5047278772760408
+ },
+ {
+  "engine": "unipase",
+  "damage": "room-near",
+  "lsd_gain": -0.19993577003479004,
+  "speaker_change": -0.09133577346801758,
+  "ovrl_change": 0.7577175695218628
+ },
+ {
+  "engine": "unipase",
+  "damage": "wideband-voip",
+  "lsd_gain": 3.356308650970459,
+  "speaker_change": -0.04151254892349243,
+  "ovrl_change": 0.3741973838496377
+ },
+ {
+  "engine": "unipase",
+  "damage": "narrowband-voip",
+  "lsd_gain": 0.8460906982421875,
+  "speaker_change": -0.04555717706680298,
+  "ovrl_change": -0.05577447487349794
+ },
+ {
+  "engine": "unipase",
+  "damage": "voip-call",
+  "lsd_gain": 0.474605655670166,
+  "speaker_change": -0.025650370121002197,
+  "ovrl_change": -0.1384128443538323
+ },
+ {
+  "engine": "unipase",
+  "damage": "landline",
+  "lsd_gain": 1.4537648200988769,
+  "speaker_change": 0.0526969313621521,
+  "ovrl_change": 0.02074226530579972
+ },
+ {
+  "engine": "unipase",
+  "damage": "overload",
+  "lsd_gain": -0.9222537279129028,
+  "speaker_change": -0.08786059617996216,
+  "ovrl_change": 0.1854814194164816
+ },
+ {
+  "engine": "unipase",
+  "damage": "overload-call",
+  "lsd_gain": 0.7313159942626953,
+  "speaker_change": 0.011513078212738037,
+  "ovrl_change": 0.04504217431997217
+ },
+ {
+  "engine": "sidon",
+  "damage": "clean",
+  "lsd_gain": -4.2073907375335695,
+  "speaker_change": -0.11173062324523926,
+  "ovrl_change": 0.08250328029037438
+ },
+ {
+  "engine": "sidon",
+  "damage": "hiss",
+  "lsd_gain": 8.449232006072998,
+  "speaker_change": -0.06846563816070557,
+  "ovrl_change": 0.32351475323379775
+ },
+ {
+  "engine": "sidon",
+  "damage": "room-laptop",
+  "lsd_gain": 1.7485733509063721,
+  "speaker_change": -0.1011934757232666,
+  "ovrl_change": 1.4165766821239727
+ },
+ {
+  "engine": "sidon",
+  "damage": "room-near",
+  "lsd_gain": 0.45036840438842773,
+  "speaker_change": -0.10284291505813599,
+  "ovrl_change": 0.6368969551593907
+ },
+ {
+  "engine": "sidon",
+  "damage": "wideband-voip",
+  "lsd_gain": 5.304648399353027,
+  "speaker_change": -0.08255279064178467,
+  "ovrl_change": 0.6293369148162068
+ },
+ {
+  "engine": "sidon",
+  "damage": "narrowband-voip",
+  "lsd_gain": 2.9051671981811524,
+  "speaker_change": 0.04432117938995361,
+  "ovrl_change": 0.6870380113299701
+ },
+ {
+  "engine": "sidon",
+  "damage": "voip-call",
+  "lsd_gain": 1.0209196090698243,
+  "speaker_change": -0.06845433712005615,
+  "ovrl_change": 0.2377083204919784
+ },
+ {
+  "engine": "sidon",
+  "damage": "landline",
+  "lsd_gain": 1.6944969177246094,
+  "speaker_change": -0.025867784023284913,
+  "ovrl_change": 0.26452723873607387
+ },
+ {
+  "engine": "sidon",
+  "damage": "overload",
+  "lsd_gain": -0.987621521949768,
+  "speaker_change": -0.09489058256149292,
+  "ovrl_change": -0.2511999978155637
+ },
+ {
+  "engine": "sidon",
+  "damage": "overload-call",
+  "lsd_gain": 1.312704372406006,
+  "speaker_change": -0.021244585514068604,
+  "ovrl_change": 0.2418384723052367
+ }
+]
