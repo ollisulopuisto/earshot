@@ -171,12 +171,17 @@ def _load(argument: str) -> Loaded:
 # -0.48, Sidon -0.84 dB). Hiss: unbounded DeepFilterNet, +6.80 dB, and the
 # owner's blind pick on hiss; deepfilternet:12 costs less identity (-0.014
 # against -0.052) for +5.88 dB (2026-10-04).
+# Then MossFormer2 (2026-10-04, five EARS excerpts): on hiss +9.07 dB,
+# speaker -0.047, OVRL +0.30 against DeepFilterNet's +8.95 / -0.052 / +0.27 —
+# small margins, against the owner's blind pick, so for his ears to settle.
+# After WPE on room-laptop: +1.28 dB, speaker +0.008, OVRL +0.81 against WPE
+# alone +0.88 / +0.011 / +0.57. In front of Sidon on calls it added nothing.
 DEFAULT_ROUTE = {
     "band": "sidon",
     "zero": "keepzero:unipase",
     "clip": "declip",
-    "sig": "wpe",
-    "bak": "deepfilternet",
+    "sig": "chain:wpe+mossformer2",
+    "bak": "mossformer2",
 }
 
 
