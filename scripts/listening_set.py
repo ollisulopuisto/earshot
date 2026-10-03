@@ -337,6 +337,7 @@ BODY = [
 VERSUS_TAKES = [
     ("unipase", "UniPASE", ""),
     ("sidon", "Sidon", ""),
+    ("route", "Reititin", "valitsee korjauksen vaurion mukaan, jättää puhtaan rauhaan"),
 ]
 VERSUS = [
     ("01-puhdas", "nyman a.wav", 15.6, "clean", "Puhdas lähimikrofoni",
@@ -347,8 +348,9 @@ VERSUS = [
      "Mittarilla Sidon selvästi edellä.", VERSUS_TAKES),
     ("04-lankapuhelin", "wancke b.wav", 20.0, "landline", "Lankapuhelin",
      "Sidon palauttaa rungon mutta muuttaa ääntä eniten.", VERSUS_TAKES),
-    ("05-huone", "nyman b.wav", 4.0, "room", "Huonekaiku",
-     "Mittarilla UniPASE edellä.", VERSUS_TAKES),
+    ("05-huone", "nyman b.wav", 4.0, "room-laptop", "Huonekaiku: läppärin mikki käsivarren päässä",
+     "Suora ääni ja kaiku yhtä voimakkaat. Generatiiviset siistivät eniten mutta "
+     "muuttavat ääntä; reititin käyttää WPE:tä ja MossFormer2:ta.", VERSUS_TAKES),
     ("06-ylikuormitus", "nyman a.wav", 23.6, "overload", "Ylikuormitettu tulo",
      "Mittarilla UniPASE edellä.", VERSUS_TAKES),
     ("07-ylikuormitus-puhelu", "wancke a.wav", 30.0, "overload-call",
