@@ -4,6 +4,16 @@ What each version contains, for whoever runs the bench or restores a file
 with it. Versions are CalVer (`vYY.MM.DD.N`). Entries up to v26.10.02.1 were
 written afterwards from `git log`; the commit messages carry the numbers.
 
+## [v26.10.03.4] - 2026-10-03
+
+- Listening pages open in blind mode (Sokko) by default.
+- A "Paras" button on every take: pick the best per comparison. Served
+  with `earshot listen DIR --serve PORT`, picks are kept in
+  `DIR/votes.jsonl` with the real take behind the blind label;
+  `earshot votes DIR` lists them.
+- UniverSR fixed: every earlier UniverSR take was stretched six-fold and
+  is invalid.
+
 ## [v26.10.03.3] - 2026-10-03
 
 - `body` engine: puts back the low end a telephone line removed, by

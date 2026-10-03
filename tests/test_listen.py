@@ -53,3 +53,64 @@ def test_the_page_starts_blind(tmp_path):
     assert 'id="sw-blind" aria-pressed="true"' in page
     assert "blind: true" in page
     assert 'bindSwitch("sw-blind", "blind", "blind-default-on")' in page
+
+
+def test_every_take_can_be_picked_as_best(tmp_path):
+    assert main(["listen", str(_set(tmp_path))]) == 0
+    page = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert 'pick.className = "pick"' in page
+    assert 'fetch("vote"' in page
+
+
+def _post(port, body: bytes):
+    import urllib.error
+    import urllib.request
+
+    request = urllib.request.Request(f"http://127.0.0.1:{port}/vote", data=body,
+                                     headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(request) as response:
+            return response.status
+    except urllib.error.HTTPError as exc:
+        return exc.code
+
+
+def test_the_server_keeps_each_pick_with_what_was_hidden(tmp_path):
+    """A pick is only worth something if it says what was really picked and
+    whether its name was showing; the page sends both, the file keeps them."""
+    import threading
+    import urllib.request
+
+    folder = _set(tmp_path)
+    listen.build(folder)
+    server = listen.serve(folder, port=0, host="127.0.0.1")
+    port = server.server_address[1]
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        vote = {"comparison": "hum", "file": "hum/01-quieter.wav", "label": "Hiljaisempi",
+                "shown_as": "Otto A", "blind": True}
+        assert _post(port, json.dumps(vote).encode()) == 204
+        assert _post(port, b"not json") == 400
+        assert _post(port, json.dumps({"comparison": "hum"}).encode()) == 400
+        assert _post(port, b"{" + b" " * 20000 + b"}") == 413
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/index.html") as page:
+            assert page.status == 200
+    finally:
+        server.shutdown()
+    lines = (folder / "votes.jsonl").read_text().splitlines()
+    assert len(lines) == 1
+    kept = json.loads(lines[0])
+    assert kept["file"] == "hum/01-quieter.wav" and kept["blind"] is True
+    assert kept["at"].endswith("Z")
+
+
+def test_votes_summarise_the_latest_pick_per_comparison(tmp_path, capsys):
+    (tmp_path / "votes.jsonl").write_text("\n".join(json.dumps(v) for v in [
+        {"comparison": "hum", "file": "hum/01-a.wav", "label": "A", "shown_as": "Otto B",
+         "blind": True, "at": "2026-10-03T10:00:00Z"},
+        {"comparison": "hum", "file": "hum/02-b.wav", "label": "B", "shown_as": "Otto A",
+         "blind": True, "at": "2026-10-03T10:05:00Z"},
+    ]) + "\n")
+    assert main(["votes", str(tmp_path)]) == 0
+    out = capsys.readouterr().out
+    assert "hum" in out and "B" in out and "blind" in out

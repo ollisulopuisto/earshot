@@ -206,6 +206,14 @@ section.cmp.playing { border-color: var(--live); }
 .take .gain { grid-column: 2; font: 11px/1.4 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
 .take[aria-pressed="true"] { border-color: var(--live); background: var(--live-soft); }
 .take[aria-pressed="true"] .n { color: var(--live); }
+.row { display: grid; grid-template-columns: 1fr auto; gap: 4px; }
+.pick {
+  cursor: pointer; font: inherit; font-size: 12px; font-weight: 600; color: var(--muted);
+  border: 1px solid var(--line); background: var(--sunk); border-radius: 4px; padding: 0 10px;
+  min-width: 44px; min-height: 44px;
+}
+.pick[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.saved { font-size: 12px; color: var(--muted); margin-top: 6px; min-height: 1em; }
 .reveal { margin-top: 10px; }
 button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .err { color: var(--live); font-size: 13px; margin-top: 8px; }
@@ -252,6 +260,8 @@ class Comparison {
     this.cmp = cmp; this.index = index; this.buffers = null; this.sources = [];
     this.gains = []; this.selected = 0; this.offset = 0; this.startedAt = 0;
     this.playing = false; this.revealed = false;
+    const remembered = recall("best." + cmp.id);
+    this.best = remembered === null ? null : Number(remembered);
     // Blind order: the reference stays first, the rest are shuffled.
     const rest = shuffle(cmp.takes.length - 1, 7919 * (index + 3));
     this.order = [0, ...rest.map(i => i + 1)];
@@ -266,6 +276,7 @@ class Comparison {
         <span class="time">0:00.0</span>
       </div>
       <div class="takes"></div>
+      <p class="saved" aria-live="polite"></p>
       <button class="switch reveal" hidden>Paljasta nimet</button>
       <div class="err" hidden></div>`;
     this.el.querySelector("h2").textContent = cmp.title;
@@ -298,9 +309,34 @@ class Comparison {
       b.querySelector(".note").textContent = note; b.querySelector(".note").hidden = !note;
       b.querySelector(".gain").textContent = gain;
       b.onclick = () => { this.select(takeIndex); if (!this.playing) this.play(); };
-      box.appendChild(b);
+      const row = document.createElement("div");
+      row.className = "row";
+      const pick = document.createElement("button");
+      pick.className = "pick";
+      pick.textContent = "Paras";
+      pick.setAttribute("aria-pressed", String(takeIndex === this.best));
+      pick.setAttribute("aria-label", "Paras: " + name);
+      pick.onclick = () => this.choose(takeIndex, name, blind);
+      row.append(b, pick);
+      box.appendChild(row);
     });
     this.el.querySelector(".reveal").hidden = !(state.blind && !this.revealed);
+  }
+  // One pick per comparison, changeable. Sent to the server with the real
+  // take behind the blind label and whether its name was showing, so a
+  // pick made blind can be told from one made with names visible.
+  async choose(takeIndex, shownAs, blind) {
+    this.best = takeIndex; store("best." + this.cmp.id, String(takeIndex)); this.render();
+    const t = this.cmp.takes[takeIndex];
+    const status = this.el.querySelector(".saved");
+    try {
+      const r = await fetch("vote", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ comparison: this.cmp.id, file: t.file, label: t.label,
+                               shown_as: shownAs, blind: blind, page: document.title }) });
+      status.textContent = r.ok ? "Valinta tallennettu." : "Valinta jäi vain tähän selaimeen (palvelin ei tallentanut).";
+    } catch (e) {
+      status.textContent = "Valinta jäi vain tähän selaimeen (palvelin ei tallentanut).";
+    }
   }
   async load() {
     if (this.buffers) return;
@@ -408,3 +444,73 @@ document.addEventListener("keydown", (e) => {
 });
 </script>
 """
+
+
+# ------------------------------------------------------------------ votes
+
+VOTE_LIMIT = 4096
+VOTE_FIELDS = ("comparison", "file", "label", "shown_as", "blind")
+
+
+def serve(directory: Path, port: int = 8000, host: str = "0.0.0.0"):
+    """Serve a listening set, and keep the takes picked as best.
+
+    A plain file server cannot hear a pick, so this adds one endpoint:
+    ``POST /vote`` appends the pick to ``votes.jsonl`` beside the page, with
+    the real take behind the blind label and the time in UTC. Returns the
+    server; the caller runs ``serve_forever``.
+    """
+    import datetime
+    import functools
+    import http.server
+
+    directory = Path(directory)
+    log = directory / "votes.jsonl"
+
+    class Handler(http.server.SimpleHTTPRequestHandler):
+        def do_POST(self):
+            if self.path.rstrip("/") != "/vote":
+                self.send_error(404)
+                return
+            length = int(self.headers.get("Content-Length") or 0)
+            if length > VOTE_LIMIT:
+                self.send_error(413)
+                return
+            try:
+                vote = json.loads(self.rfile.read(length))
+                if not isinstance(vote, dict) or any(k not in vote for k in VOTE_FIELDS):
+                    raise ValueError("missing fields")
+            except ValueError:
+                self.send_error(400)
+                return
+            kept = {k: vote[k] for k in (*VOTE_FIELDS, "page") if k in vote}
+            kept["at"] = datetime.datetime.now(datetime.timezone.utc).strftime(
+                "%Y-%m-%dT%H:%M:%SZ")
+            with open(log, "a", encoding="utf-8") as out:
+                out.write(json.dumps(kept, ensure_ascii=False) + "\n")
+            self.send_response(204)
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    handler = functools.partial(Handler, directory=str(directory))
+    return http.server.ThreadingHTTPServer((host, port), handler)
+
+
+def votes(directory: Path) -> list[dict]:
+    """The latest pick per comparison, and how many picks it took to get there."""
+    log = Path(directory) / "votes.jsonl"
+    if not log.exists():
+        return []
+    latest: dict[str, dict] = {}
+    count: dict[str, int] = {}
+    for line in log.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        vote = json.loads(line)
+        key = vote["comparison"]
+        count[key] = count.get(key, 0) + 1
+        if key not in latest or vote.get("at", "") >= latest[key].get("at", ""):
+            latest[key] = vote
+    return [dict(latest[k], picks=count[k]) for k in sorted(latest)]
