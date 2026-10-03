@@ -173,7 +173,7 @@ def _load(argument: str) -> Loaded:
 # against -0.052) for +5.88 dB (2026-10-04).
 # Then MossFormer2 (2026-10-04, five EARS excerpts): on hiss +9.07 dB,
 # speaker -0.047, OVRL +0.30 against DeepFilterNet's +8.95 / -0.052 / +0.27 —
-# small margins, against the owner's blind pick, so for his ears to settle.
+# small margins, against the owner's blind pick, so for the owner's ears to settle.
 # After WPE on room-laptop: +1.28 dB, speaker +0.008, OVRL +0.81 against WPE
 # alone +0.88 / +0.011 / +0.57. In front of Sidon on calls it added nothing.
 DEFAULT_ROUTE = {
