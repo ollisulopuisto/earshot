@@ -163,6 +163,12 @@ wrong twice: the page shuffles in JavaScript doubles, and an exact Python
 copy diverges once the product passes 2^53. The saved picks carry the
 real take; trust those, or reproduce the float arithmetic.
 
+**The podcast repairs set (`out/kuuntelu-podcast`), blind.** On the Nyman
+room the owner's best pick was *the damaged take*: every DeepFilterNet
+setting was worse than doing nothing ("all bad"). On hiss, unbounded
+DeepFilterNet. Nothing on the bench is built for dereverberation;
+UniPASE (trained with reverberation) and VoiceFixer are the next to try.
+
 **Every UniverSR take in that first listen was broken** (fixed in ceab298).
 The engine handed upstream's `enhance()` 48 kHz audio labelled with the
 band's rate; upstream takes an array to be at that rate, so speech came out
