@@ -212,6 +212,17 @@ nine damages, M1 Max CPU; UniverSR absent — 12 min a call on this CPU).
 - **PESQ falls under UniPASE** almost everywhere, as metrics.md predicts for
   a generative engine; it is not the arbiter here.
 
+**Sidon on the same bench** (`results/2026-10-03-sidon-pp53-m1max.json`):
+it out-recovers UniPASE on every call-like damage — wideband +3.28 vs
++2.70 dB, narrowband +1.32 vs −0.44, VoIP call +2.93 vs +1.33, overloaded
+call +2.76 vs +1.63 — and puts the low end back (narrowband body −17.4 →
++1.0, landline −32.6 → −1.2, where UniPASE leaves −17 and −21). It loses on
+room (+0.76 vs +1.95), plain overload (−3.41 vs −1.40) and clean audio,
+which it harms more than UniPASE (−5.41 dB, PESQ −3.15). Speaker drift is
+mixed: smaller on the calls (−0.010 vs −0.028 VoIP), larger on the landline
+(−0.161 vs −0.029). Neither wins everywhere — the case for a per-segment
+choice and a gate that leaves clean audio alone.
+
 **Every UniverSR take in that first listen was broken** (fixed in ceab298).
 The engine handed upstream's `enhance()` 48 kHz audio labelled with the
 band's rate; upstream takes an array to be at that rate, so speech came out
