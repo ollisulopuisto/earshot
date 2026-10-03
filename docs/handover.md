@@ -188,6 +188,30 @@ the band edge and with it the identity. One embedding model, few
 comparisons per engine: a strong lead, not a verdict. The broken UniverSR
 scored −0.81, so the probe sees a voice that is gone.
 
+**First bench of the new candidates on podcast voices** (`results/
+2026-10-03-*-pp53-m1max.json`: six 8 s excerpts of pp53 Nyman and Wancke,
+nine damages, M1 Max CPU; UniverSR absent — 12 min a call on this CPU).
+
+- **UniPASE recovers the most where there is something to recover:**
+  log-spectral gain +1.95 dB on room, +2.70 wideband call, +1.33 VoIP call,
+  +1.64 landline, +1.63 overload on a call; on the landline it also puts
+  back 11 dB of the 32 dB of low end the line removed (body −32.6 →
+  −21.1). Nothing else recovers more than +0.65 anywhere.
+- **It damages clean audio:** −3.55 dB, PESQ −1.06, speaker −0.109. Run
+  blind on everything, it would harm the good microphones; it needs a gate
+  that leaves full-band clean audio alone, as `universr` and the router do.
+- **Speaker similarity** moves −0.03 to −0.16 under UniPASE (+0.18 on the
+  gated platform audio); LavaSR is worse at −0.08 to −0.21. The router
+  variants read ±0.00 — but the speaker model hears only 0–8 kHz, and they
+  change nothing below their band edge, so that reading is blind to them.
+- **router(unipase) does almost nothing** on most damages, because the edge
+  sits high, and costs on narrowband (−1.47 dB, PESQ −0.33).
+- **declip → unipase** equals UniPASE on the overloaded call (the codec
+  smears the flat tops declip looks for) and is marginally better on plain
+  overload (−1.25 vs −1.40).
+- **PESQ falls under UniPASE** almost everywhere, as metrics.md predicts for
+  a generative engine; it is not the arbiter here.
+
 **Every UniverSR take in that first listen was broken** (fixed in ceab298).
 The engine handed upstream's `enhance()` 48 kHz audio labelled with the
 band's rate; upstream takes an array to be at that rate, so speech came out
