@@ -223,6 +223,15 @@ mixed: smaller on the calls (−0.010 vs −0.028 VoIP), larger on the landline
 (−0.161 vs −0.029). Neither wins everywhere — the case for a per-segment
 choice and a gate that leaves clean audio alone.
 
+**Identity loss is not spectral tilt** (2026-10-04, negative result). The
+research suggested part of UniPASE's speaker-similarity loss might be
+long-term spectrum, since speaker embeddings shift strongly under EQ. Tested
+in the best case — each UniPASE take EQ-matched (third-octave, ±12 dB) to the
+*original's* own spectrum: median cosine 0.817 → 0.823, change +0.000,
+better in 8 of 16. LavaSR +0.003. The drift lives in finer structure than
+an EQ reaches, so a per-speaker profile would have to condition the model,
+not post-filter its output.
+
 **Every UniverSR take in that first listen was broken** (fixed in ceab298).
 The engine handed upstream's `enhance()` 48 kHz audio labelled with the
 band's rate; upstream takes an array to be at that rate, so speech came out
