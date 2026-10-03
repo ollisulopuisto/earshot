@@ -72,6 +72,28 @@ BAK_BELOW = 3.50
 # clean EARS at most 0.519, clean pp53 at most 0.462; rooms and calls lower
 # still. Thin margin on EARS, and only white-ish hiss reads this flat.
 HISS_FLATNESS = 0.54
+# Real backgrounds (office, kitchen, cafeteria) moved neither DNSMOS nor the
+# flatness enough. What a voice isolator would take out does: MossFormer2's
+# removal relative to the input, measured 2026-10-04. EARS: clean at most
+# -19.0 dB, every background at least -10.8 dB; at -12 dB clean 0/10,
+# backgrounds 10/10 each. pp53: cafeteria 5/5, kitchen 4/5, office 3/5, and
+# one clean excerpt of five touched — isolating it moved its speaker cosine to
+# 0.874, so this detector is a known cost on rooms with real ambience.
+ISOLATE_ABOVE_DB = -12.0
+_ISOLATOR = None
+
+
+def _isolator():
+    """MossFormer2, loaded once, or None where it is not installed."""
+    global _ISOLATOR
+    if _ISOLATOR is None:
+        try:
+            from . import load as load_engine
+
+            _ISOLATOR = load_engine("mossformer2").engine
+        except EngineError:
+            _ISOLATOR = False
+    return _ISOLATOR or None
 
 
 def quiet_flatness(x: np.ndarray, rate: int) -> float:
@@ -112,6 +134,12 @@ def findings(audio: np.ndarray, rate: int) -> list[tuple[str, str]]:
     zeros = 100.0 * float(np.mean(x == 0.0))
     if zeros >= ZERO_PERCENT:
         found.append(("zero", f"{zeros:.1f} % exact zero"))
+    isolator = _isolator()
+    if isolator is not None and rate == 48000 and len(x) >= rate:
+        kept = isolator.process(x, rate)
+        removed = 10 * np.log10(np.mean((x - kept) ** 2) / max(np.mean(x**2), 1e-20) + 1e-20)
+        if removed > ISOLATE_ABOVE_DB:
+            found.append(("bak", f"voice isolation would remove {removed:.1f} dB"))
     flatness = quiet_flatness(x, rate)
     if flatness == flatness and flatness >= HISS_FLATNESS:
         found.append(("bak", f"hiss: quiet frames {flatness:.2f} flat"))

@@ -28,6 +28,7 @@ def _no_dnsmos_on_synthetic(request, monkeypatch):
         from earshot import quality
 
         monkeypatch.setattr(quality, "available", lambda: False)
+        monkeypatch.setattr(gate, "_isolator", lambda: None)
 
 
 def _voice(seconds=4.0):
@@ -192,3 +193,26 @@ def test_white_hiss_is_found_without_a_model():
     x = _voice(6.0)
     gate_reasons = gate.reasons(degrade.noise(x, RATE, snr_db=20.0), RATE)
     assert any("hiss" in r for r in gate_reasons)
+
+
+@pytest.mark.real_speech
+def test_a_kitchen_behind_the_voice_reaches_the_engine():
+    """DNSMOS and flatness both missed real backgrounds (kitchen 0/5 on EARS).
+    What a voice isolator would remove finds them: at -12 dB, EARS clean was
+    left alone 10/10 and office, kitchen and cafeteria caught 10/10 each
+    (2026-10-04)."""
+    from pathlib import Path
+
+    import soundfile as sf
+
+    from earshot import probes
+
+    if gate._isolator() is None or not probes._have("demand"):
+        pytest.skip("needs mossformer2 and the DEMAND recordings")
+    path = Path(__file__).parent.parent / EARS_CLEAN
+    if not path.exists():
+        pytest.skip("needs a real clean EARS excerpt in out/")
+    x, rate = sf.read(path, dtype="float32")
+    assert not any("isolation" in r for r in gate.reasons(x, rate))
+    kitchen = degrade.by_name("kitchen").apply(x, rate)
+    assert any("isolation" in r for r in gate.reasons(kitchen, rate))
