@@ -415,9 +415,19 @@ def _damaged_band(damage: degrade.Damage, rate: int) -> tuple[float, float]:
 
 
 def _have(tool: str) -> bool:
+    """Whether every ``+``-joined requirement is present: a program on PATH,
+    or ``libopus``, which is a library rather than a program."""
     import shutil
 
-    return shutil.which(tool) is not None
+    for part in tool.split("+"):
+        if part == "libopus":
+            from .degrade import _libopus
+
+            if _libopus() is None:
+                return False
+        elif shutil.which(part) is None:
+            return False
+    return True
 
 
 def _cpu_seconds() -> float:

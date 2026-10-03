@@ -4,6 +4,17 @@ What each version contains, for whoever runs the bench or restores a file
 with it. Versions are CalVer (`vYY.MM.DD.N`). Entries up to v26.10.02.1 were
 written afterwards from `git log`; the commit messages carry the numbers.
 
+## [v26.10.03.2] - 2026-10-03
+
+- Believable call damage, after the synthetic calls were judged not
+  believable: `voip-call` (Opus wideband at 12 kbit/s, 5 % of packets lost
+  in bursts and concealed by the real decoder, not cut out), `landline`
+  (G.711 telephone line) and `overload` (input gain 12 dB past full scale),
+  plus `overload-call`. The Opus recipes need ffmpeg and libopus
+  (`brew install opus-tools` brings libopus) and are skipped without them.
+- Weight downloads that end early are fetched again instead of failing
+  their checksum.
+
 ## [v26.10.03.1] - 2026-10-03
 
 - `audiosr` engine (`audiosr:<DDIM steps>`, default 50): AudioSR's speech

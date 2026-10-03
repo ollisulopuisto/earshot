@@ -70,3 +70,36 @@ def test_a_missing_source_fails_cleanly(cache):
     with pytest.raises(EngineError) as caught:
         fetch.ensure(asset)
     assert "could not fetch" in str(caught.value)
+
+
+def test_a_download_cut_short_is_retried_not_reported_as_a_new_model(cache, monkeypatch, capsys):
+    """On Colab the 6.2 GB AudioSR checkpoint arrived with a wrong digest
+    while the same pinned revision verified on the Mac: the connection ended
+    early and the short file was taken as whole. A body shorter than its
+    Content-Length is a broken transfer, and is fetched again."""
+    import io
+
+    payload = b"weights" * 1000
+    asset = fetch.Asset("big.bin", "https://example.invalid/big.bin",
+                        hashlib.sha256(payload).hexdigest())
+    calls = []
+
+    class Response(io.BytesIO):
+        def __init__(self, body):
+            super().__init__(body)
+            self.headers = {"Content-Length": str(len(payload))}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def urlopen(url):
+        calls.append(url)
+        return Response(payload[:100] if len(calls) == 1 else payload)
+
+    monkeypatch.setattr(fetch.urllib.request, "urlopen", urlopen)
+    assert fetch.ensure(asset).read_bytes() == payload
+    assert len(calls) == 2
+    assert "cut short" in capsys.readouterr().err

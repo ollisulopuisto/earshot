@@ -395,6 +395,194 @@ def codec(x: np.ndarray, rate: int, bitrate_kbps: int = 16, name: str = "opus"):
     return _align(np.asarray(y).reshape(-1), x).astype(np.float32)
 
 
+def bursty_loss(packets: int, loss: float = 0.05, burst: float = 2.5, seed: int = 0):
+    """Which packets a network loses, as a boolean mask.
+
+    A two-state (Gilbert) model: losses come in runs averaging ``burst``
+    packets, at ``loss`` of all packets in the long run. Uniform random loss
+    is the textbook version and not what a congested link or a Wi-Fi drop
+    does; a network that loses one packet usually loses the next.
+    """
+    rng = np.random.default_rng(seed)
+    recover = 1.0 / max(burst, 1.0)
+    fail = recover * loss / max(1.0 - loss, 1e-9)
+    lost = np.zeros(packets, dtype=bool)
+    state = rng.random() < loss
+    draws = rng.random(packets)
+    for i in range(packets):
+        lost[i] = state
+        state = draws[i] >= recover if state else draws[i] < fail
+    return lost
+
+
+def _libopus():
+    """libopus through ctypes, or None. Only the decoder is called: its
+    functions take fixed arguments. The encoder's settings go through a
+    variadic call, which ctypes cannot make reliably on Apple Silicon, so
+    encoding is left to ffmpeg."""
+    import ctypes
+    import ctypes.util
+
+    for name in (ctypes.util.find_library("opus"), "/opt/homebrew/lib/libopus.dylib",
+                 "/usr/local/lib/libopus.dylib", "libopus.so.0"):
+        if not name:
+            continue
+        try:
+            lib = ctypes.CDLL(name)
+        except OSError:
+            continue
+        lib.opus_decoder_create.restype = ctypes.c_void_p
+        lib.opus_decoder_create.argtypes = [ctypes.c_int, ctypes.c_int,
+                                            ctypes.POINTER(ctypes.c_int)]
+        lib.opus_decode_float.restype = ctypes.c_int
+        lib.opus_decode_float.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int32,
+                                          ctypes.POINTER(ctypes.c_float), ctypes.c_int,
+                                          ctypes.c_int]
+        lib.opus_decoder_destroy.argtypes = [ctypes.c_void_p]
+        return lib
+    return None
+
+
+def _ogg_packets(data: bytes) -> list[bytes]:
+    """The packets of one logical Ogg stream, in order."""
+    packets, partial, at = [], b"", 0
+    while at < len(data):
+        if data[at:at + 4] != b"OggS":
+            raise ValueError("not an Ogg page")
+        count = data[at + 26]
+        lacing = data[at + 27: at + 27 + count]
+        at += 27 + count
+        for size in lacing:
+            partial += data[at: at + size]
+            at += size
+            if size < 255:
+                packets.append(partial)
+                partial = b""
+    return packets
+
+
+def opus_call(
+    x: np.ndarray,
+    rate: int,
+    bitrate_kbps: int = 12,
+    loss: float = 0.05,
+    burst: float = 2.5,
+    seed: int = 0,
+):
+    """A VoIP leg: Opus in its voice mode, wideband, with packets lost.
+
+    Encoded by ffmpeg's libopus at ``bitrate_kbps`` in 20 ms packets with an
+    8 kHz ceiling — the one real call in this project's material stops at
+    7.5 kHz. Decoded packet by packet through libopus, and a lost packet is
+    handed to the decoder *as lost*, so its own concealment fills the gap the
+    way a real receiver does: the last sound stretched and faded, not a hole.
+    The decoder's pre-skip is removed, which aligns the result exactly.
+    """
+    import ctypes
+    import shutil
+    import subprocess
+    import tempfile
+    from pathlib import Path
+
+    import soundfile as sf
+
+    lib = _libopus()
+    if not shutil.which("ffmpeg") or lib is None:
+        raise RuntimeError("opus_call needs ffmpeg on PATH and libopus")
+    with tempfile.TemporaryDirectory() as work:
+        raw, squeezed = Path(work) / "in.wav", Path(work) / "mid.opus"
+        sf.write(raw, np.asarray(x, dtype=np.float32), rate, subtype="FLOAT")
+        subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-i", str(raw), "-ar", "48000", "-ac", "1",
+             "-c:a", "libopus", "-application", "voip", "-b:a", f"{bitrate_kbps}k",
+             "-frame_duration", "20", "-cutoff", "8000", "-map_metadata", "-1",
+             str(squeezed)],
+            check=True,
+        )
+        packets = _ogg_packets(squeezed.read_bytes())
+    head, audio = packets[0], packets[2:]
+    if not head.startswith(b"OpusHead"):
+        raise RuntimeError("ffmpeg did not write an Ogg Opus stream")
+    pre_skip = int.from_bytes(head[10:12], "little")
+
+    def decode(lost: np.ndarray) -> np.ndarray:
+        error = ctypes.c_int(0)
+        decoder = lib.opus_decoder_create(48000, 1, ctypes.byref(error))
+        if error.value or not decoder:
+            raise RuntimeError(f"libopus would not make a decoder ({error.value})")
+        pcm = (ctypes.c_float * 5760)()
+        pieces, last = [], 960
+        try:
+            for packet, gone in zip(audio, lost):
+                if gone:
+                    n = lib.opus_decode_float(decoder, None, 0, pcm, last, 0)
+                else:
+                    n = lib.opus_decode_float(decoder, packet, len(packet), pcm, 5760, 0)
+                    last = max(n, 120)
+                if n < 0:
+                    raise RuntimeError(f"libopus decode failed ({n})")
+                pieces.append(np.ctypeslib.as_array(pcm)[:n].copy())
+        finally:
+            lib.opus_decoder_destroy(decoder)
+        y = np.concatenate(pieces)[pre_skip:] if pieces else np.zeros(0, dtype=np.float32)
+        if rate != 48000:
+            from math import gcd
+
+            from scipy import signal
+
+            factor = gcd(48000, int(rate))
+            y = signal.resample_poly(y, rate // factor, 48000 // factor)
+        return y.astype(np.float32)
+
+    # Pre-skip leaves the encoder's few samples of filter delay (5 at 48 kHz
+    # measured). The shift is found on a lossless decode, where nothing but
+    # the codec stands between it and the source, and applied to the lossy
+    # one; searching the lossy one would let a concealed gap pull the answer.
+    clean_decode = decode(np.zeros(len(audio), dtype=bool))
+    lag = _lag(clean_decode, np.asarray(x, dtype=np.float32))
+    y = decode(bursty_loss(len(audio), loss=loss, burst=burst, seed=seed)) if loss > 0 \
+        else clean_decode
+    return _shift(y, lag, len(x))
+
+
+def landline(x: np.ndarray, rate: int, mu: float = 255.0):
+    """A telephone line: 8 kHz sampling, 300–3400 Hz, and G.711 µ-law's
+    8-bit companding. Zero-phase filtering and polyphase resampling keep the
+    alignment without needing to search for it."""
+    from math import gcd
+
+    from scipy import signal
+
+    factor = gcd(int(rate), 8000)
+    narrow = signal.resample_poly(x, 8000 // factor, rate // factor)
+    sos = signal.butter(6, (300.0, 3400.0), btype="band", fs=8000, output="sos")
+    narrow = signal.sosfiltfilt(sos, narrow)
+    peak = np.abs(narrow).max() or 1.0
+    unit = np.clip(narrow / peak, -1.0, 1.0)
+    squeezed = np.sign(unit) * np.log1p(mu * np.abs(unit)) / np.log1p(mu)
+    squeezed = np.round(squeezed * 127.0) / 127.0
+    narrow = np.sign(squeezed) * np.expm1(np.abs(squeezed) * np.log1p(mu)) / mu * peak
+    y = signal.resample_poly(narrow, rate // factor, 8000 // factor)
+    n = len(x)
+    y = y[:n] if len(y) >= n else np.concatenate([y, np.zeros(n - len(y))])
+    return y.astype(np.float32)
+
+
+def overload(x: np.ndarray, rate: int, over_db: float = 12.0):
+    """Input gain pushed ``over_db`` past full scale, then levelled back.
+
+    The converter cannot go above 0 dBFS, so everything louder is flattened
+    there. The producer later brings the track back to speaking level — to
+    the original's RMS here, so the recipe is the flattening and not a fader
+    move as well (dividing by the gain instead measured −6.7 dB).
+    """
+    gain = 10 ** (over_db / 20)
+    peak = np.abs(x).max() or 1.0
+    y = np.clip(x * gain, -peak, peak)
+    rms = np.sqrt(np.mean(np.square(y, dtype=np.float64))) or 1.0
+    return (y * np.sqrt(np.mean(np.square(x, dtype=np.float64))) / rms).astype(np.float32)
+
+
 # ------------------------------------------------------------------ helpers
 
 
@@ -429,20 +617,28 @@ def _envelope(x: np.ndarray, rate: int, attack_ms: float, release_ms: float):
     return np.interp(np.arange(len(x)), np.arange(len(coarse)) * step, out)
 
 
-def _align(y: np.ndarray, reference: np.ndarray) -> np.ndarray:
-    """Shift ``y`` onto ``reference`` and match its length."""
+def _lag(y: np.ndarray, reference: np.ndarray) -> int:
+    """How many samples ``y`` runs late against ``reference``."""
     n = len(reference)
     probe = min(len(y), n, 200000)
     spectrum = np.fft.rfft(y[:probe], probe * 2) * np.conj(
         np.fft.rfft(reference[:probe], probe * 2)
     )
     lag = int(np.argmax(np.fft.irfft(spectrum)))
-    if lag > probe:
-        lag -= probe * 2
+    return lag - probe * 2 if lag > probe else lag
+
+
+def _shift(y: np.ndarray, lag: int, n: int) -> np.ndarray:
+    """Move ``y`` earlier by ``lag`` samples and fit it to length ``n``."""
     y = y[lag:] if lag > 0 else np.concatenate([np.zeros(-lag, dtype=y.dtype), y])
     if len(y) < n:
         y = np.concatenate([y, np.zeros(n - len(y), dtype=y.dtype)])
     return y[:n]
+
+
+def _align(y: np.ndarray, reference: np.ndarray) -> np.ndarray:
+    """Shift ``y`` onto ``reference`` and match its length."""
+    return _shift(y, _lag(y, reference), len(reference))
 
 
 # --------------------------------------------------------------- the recipes
@@ -565,6 +761,33 @@ RECIPES: tuple[Damage, ...] = (
         "a real Opus round trip at 16 kbit/s",
         ((codec, {"bitrate_kbps": 16}),),
         needs="ffmpeg",
+    ),
+    Damage(
+        "voip-call",
+        "a VoIP guest: auto-gain, Opus wideband at 12 kbit/s, 5 % of packets "
+        "lost in bursts and concealed by the decoder",
+        ((autogain, {"target_db": -20.0}),
+         (opus_call, {"bitrate_kbps": 12, "loss": 0.05, "burst": 2.5})),
+        needs="ffmpeg+libopus",
+    ),
+    Damage(
+        "landline",
+        "a telephone line: 8 kHz, 300-3400 Hz, G.711 mu-law",
+        ((landline, {}),),
+    ),
+    Damage(
+        "overload",
+        "input gain 12 dB past full scale: flat-topped at the converter, "
+        "turned back down after",
+        ((overload, {"over_db": 12.0}),),
+    ),
+    Damage(
+        "overload-call",
+        "an overloaded microphone on a VoIP call: overload, then voip-call",
+        ((overload, {"over_db": 12.0}),
+         (autogain, {"target_db": -20.0}),
+         (opus_call, {"bitrate_kbps": 12, "loss": 0.05, "burst": 2.5})),
+        needs="ffmpeg+libopus",
     ),
 )
 
