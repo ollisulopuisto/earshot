@@ -131,6 +131,25 @@ where attention is pointing, not as evidence. What would make it one:
 - its known fault measured on real material: it speaks into digital silence
   at −32.8 dBFS (contract kit), so gated audio wants `keepzero:unipase`.
 
+**Blind picks, same day** (`votes.jsonl` beside each set, Sokko on, owner,
+15:08–15:14 Helsinki). One best take per comparison, on EARS voices:
+
+| set | comparison | picked |
+|---|---|---|
+| calls-ears | VoIP call, p001 | UniPASE |
+| calls-ears | VoIP call, p008 | UniverSR (4 s chunks) |
+| calls-ears | overload | declip → UniPASE |
+| calls-ears | overload on a call | UniPASE |
+| bwe-ears | telephone band, p001 | UniPASE |
+| bwe-ears | telephone band, p002 | UniPASE |
+| bwe-ears | wideband call | UniPASE |
+| bwe-ears | platform upload | UniPASE |
+
+UniPASE 7 of 8, blind this time, and LavaSR, NovaSR, AudioSR and every
+router variant never picked. Still one listener and one voice per damage,
+and the speaker-similarity question above is unanswered: the picks say
+which sounded best, not which still sounds like its speaker.
+
 **Every UniverSR take in that first listen was broken** (fixed in ceab298).
 The engine handed upstream's `enhance()` 48 kHz audio labelled with the
 band's rate; upstream takes an array to be at that rate, so speech came out
