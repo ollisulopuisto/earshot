@@ -112,6 +112,25 @@ session could not reach. DeepFilterNet's own download URL also returned 403
 there; its weights were taken from a sparse git checkout of the upstream
 repository instead, which is the same file.
 
+## 3 October 2026: four new candidates, and a first impression
+
+UniverSR, NovaSR, UniPASE and AudioSR are wired as engines (see the README's
+candidates table); none is benched yet. Two listening sets exist: `bwe`
+(pp53 voices and the real 7.5 kHz call, rendered locally) and `bwe-ears`
+(EARS, rendered on Colab via `scripts/colab.py`).
+
+**First impression, not a finding.** The owner's quick listening: UniPASE
+was usually the most promising. Not blind, not on headphones, and stated by
+the owner as very preliminary. It is recorded so the next session knows
+where attention is pointing, not as evidence. What would make it one:
+
+- a blind listen on headphones, the page's *Sokko* mode;
+- a speaker-similarity probe, since UniPASE resynthesises everything and
+  keeps no sample of the input — `origin` will read near zero by design and
+  cannot say whether the voice is still its owner's;
+- its known fault measured on real material: it speaks into digital silence
+  at −32.8 dBFS (contract kit), so gated audio wants `keepzero:unipase`.
+
 ## What is not known, in priority order
 
 **1. ~~Whether any of this holds on real VoIP.~~ Answered — see the README's
