@@ -253,6 +253,22 @@ def run_all(
                    "positive means less hum than the damage left"),
         ]
 
+    # --- body: the low end a voice sounds full with, against the original.
+    # Asked because the owner heard restorations without it: the telephone
+    # band takes 80-250 Hz about 20 dB down, and LavaSR, NovaSR and the
+    # router all pass that loss straight through (listening sets, 2026-10-03).
+    reference_body = metrics.body(clean, rate)
+    before = metrics.body(broken, rate) - reference_body
+    after = metrics.body(restored, rate) - reference_body
+    run.results += [
+        Result("body", "before", before, "dB", "",
+               "80-250 Hz against 300-3000 Hz, damaged minus clean; negative is thin"),
+        Result("body", "after", after, "dB", "",
+               "the same after the engine; 0 is the original's balance"),
+        Result("body", "restored", abs(before) - abs(after), "dB", "higher",
+               "positive means nearer the original's balance than the damage was"),
+    ]
+
     # --- perceptual: the literature's numbers, for comparison with papers
     before_scores = metrics.perceptual(clean, broken, rate)
     after_scores = metrics.perceptual(clean, restored, rate)

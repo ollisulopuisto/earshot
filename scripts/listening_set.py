@@ -304,6 +304,31 @@ CALLS_EARS = [
      OVERLOAD_TAKES),
 ]
 
+# Body (2026-10-03): the Pulakka-style low-harmonic synthesis, behind the
+# two engines that pass the telephone band's missing low end straight
+# through. Runs on a CPU; the pp53 voices and the real call stay local.
+BODY_TAKES = [
+    ("body", "Body yksin", "matalat harmoniset sävelmäkorkeudesta"),
+    ("lavasr", "LavaSR", "jättää alapään sellaiseksi kuin se tuli"),
+    ("chain:lavasr+body", "LavaSR → Body", ""),
+    ("unipase", "UniPASE", ""),
+    ("chain:unipase+body", "UniPASE → Body", ""),
+]
+BODY = [
+    ("01-puhelin-nyman", "nyman b.wav", 50.8, "narrowband-voip",
+     "Huono puhelu, Nyman: runko poissa 300 Hz:n alta",
+     "Mitattuna alapää on 20 dB liian hiljaa. Kuuntele, palaako runko ja "
+     "kuulostaako se samalta ihmiseltä vai jytinältä.", BODY_TAKES),
+    ("02-puhelin-wancke", "wancke a.wav", 51.6, "narrowband-voip",
+     "Huono puhelu, Wancke", "Sama vaurio toisella äänellä.", BODY_TAKES),
+    ("03-lankapuhelin", "wancke b.wav", 20.0, "landline",
+     "Lankapuhelin", "300–3400 Hz ja G.711.", BODY_TAKES),
+    ("04-aito-puhelu", "../../../material/local/jussi-recording-4_2026-02-24_16-03-42.wav",
+     675.6, "clean", "Aito puhelu: perustaajuus 30 dB alhaalla",
+     "Alkuperäistä ei ole. Puhelun alapää putoaa jyrkästi 200 Hz:n alla; "
+     "Body lisää sitä 7,8 dB.", BODY_TAKES),
+]
+
 BWE_INTRO = """
 <p>Kaistanlaajennus: neljä mallia, kukin yksin ja reitittimen takana.
 Vertailut on tehty pp53-podcastin nyman- ja wancke-äänitteistä sekä yhdestä
@@ -317,6 +342,7 @@ SETS = {
     "podcast": Plan(PODCAST, ("Alkuperäinen", "pp53-podcastin puhdas äänite"), PODCAST_INTRO, "Podcast-kuuntelu (yksityinen)"),
     "bwe-ears": Plan(BWE_EARS, ORIGINAL, EARS_INTRO, "Kaistanlaajennus, EARS"),
     "calls-ears": Plan(CALLS_EARS, ORIGINAL, EARS_INTRO, "Puhelut ja ylikuormitus, EARS"),
+    "body": Plan(BODY, ("Alkuperäinen", "ennen vauriota; aidossa puhelussa puhelu itse"), BWE_INTRO, "Runko takaisin (yksityinen)"),
     "bwe": Plan(BWE, ("Alkuperäinen", "ennen vauriota; aidossa puhelussa puhelu itse"), BWE_INTRO, "Kaistanlaajennus (yksityinen)"),
 }
 

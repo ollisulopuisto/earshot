@@ -162,6 +162,29 @@ def spectral_tilt(x: np.ndarray, rate: int, low: float = 200.0, high: float = 80
     return float(np.polyfit(octaves, decibels, 1)[0])
 
 
+BODY_BAND_HZ = (80.0, 250.0)
+SPEECH_BAND_HZ = (300.0, 3000.0)
+
+
+def body(x: np.ndarray, rate: int) -> float:
+    """The level of 80–250 Hz against 300–3000 Hz, in dB.
+
+    Where a voice's fundamental and second harmonic live, against where its
+    intelligibility does: a balance, so a fader move leaves it alone. A
+    telephone band cuts at 300 Hz and takes this about 20 dB down (measured
+    on the listening sets, 2026-10-03), which is the thinness the owner heard.
+    """
+    from scipy import signal
+
+    x = np.asarray(x, dtype=np.float64)
+    if len(x) < 256:
+        return float("nan")
+    f, p = signal.welch(x, rate, nperseg=min(8192, len(x)))
+    low = p[(f >= BODY_BAND_HZ[0]) & (f < BODY_BAND_HZ[1])].sum()
+    mid = p[(f >= SPEECH_BAND_HZ[0]) & (f < SPEECH_BAND_HZ[1])].sum()
+    return float(10 * np.log10((low + 1e-30) / (mid + 1e-30)))
+
+
 def repeatability(first: np.ndarray, second: np.ndarray) -> float:
     """How far below the signal the difference between two runs sits, in dB.
 

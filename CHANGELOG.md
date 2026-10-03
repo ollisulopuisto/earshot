@@ -4,6 +4,18 @@ What each version contains, for whoever runs the bench or restores a file
 with it. Versions are CalVer (`vYY.MM.DD.N`). Entries up to v26.10.02.1 were
 written afterwards from `git log`; the commit messages carry the numbers.
 
+## [v26.10.03.3] - 2026-10-03
+
+- `body` engine: puts back the low end a telephone line removed, by
+  rebuilding the voice's lowest harmonics from its pitch (after Pulakka et
+  al.). Chain it after a restorer: `chain:unipase+body`. Leaves voices that
+  still have their low end untouched. On phone-band damage it brings the
+  low end from about 20 dB short to 5–8 dB short.
+- A `body` probe in the bench: the low end's balance against the speech
+  band, compared with the original.
+- `scripts/listening_set.py --set body`: phone calls and the real call,
+  with and without `body`.
+
 ## [v26.10.03.2] - 2026-10-03
 
 - Believable call damage, after the synthetic calls were judged not
