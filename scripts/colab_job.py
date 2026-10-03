@@ -31,7 +31,10 @@ UPLOAD_TAR = "/content/upload.tar"
 RESULT_TAR = "/content/result.tar"
 # The second T4 run died of fragmentation: 3.44 GiB reserved by PyTorch but
 # unallocated when 2.2 GiB was asked for.
-GPU_ENV = {"EARSHOT_DEVICE": "cuda", "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"}
+# UniverSR is chunked on the T4: one 8 s call needed 11.5 GB plus 2.8 GB more
+# (2026-10-03). What that costs is measured by scripts/measure_chunking.py.
+GPU_ENV = {"EARSHOT_DEVICE": "cuda", "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+           "EARSHOT_UNIVERSR_CHUNK_S": "4"}
 EARS_RELEASE = "https://github.com/facebookresearch/ears_dataset/releases/download/dataset"
 
 

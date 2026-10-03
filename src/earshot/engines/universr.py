@@ -30,6 +30,7 @@ this wiring, not the model.
 
 from __future__ import annotations
 
+import os
 import time
 from pathlib import Path
 
@@ -143,11 +144,34 @@ class UniverSREngine:
             self.model = UniverSR.from_pretrained(str(folder), device=device or torch_device())
         except Exception as exc:
             raise EngineError(f"could not start UniverSR: {exc}") from exc
+        self._configure(fixed_rate, ode_steps, guidance, ode_method)
+
+    def _configure(self, fixed_rate, ode_steps, guidance, ode_method) -> None:
         self.fixed_rate = fixed_rate
         self.ode_steps, self.guidance, self.ode_method = ode_steps, guidance, ode_method
+        # Chunked only when asked: on a 15 GB T4 one 8 s call needed more than
+        # the card has (11.5 GB in use and 2.8 GB more requested, Colab
+        # 2026-10-03). Chunks change the output at their seams, so it is
+        # opt-in and the name says so.
+        self.chunk_seconds = float(os.environ.get("EARSHOT_UNIVERSR_CHUNK_S") or 0)
         self.name = f"universr@{fixed_rate // 1000}k" if fixed_rate else "universr"
+        if self.chunk_seconds:
+            self.name += f"+chunk{self.chunk_seconds:g}s"
 
     def process(self, audio: np.ndarray, rate: int) -> np.ndarray:
+        x = np.asarray(audio, dtype=np.float32).reshape(-1)
+        chunk = getattr(self, "chunk_seconds", 0.0)
+        if chunk and len(x) > chunk * rate:
+            from types import SimpleNamespace
+
+            from . import process_in_chunks
+
+            whole = SimpleNamespace(name=self.name, process=self._process_whole)
+            return process_in_chunks(whole, x, rate, chunk_seconds=chunk,
+                                     overlap_seconds=min(1.0, chunk / 4))
+        return self._process_whole(x, rate)
+
+    def _process_whole(self, audio: np.ndarray, rate: int) -> np.ndarray:
         x = np.asarray(audio, dtype=np.float32).reshape(-1)
         if len(x) == 0:
             return x

@@ -130,3 +130,28 @@ def test_gpu_memory_is_released_after_each_call(monkeypatch):
     engine.ode_steps, engine.guidance, engine.ode_method = 1, None, "euler"
     engine.process(np.zeros(RATE, dtype=np.float32), RATE)
     assert released
+
+
+def test_chunking_is_asked_for_and_named(monkeypatch):
+    """On a 15 GB T4 one 8 s call needed more than the card has (11.5 GB in
+    use, 2.8 GB more asked for). Chunks bound that, at a cost measured
+    separately; the takes say they were chunked so nobody compares them with
+    whole-file ones unawares."""
+    torch = pytest.importorskip("torch")
+    seen = []
+
+    class Model:
+        _device = "cpu"
+
+        def enhance(self, x, **_):
+            seen.append(len(x))
+            return x.clone()
+
+    monkeypatch.setenv("EARSHOT_UNIVERSR_CHUNK_S", "4")
+    engine = universr.UniverSREngine.__new__(universr.UniverSREngine)
+    universr.UniverSREngine._configure(engine, 16000, 1, None, "euler")
+    engine.model = Model()
+    out = engine.process(np.zeros(RATE * 10, dtype=np.float32) + 0.01, RATE)
+    assert len(out) == RATE * 10
+    assert max(seen) <= 4 * RATE
+    assert "chunk4s" in engine.name

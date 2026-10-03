@@ -93,3 +93,40 @@ def test_one_at_a_time_frees_each_engine_before_the_next(tmp_path, monkeypatch):
     loads.clear(), closes.clear()
     script.main(tmp_path, tmp_path / "out2", plan)
     assert len(loads) == 2  # cached across comparisons, as before
+
+
+def test_a_take_that_fails_is_reported_and_the_rest_still_render(tmp_path, monkeypatch):
+    """On Colab one UniverSR take ran out of GPU memory and the whole set
+    died with it, two finished comparisons included. A failed take is now
+    left out, said so on the page, and listed at the end."""
+    import json
+
+    import numpy as np
+    import soundfile as sf
+
+    script = _script()
+
+    class Fine:
+        name = "fine"
+
+        def process(self, audio, rate):
+            return audio
+
+    def fake_load(spec):
+        if spec == "broken":
+            raise engines.EngineError("CUDA out of memory")
+        return engines.Loaded(Fine())
+
+    monkeypatch.setattr(script.engines, "load", fake_load)
+    monkeypatch.setattr(script.listen, "build", lambda *a, **k: None)
+    sf.write(tmp_path / "voice.wav", np.zeros(48000 * 10, dtype=np.float32), 48000)
+    plan = script.Plan(
+        [("01", "voice.wav", 0.0, "clean", "t", "listen.",
+          [("broken", "B", ""), ("fine", "F", "")])],
+        ("o", ""), "", "title",
+    )
+    failed = script.main(tmp_path, tmp_path / "out", plan)
+    about = json.loads((tmp_path / "out" / "01" / "about.json").read_text())
+    assert any("fine" in name for name in about["takes"])
+    assert "CUDA out of memory" in about["listen_for"]
+    assert failed == [("01", "broken", "CUDA out of memory")]

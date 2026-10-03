@@ -368,12 +368,13 @@ def main(
     plan: Plan,
     only: set[str] | None = None,
     one_at_a_time: bool = False,
-) -> None:
+) -> list[tuple[str, str, str]]:
     """``one_at_a_time`` loads each engine for its take and frees it after:
     on a 15 GB T4 a set ran out of memory holding UniverSR and UniPASE at
     once, and AudioSR alone is a 6.2 GB checkpoint. The default keeps them
     loaded across comparisons, which is faster where memory allows."""
     cache: dict[str, engines.Loaded] = {}
+    failed: list[tuple[str, str, str]] = []
     target.mkdir(parents=True, exist_ok=True)
     for folder, speaker_file, start, recipe_name, title, listen_for, takes in plan.comparisons:
         if only and folder not in only:
@@ -399,28 +400,48 @@ def main(
         if recipe_name != "clean":
             write(1, "vaurio", damaged, DAMAGED[0], recipe.describe)
             index = 2
+        missing = []
         for spec, label, note in takes:
-            if spec not in cache:
-                cache[spec] = engines.load(spec)
-            engine = cache[spec].engine
-            restored = engines.check_contract(damaged, engine.process(damaged, rate), engine.name)
-            engine_name = engine.name
-            if one_at_a_time:
+            # A take that fails is left out and said so, rather than ending
+            # the set: on Colab one UniverSR take ran out of GPU memory and
+            # took two finished comparisons down with it.
+            try:
+                if spec not in cache:
+                    cache[spec] = engines.load(spec)
+                engine = cache[spec].engine
+                restored = engines.check_contract(
+                    damaged, engine.process(damaged, rate), engine.name)
+                engine_name = engine.name
+            except engines.EngineError as exc:
+                reason = str(exc).splitlines()[0][:200]
+                print(f"{folder}: SKIPPED {spec}: {reason}", flush=True)
+                failed.append((folder, spec, reason))
+                missing.append(f"{label} ({reason})")
+                cache.pop(spec, None)
+                continue
+            finally:
                 engine = None
-                _release(cache.pop(spec))
+                if one_at_a_time and spec in cache:
+                    _release(cache.pop(spec))
             safe = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in engine_name)
             write(index, safe, restored, label, note)
             index += 1
         speaker = Path(speaker_file).parent.name or speaker_file.split()[0]
+        absent = f" Puuttuu: {'; '.join(missing)}." if missing else ""
         (out / "about.json").write_text(json.dumps({
             "title": title,
-            "listen_for": f"{listen_for} Puhuja {speaker}, {start:g}–{start + SECONDS:g} s.",
+            "listen_for": f"{listen_for} Puhuja {speaker}, {start:g}–{start + SECONDS:g} s.{absent}",
             "takes": labels,
         }, ensure_ascii=False, indent=1), encoding="utf-8")
         print(f"{folder}: {index} takes in {time.time() - started:.1f} s", flush=True)
 
     listen.build(target, title=plan.title, intro=plan.intro)
     print(f"wrote {target / 'index.html'}")
+    if failed:
+        print(f"{len(failed)} takes SKIPPED:", flush=True)
+        for folder, spec, reason in failed:
+            print(f"  {folder} {spec}: {reason}", flush=True)
+    return failed
 
 
 if __name__ == "__main__":
