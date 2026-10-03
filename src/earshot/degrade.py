@@ -417,6 +417,60 @@ def codec(x: np.ndarray, rate: int, bitrate_kbps: int = 16, name: str = "opus"):
     return _align(np.asarray(y).reshape(-1), x).astype(np.float32)
 
 
+# Real background noise: DEMAND (Thiemann, Ito, Vincent 2013, CC BY 4.0),
+# recorded at 48 kHz with a 16-microphone array; one channel is used. Three
+# places a podcast guest might be. The cafeteria has other people's voices
+# in it — the hard case for an engine asked to keep only the speaker.
+def _demand(name: str, sha256: str):
+    from .fetch import Asset
+
+    return Asset(f"demand/{name}_48k.zip",
+                 f"https://zenodo.org/records/1227121/files/{name}_48k.zip?download=1",
+                 sha256, f"DEMAND {name}, 48 kHz noise recordings, CC BY 4.0")
+
+
+ENVIRONMENTS = {
+    "OOFFICE": _demand("OOFFICE", "5e0e50f3ab7750c795b71eaf3b001a9fe1d6e5e15a95c6b036d3eefaa5ec6eaf"),
+    "DKITCHEN": _demand("DKITCHEN", "4197f1a02dbb36c4c655a11d14cc4c5dca50eae52a4abaa2c61bfca9de6be17f"),
+    "PCAFETER": _demand("PCAFETER", "ea1defbc29d564d4cdbf8b34191783ebf8debba47cdd3a82c6026608b9788942"),
+}
+
+
+def _environment_audio(name: str) -> np.ndarray:
+    """Channel 1 of a DEMAND environment, unpacked once beside its archive."""
+    import zipfile
+
+    import soundfile as sf
+
+    from .fetch import ensure
+
+    archive = ensure(ENVIRONMENTS[name])
+    target = archive.parent / name / "ch01.wav"
+    if not target.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(archive) as z, open(target, "wb") as out:
+            out.write(z.read(f"{name}/ch01.wav"))
+    audio, _ = sf.read(target, dtype="float32")
+    return audio
+
+
+def background(x: np.ndarray, rate: int, environment: str = "OOFFICE",
+               snr_db: float = 15.0, seed: int = 0):
+    """A recorded place under the voice, at ``snr_db`` against the speech.
+
+    The excerpt starts at a seeded offset into the five-minute recording, so
+    every run hears the same seconds.
+    """
+    if rate != 48000:
+        raise RuntimeError("DEMAND backgrounds are 48 kHz; resample first")
+    noise_track = _environment_audio(environment)
+    rng = np.random.default_rng(seed)
+    start = int(rng.integers(0, max(1, len(noise_track) - len(x))))
+    n = np.resize(noise_track[start:], len(x)).astype(np.float64)
+    n *= _speech_rms(x, rate) / (np.sqrt(np.mean(n**2)) + 1e-12) * 10 ** (-snr_db / 20)
+    return (x + n).astype(np.float32)
+
+
 def bursty_loss(packets: int, loss: float = 0.05, burst: float = 2.5, seed: int = 0):
     """Which packets a network loses, as a boolean mask.
 
@@ -823,6 +877,24 @@ RECIPES: tuple[Damage, ...] = (
         "a close microphone in an untreated room: RT60 0.6 s, direct sound "
         "6 dB over the reverberation",
         ((reverb, {"rt60": 0.6, "drr_db": 6.0}),),
+    ),
+    Damage(
+        "office",
+        "an open-plan office behind the guest (DEMAND OOFFICE), 15 dB under the speech",
+        ((background, {"environment": "OOFFICE", "snr_db": 15.0}),),
+        needs="demand",
+    ),
+    Damage(
+        "kitchen",
+        "a kitchen: clatter and running water (DEMAND DKITCHEN), 10 dB under the speech",
+        ((background, {"environment": "DKITCHEN", "snr_db": 10.0}),),
+        needs="demand",
+    ),
+    Damage(
+        "cafeteria",
+        "a cafeteria with other people talking (DEMAND PCAFETER), 10 dB under the speech",
+        ((background, {"environment": "PCAFETER", "snr_db": 10.0}),),
+        needs="demand",
     ),
 )
 

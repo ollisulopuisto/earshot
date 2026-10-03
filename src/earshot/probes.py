@@ -455,7 +455,16 @@ def _have(tool: str) -> bool:
     import shutil
 
     for part in tool.split("+"):
-        if part == "libopus":
+        if part == "demand":
+            # Recorded noise: present in the cache, or fetchable.
+            import os
+
+            from .degrade import ENVIRONMENTS
+            from .fetch import missing
+
+            if missing(ENVIRONMENTS.values()) and os.environ.get("EARSHOT_NO_DOWNLOAD"):
+                return False
+        elif part == "libopus":
             from .degrade import _libopus
 
             if _libopus() is None:
