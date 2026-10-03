@@ -169,6 +169,13 @@ setting was worse than doing nothing ("all bad"). On hiss, unbounded
 DeepFilterNet. Nothing on the bench is built for dereverberation;
 UniPASE (trained with reverberation) and VoiceFixer are the next to try.
 
+**The body set (`out/kuuntelu-body`), blind.** Plain UniPASE was picked
+over UniPASE → Body on all three comparisons with a pick (Nyman call,
+landline, real call). The body probe says the repair restores most of the
+missing low end (−20 → −5..−8 dB); the ear did not prefer it. Unknown
+whether the synthesised harmonics sound artificial, or whether UniPASE's
+own low end was already enough — untested.
+
 **Every UniverSR take in that first listen was broken** (fixed in ceab298).
 The engine handed upstream's `enhance()` 48 kHz audio labelled with the
 band's rate; upstream takes an array to be at that rate, so speech came out
