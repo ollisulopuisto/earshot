@@ -317,7 +317,9 @@ class Comparison {
       pick.setAttribute("aria-pressed", String(takeIndex === this.best));
       pick.setAttribute("aria-label", "Paras: " + name);
       pick.onclick = () => this.choose(takeIndex, name, blind);
-      row.append(b, pick);
+      // The reference is the original before damage: best by definition.
+      row.append(b);
+      if (takeIndex !== 0) row.append(pick);
       box.appendChild(row);
     });
     this.el.querySelector(".reveal").hidden = !(state.blind && !this.revealed);

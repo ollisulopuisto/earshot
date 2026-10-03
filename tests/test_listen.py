@@ -114,3 +114,11 @@ def test_votes_summarise_the_latest_pick_per_comparison(tmp_path, capsys):
     assert main(["votes", str(tmp_path)]) == 0
     out = capsys.readouterr().out
     assert "hum" in out and "B" in out and "blind" in out
+
+
+def test_the_reference_cannot_be_picked(tmp_path):
+    """The reference is the original before damage, best by definition; a
+    Paras button on it asked a question with no answer (owner, 2026-10-03)."""
+    assert main(["listen", str(_set(tmp_path))]) == 0
+    page = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert "if (takeIndex !== 0) row.append(pick)" in page
