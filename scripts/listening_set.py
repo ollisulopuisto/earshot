@@ -242,23 +242,30 @@ BWE = [
      "ensimmäinen otto on puhelu sellaisenaan.", BWE_TAKES_GATED),
 ]
 
+# AudioSR runs in its own Python (EARSHOT_AUDIOSR_PYTHON), which exists only
+# where scripts/colab.py --audiosr built it, so only the EARS set asks for it.
+BWE_TAKES_AUDIOSR = [
+    ("audiosr", "AudioSR", "diffuusio, 50 askelta, 6,2 Gt"),
+    ("router:audiosr", "AudioSR reitittimen kautta", ""),
+]
+
 # The same comparison on EARS, which can be fetched anywhere — what a Colab
 # run renders, since the pp53 voices stay on the owner's machine.
 BWE_EARS = [
     ("01-puhdas", "p008 freeform 01.wav", 42.0, "clean", "Puhdas studioääni: saako kukaan koskea?",
-     "Mitään ei puutu. Kuuntele ilmavuutta ja ässiä.", BWE_TAKES),
+     "Mitään ei puutu. Kuuntele ilmavuutta ja ässiä.", BWE_TAKES + BWE_TAKES_AUDIOSR),
     ("02-puhelin-p001", "p001 freeform 01.wav", 75.0, "narrowband-voip",
      "Huono puhelu: 300–3400 Hz, klippaus, pakettihäviö",
-     "Kuulostaako keksitty yläpää samalta ihmiseltä kuin alkuperäinen?", BWE_TAKES),
+     "Kuulostaako keksitty yläpää samalta ihmiseltä kuin alkuperäinen?", BWE_TAKES + BWE_TAKES_AUDIOSR),
     ("03-puhelin-p002", "p002 freeform 01.wav", 50.0, "narrowband-voip",
-     "Huono puhelu, toinen ääni", "Sama vaurio toisella äänellä.", BWE_TAKES),
+     "Huono puhelu, toinen ääni", "Sama vaurio toisella äänellä.", BWE_TAKES + BWE_TAKES_AUDIOSR),
     ("04-laajakaista", "p008 freeform 02.wav", 30.0, "wideband-voip",
      "Kohtuullinen puhelu: kaista 8 kHz:iin",
-     "Ässät ja ilmavuus puuttuvat, puhe on kunnossa.", BWE_TAKES),
+     "Ässät ja ilmavuus puuttuvat, puhe on kunnossa.", BWE_TAKES + BWE_TAKES_AUDIOSR),
     ("05-alusta", "p001 freeform 02.wav", 60.0, PLATFORM_EARS,
      "Etätallennusalusta: kaista 15 kHz:iin, tauot nollaa",
      "UniverSR leikkaa syötteen 12 kHz:iin ennen keksimistä; reititin "
-     "palauttaa sen, mikä oli tallessa.", BWE_TAKES_GATED),
+     "palauttaa sen, mikä oli tallessa.", BWE_TAKES_GATED + BWE_TAKES_AUDIOSR),
 ]
 
 BWE_INTRO = """
@@ -277,7 +284,32 @@ SETS = {
 }
 
 
-def main(source: Path, target: Path, plan: Plan, only: set[str] | None = None) -> None:
+def _release(loaded: engines.Loaded) -> None:
+    """Close an engine and give back what it held on the GPU."""
+    close = getattr(loaded.engine, "close", None)
+    if close:
+        close()
+    del loaded
+    import gc
+    import sys
+
+    gc.collect()
+    torch = sys.modules.get("torch")
+    if torch is not None and torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+
+def main(
+    source: Path,
+    target: Path,
+    plan: Plan,
+    only: set[str] | None = None,
+    one_at_a_time: bool = False,
+) -> None:
+    """``one_at_a_time`` loads each engine for its take and frees it after:
+    on a 15 GB T4 a set ran out of memory holding UniverSR and UniPASE at
+    once, and AudioSR alone is a 6.2 GB checkpoint. The default keeps them
+    loaded across comparisons, which is faster where memory allows."""
     cache: dict[str, engines.Loaded] = {}
     target.mkdir(parents=True, exist_ok=True)
     for folder, speaker_file, start, recipe_name, title, listen_for, takes in plan.comparisons:
@@ -309,7 +341,11 @@ def main(source: Path, target: Path, plan: Plan, only: set[str] | None = None) -
                 cache[spec] = engines.load(spec)
             engine = cache[spec].engine
             restored = engines.check_contract(damaged, engine.process(damaged, rate), engine.name)
-            safe = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in engine.name)
+            engine_name = engine.name
+            if one_at_a_time:
+                engine = None
+                _release(cache.pop(spec))
+            safe = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in engine_name)
             write(index, safe, restored, label, note)
             index += 1
         speaker = Path(speaker_file).parent.name or speaker_file.split()[0]
@@ -330,5 +366,8 @@ if __name__ == "__main__":
     parser.add_argument("source", type=Path)
     parser.add_argument("target", type=Path)
     parser.add_argument("only", nargs="*")
+    parser.add_argument("--one-at-a-time", action="store_true",
+                        help="load and free each engine per take, for a small GPU")
     args = parser.parse_args()
-    main(args.source, args.target, SETS[args.set], set(args.only) or None)
+    main(args.source, args.target, SETS[args.set], set(args.only) or None,
+         one_at_a_time=args.one_at_a_time)

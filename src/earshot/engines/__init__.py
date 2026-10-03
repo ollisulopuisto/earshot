@@ -207,6 +207,7 @@ def torch_device() -> str:
     return "cuda" if torch.cuda.is_available() else "cpu"
 
 
+from . import audiosr as _audiosr  # noqa: E402,F401
 from . import chain as _chain  # noqa: E402,F401
 from . import declip as _declip  # noqa: E402,F401
 from . import deepfilternet as _deepfilternet  # noqa: E402,F401

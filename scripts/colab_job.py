@@ -9,6 +9,7 @@ installed. Settings arrive as environment variables:
     EARSHOT_EARS     comma-separated EARS speakers to fetch, e.g. p001,p008
     EARSHOT_RUN      the shell command to run in the repository
     EARSHOT_RESULT   the path, relative to the repository, to bring back
+    EARSHOT_AUDIOSR  "1" to build AudioSR's own Python 3.10 environment
 
 EARS is fetched here from its public GitHub release, so no material leaves
 the owner's machine for it. Anything uploaded arrives as
@@ -83,6 +84,17 @@ def _fetch_ears(speakers: list[str]) -> None:
     print(f"EARS: {len(speakers)} speakers, {renamed} freeform files", flush=True)
 
 
+AUDIOSR_ENV = Path("/content/audiosr-env")
+
+
+def _build_audiosr() -> None:
+    """AudioSR pins numpy<=1.23.5, librosa 0.9.2 and transformers 4.30.2, so
+    it gets an interpreter of its own; the engine talks to it over a pipe."""
+    _sh(f"uv venv -q --python 3.10 {AUDIOSR_ENV}")
+    _sh(f"uv pip install -q --python {AUDIOSR_ENV}/bin/python audiosr==0.0.7 soundfile")
+    os.environ["EARSHOT_AUDIOSR_PYTHON"] = str(AUDIOSR_ENV / "bin/python")
+
+
 def clear_result() -> None:
     """`colab exec` reports success even when this script fails (the kernel
     swallows the exit), so the result file is the proof a run finished. One
@@ -114,6 +126,8 @@ def main() -> None:
     if Path(UPLOAD_TAR).exists():
         _sh(f"tar -xf {UPLOAD_TAR} -C {CHECKOUT}")
     _fetch_ears(speakers)
+    if os.environ.get("EARSHOT_AUDIOSR") == "1":
+        _build_audiosr()
 
     for key, value in GPU_ENV.items():
         os.environ.setdefault(key, value)

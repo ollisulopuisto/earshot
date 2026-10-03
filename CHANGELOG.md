@@ -4,6 +4,17 @@ What each version contains, for whoever runs the bench or restores a file
 with it. Versions are CalVer (`vYY.MM.DD.N`). Entries up to v26.10.02.1 were
 written afterwards from `git log`; the commit messages carry the numbers.
 
+## [v26.10.03.1] - 2026-10-03
+
+- `audiosr` engine (`audiosr:<DDIM steps>`, default 50): AudioSR's speech
+  checkpoint, run in its own Python because its pinned dependencies cannot
+  live beside earshot. Point `EARSHOT_AUDIOSR_PYTHON` at that interpreter;
+  `scripts/colab.py --audiosr` builds it on the VM. Its 6.2 GB of weights
+  are pinned like every other model's.
+- `listening_set.py --one-at-a-time` loads and frees each engine per take,
+  for GPUs too small to hold them all; the Colab default now uses it.
+- The `bwe-ears` set includes AudioSR, alone and behind the router.
+
 ## [v26.10.02.4] - 2026-10-02
 
 - `scripts/colab.py`: runs an earshot command on a Colab GPU and brings the

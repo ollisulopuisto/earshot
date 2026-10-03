@@ -155,3 +155,12 @@ def test_the_vm_uses_the_allocator_that_does_not_fragment():
     """The second T4 run died of fragmentation: 3.44 GiB reserved but
     unallocated, 2.2 GiB asked for, 0.86 GiB free."""
     assert job.GPU_ENV["PYTORCH_CUDA_ALLOC_CONF"] == "expandable_segments:True"
+
+
+def test_audiosr_gets_its_own_python_only_when_asked():
+    def env(commands):
+        (call,) = [c for c in commands if _verb(c) == "exec"]
+        return dict(call[i + 1].split("=", 1) for i, a in enumerate(call) if a == "--env")
+
+    assert env(_plan())["EARSHOT_AUDIOSR"] == ""
+    assert env(_plan(audiosr=True))["EARSHOT_AUDIOSR"] == "1"

@@ -56,6 +56,7 @@ class Options:
     ears: tuple[str, ...] = ()
     upload: tuple[Path, ...] = field(default_factory=tuple)
     keep: bool = False
+    audiosr: bool = False
 
 
 # The tool's default login asks for a code pasted from a browser, which an
@@ -79,6 +80,7 @@ def plan(o: Options) -> list[list[str]]:
         "EARSHOT_EARS": ",".join(o.ears),
         "EARSHOT_RUN": o.run,
         "EARSHOT_RESULT": o.result,
+        "EARSHOT_AUDIOSR": "1" if o.audiosr else "",
     }
     job = [*COLAB, "exec", "-s", o.session, "-f", str(JOB), "--timeout", str(TIMEOUT_S)]
     for key, value in env.items():
@@ -119,7 +121,7 @@ def main() -> int:
                         help="EARS speakers fetched on the VM; empty for none")
     parser.add_argument(
         "--run",
-        default="uv run python scripts/listening_set.py --set bwe-ears "
+        default="uv run python scripts/listening_set.py --set bwe-ears --one-at-a-time "
         "material/local/ears out/kuuntelu-bwe-ears",
     )
     parser.add_argument("--result", default="out/kuuntelu-bwe-ears")
@@ -127,6 +129,8 @@ def main() -> int:
     parser.add_argument("--upload", type=Path, nargs="*", default=[],
                         help="repository-relative paths to send; private audio only by choice")
     parser.add_argument("--keep", action="store_true", help="leave the VM running")
+    parser.add_argument("--audiosr", action="store_true",
+                        help="build AudioSR's own Python 3.10 environment on the VM")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -137,7 +141,7 @@ def main() -> int:
         session=args.session, gpu=args.gpu, commit=sha, run=args.run, result=args.result,
         out=args.out, extras=tuple(e for e in args.extras.split(",") if e),
         ears=tuple(s for s in args.ears.split(",") if s), upload=tuple(args.upload),
-        keep=args.keep,
+        keep=args.keep, audiosr=args.audiosr,
     )
     commands = plan(options)
     if args.dry_run:
