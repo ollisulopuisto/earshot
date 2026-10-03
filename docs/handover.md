@@ -262,6 +262,36 @@ band through at r > 0.95. The lesson for every new engine: check that it
 returns the input where it claims to keep it, not only that it returns
 the right number of samples.
 
+## 4 October 2026, night: a route instead of a model
+
+The research survey (`docs/research/`) said no single open model beats
+UniPASE outright and that the URGENT winners kept more of the original. The
+night's work built that: **`route`**, which measures the input and sends each
+damage to the engine that measured best on it, and passes clean audio
+through bit for bit.
+
+- **Gate** (`gate:<engine>`, `earshot.engines.gate`): band edge under 10 kHz,
+  ≥0.3 % of samples at the peak, ≥1 % exact zero, DNSMOS SIG under 2.45
+  (rooms), quiet-frame flatness ≥0.54 (white hiss), and what MossFormer2
+  would remove above −12 dB (real backgrounds). Clean audio untouched on
+  every held-out EARS excerpt; one clean pp53 excerpt of five touched by the
+  isolation detector (its speaker cosine after isolation 0.874).
+- **Route defaults**, each measured on five EARS excerpts: missing band →
+  Sidon; room → WPE then MossFormer2; clipping → declip; hiss and
+  backgrounds → MossFormer2; gated silence → keepzero:unipase.
+- **New engines**: Sidon, WPE (nara_wpe, 60 taps), MossFormer2 SE 48K
+  (vendored), and DNSMOS as `earshot.quality`.
+- **New damage**: `room-laptop` and `room-near` (the old `room` is a hall,
+  DRR −12.3 dB), and real backgrounds `office`, `kitchen`, `cafeteria` from
+  DEMAND.
+- **Negative result**: an EQ match does not recover UniPASE's identity drift.
+
+Route against single models (ten damages, EARS, `results/2026-10-04-route-
+vs-models-ears-m1max.json`): mean log-spectral gain +2.37 dB against
+UniPASE +1.16 and Sidon +1.77; mean speaker change −0.017 against −0.046 and
+−0.063. Not yet heard by anyone — the morning `versus` set has it beside
+UniPASE and Sidon on the pp53 voices.
+
 ## What is not known, in priority order
 
 **1. ~~Whether any of this holds on real VoIP.~~ Answered — see the README's
