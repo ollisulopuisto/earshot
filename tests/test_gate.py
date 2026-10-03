@@ -139,3 +139,43 @@ def test_the_quality_detector_is_optional():
     """CI has no onnxruntime; the gate must still run on its other detectors
     (the autouse fixture plays the part of the missing model)."""
     assert gate.reasons(_voice(), RATE) == []
+
+
+class Named(Marker):
+    def __init__(self, name):
+        super().__init__()
+        self.name = name
+
+
+def test_route_sends_each_damage_to_its_engine(monkeypatch):
+    """One engine does not win everywhere (pp53 bench, 2026-10-03): Sidon
+    leads on every call-like damage, UniPASE on room. The route reads the
+    gate's findings and picks."""
+    made = {}
+
+    def fake_load(spec):
+        made[spec] = Named(spec)
+        return engines.Loaded(made[spec])
+
+    monkeypatch.setattr(engines, "load", fake_load)
+    route = gate.RouteEngine({"band": "sidon", "clip": "declip"})
+    x = _voice()
+    np.testing.assert_array_equal(route.process(x, RATE), x)  # clean: nothing runs
+    route.process(degrade.band_limit(x, RATE, 300.0, 3400.0), RATE)
+    assert made["sidon"].calls == 1
+    route.process(degrade.overload(x, RATE, 12.0), RATE)
+    assert made["declip"].calls == 1
+    assert route.last_choice == "declip"
+
+
+def test_route_parses_its_spec_and_refuses_unknown_damage():
+    loaded = engines.load("route:band=passthrough,clip=passthrough")
+    assert loaded.engine.rules == {"band": "passthrough", "clip": "passthrough"}
+    with pytest.raises(engines.EngineError):
+        engines.load("route:hum=passthrough")
+
+
+def test_route_keeps_the_contract():
+    from earshot.testing import assert_engine_contract
+
+    assert_engine_contract(engines.load("route:band=passthrough").engine)

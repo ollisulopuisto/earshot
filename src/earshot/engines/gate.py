@@ -57,6 +57,8 @@ import numpy as np
 
 from . import EngineError, Loaded, register
 
+KINDS = ("band", "zero", "clip", "sig", "bak")  # also the route's priority
+
 BAND_EDGE_HZ = 10000.0
 CLIPPED_PERCENT = 0.3
 ZERO_PERCENT = 1.0
@@ -67,8 +69,8 @@ SIG_BELOW = 2.45
 BAK_BELOW = 3.50
 
 
-def reasons(audio: np.ndarray, rate: int) -> list[str]:
-    """Why ``audio`` needs restoring; an empty list means leave it alone."""
+def findings(audio: np.ndarray, rate: int) -> list[tuple[str, str]]:
+    """``(kind, why)`` for each detector that fired; kinds are ``KINDS``."""
     from .universr import content_edge
 
     x = np.asarray(audio, dtype=np.float32).reshape(-1)
@@ -78,22 +80,27 @@ def reasons(audio: np.ndarray, rate: int) -> list[str]:
         return found
     edge = content_edge(x, rate)
     if edge < BAND_EDGE_HZ:
-        found.append(f"band ends at {edge / 1000:.1f} kHz")
+        found.append(("band", f"band ends at {edge / 1000:.1f} kHz"))
     clipped = 100.0 * float(np.mean(np.abs(x) >= 0.999 * peak))
     if clipped >= CLIPPED_PERCENT:
-        found.append(f"{clipped:.1f} % of samples at the peak")
+        found.append(("clip", f"{clipped:.1f} % of samples at the peak"))
     zeros = 100.0 * float(np.mean(x == 0.0))
     if zeros >= ZERO_PERCENT:
-        found.append(f"{zeros:.1f} % exact zero")
+        found.append(("zero", f"{zeros:.1f} % exact zero"))
     from .. import quality
 
     if quality.available():
         scores = quality.dnsmos(x, rate)
         if scores["sig"] < SIG_BELOW:
-            found.append(f"speech quality {scores['sig']:.2f} (DNSMOS SIG)")
+            found.append(("sig", f"speech quality {scores['sig']:.2f} (DNSMOS SIG)"))
         if scores["bak"] < BAK_BELOW:
-            found.append(f"background {scores['bak']:.2f} (DNSMOS BAK)")
+            found.append(("bak", f"background {scores['bak']:.2f} (DNSMOS BAK)"))
     return found
+
+
+def reasons(audio: np.ndarray, rate: int) -> list[str]:
+    """Why ``audio`` needs restoring; an empty list means leave it alone."""
+    return [why for _, why in findings(audio, rate)]
 
 
 class GateEngine:
@@ -123,3 +130,60 @@ def _load(argument: str) -> Loaded:
                   load_seconds=time.perf_counter() - started,
                   notes={"inner": argument, "band_edge_hz": BAND_EDGE_HZ,
                          "clipped_percent": CLIPPED_PERCENT, "zero_percent": ZERO_PERCENT})
+
+
+# Which engine each damage goes to, from the pp53 bench (2026-10-03) where
+# it measured: Sidon led on every call-like damage (missing band), UniPASE on
+# room (SIG). Gated silence keeps its zeros. Clipping and hiss were not
+# measured head to head yet; these two are provisional.
+DEFAULT_ROUTE = {
+    "band": "sidon",
+    "zero": "keepzero:unipase",
+    "clip": "chain:declip+unipase",
+    "sig": "unipase",
+    "bak": "unipase",
+}
+
+
+class RouteEngine:
+    """The gate, with a choice: the first finding in ``KINDS`` order picks
+    the engine; no finding passes the input through untouched."""
+
+    def __init__(self, rules: dict[str, str]):
+        self.rules = dict(rules)
+        self.name = "route(" + ",".join(f"{k}={v}" for k, v in self.rules.items()) + ")"
+        self._loaded: dict[str, object] = {}
+        self.last_choice: str | None = None
+        self.last_reasons: list[str] = []
+
+    def process(self, audio: np.ndarray, rate: int) -> np.ndarray:
+        from . import load as load_engine
+
+        x = np.asarray(audio, dtype=np.float32).reshape(-1)
+        found = findings(x, rate)
+        self.last_reasons = [why for _, why in found]
+        kinds = {kind for kind, _ in found}
+        self.last_choice = next((self.rules[k] for k in KINDS if k in kinds and k in self.rules),
+                                None)
+        if self.last_choice is None:
+            return x.copy()
+        if self.last_choice not in self._loaded:
+            self._loaded[self.last_choice] = load_engine(self.last_choice).engine
+        return np.asarray(self._loaded[self.last_choice].process(x, rate), dtype=np.float32)
+
+
+@register("route")
+def _load_route(argument: str) -> Loaded:
+    """``route`` (the measured defaults) or ``route:band=sidon,sig=unipase``."""
+    rules = dict(DEFAULT_ROUTE)
+    if argument:
+        rules = {}
+        for part in argument.split(","):
+            kind, _, spec = part.partition("=")
+            if kind not in KINDS or not spec:
+                raise EngineError(
+                    f"route takes kind=engine pairs with kinds {', '.join(KINDS)}; got {part!r}")
+            rules[kind] = spec
+    started = time.perf_counter()
+    return Loaded(RouteEngine(rules), load_seconds=time.perf_counter() - started,
+                  notes={"rules": rules})
