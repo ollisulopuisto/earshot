@@ -91,7 +91,13 @@ def _build_audiosr() -> None:
     """AudioSR pins numpy<=1.23.5, librosa 0.9.2 and transformers 4.30.2, so
     it gets an interpreter of its own; the engine talks to it over a pipe."""
     _sh(f"uv venv -q --python 3.10 {AUDIOSR_ENV}")
-    _sh(f"uv pip install -q --python {AUDIOSR_ENV}/bin/python audiosr==0.0.7 soundfile")
+    # Each pin is a failure seen on a real run (2026-10-03): librosa 0.9.2
+    # imports pkg_resources, which a uv environment lacks and setuptools 81
+    # removed; audiosr imports matplotlib without declaring it; torchaudio
+    # from 2.9 reads files only through torchcodec. torch 2.4.1 is of
+    # AudioSR's era and has CUDA wheels on PyPI.
+    _sh(f"uv pip install -q --python {AUDIOSR_ENV}/bin/python audiosr==0.0.7 soundfile "
+        "matplotlib 'setuptools<81' torch==2.4.1 torchaudio==2.4.1 torchvision==0.19.1")
     os.environ["EARSHOT_AUDIOSR_PYTHON"] = str(AUDIOSR_ENV / "bin/python")
 
 
