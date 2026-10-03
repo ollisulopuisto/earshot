@@ -138,13 +138,17 @@ def _load(argument: str) -> Loaded:
 # (+0.011/+0.024 on realistic rooms, 2026-10-04) while UniPASE and Sidon
 # cleaned further at -0.09 to -0.11 — the owner's rule puts the voice first;
 # "chain:wpe+unipase" is the stronger alternative. Gated silence keeps its
-# zeros. Clipping and hiss were not measured head to head yet: provisional.
+# zeros. Clipping: declip alone, +2.01 dB and speaker +0.017 on five EARS
+# excerpts, where every generative engine made overload worse (UniPASE
+# -0.48, Sidon -0.84 dB). Hiss: unbounded DeepFilterNet, +6.80 dB, and the
+# owner's blind pick on hiss; deepfilternet:12 costs less identity (-0.014
+# against -0.052) for +5.88 dB (2026-10-04).
 DEFAULT_ROUTE = {
     "band": "sidon",
     "zero": "keepzero:unipase",
-    "clip": "chain:declip+unipase",
+    "clip": "declip",
     "sig": "wpe",
-    "bak": "unipase",
+    "bak": "deepfilternet",
 }
 
 
