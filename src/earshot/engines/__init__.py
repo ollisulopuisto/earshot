@@ -213,6 +213,7 @@ from . import chain as _chain  # noqa: E402,F401
 from . import declip as _declip  # noqa: E402,F401
 from . import deepfilternet as _deepfilternet  # noqa: E402,F401
 from . import dehum as _dehum  # noqa: E402,F401
+from . import gate as _gate  # noqa: E402,F401
 from . import keepzero as _keepzero  # noqa: E402,F401
 from . import lavasr as _lavasr  # noqa: E402,F401
 from . import notch as _notch  # noqa: E402,F401
