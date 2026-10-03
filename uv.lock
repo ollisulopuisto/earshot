@@ -512,6 +512,12 @@ lavasr = [
     { name = "onnxruntime" },
     { name = "pyyaml" },
 ]
+mossformer2 = [
+    { name = "rotary-embedding-torch" },
+    { name = "torch" },
+    { name = "torchaudio" },
+    { name = "torchinfo" },
+]
 novasr = [
     { name = "novasr" },
     { name = "torch" },
@@ -564,24 +570,28 @@ requires-dist = [
     { name = "pystoi", marker = "extra == 'perceptual'", specifier = ">=0.4" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pyyaml", marker = "extra == 'lavasr'", specifier = ">=6.0" },
+    { name = "rotary-embedding-torch", marker = "extra == 'mossformer2'", specifier = ">=0.8" },
     { name = "scipy", specifier = ">=1.11" },
     { name = "soundfile", specifier = ">=0.12" },
     { name = "torch", marker = "extra == 'deepfilternet'", specifier = ">=2.0" },
+    { name = "torch", marker = "extra == 'mossformer2'", specifier = ">=2.0" },
     { name = "torch", marker = "extra == 'novasr'", specifier = ">=2.0" },
     { name = "torch", marker = "extra == 'sidon'", specifier = ">=2.0" },
     { name = "torch", marker = "extra == 'speaker'", specifier = ">=2.0" },
     { name = "torch", marker = "extra == 'unipase'", specifier = ">=2.0" },
     { name = "torch", marker = "extra == 'universr'", specifier = ">=2.0" },
     { name = "torchaudio", marker = "extra == 'deepfilternet'", specifier = ">=2.0" },
+    { name = "torchaudio", marker = "extra == 'mossformer2'", specifier = ">=2.0" },
     { name = "torchaudio", marker = "extra == 'novasr'", specifier = ">=2.0" },
     { name = "torchaudio", marker = "extra == 'sidon'", specifier = ">=2.0" },
     { name = "torchaudio", marker = "extra == 'speaker'", specifier = ">=2.0" },
     { name = "torchaudio", marker = "extra == 'unipase'", specifier = ">=2.0" },
     { name = "torchaudio", marker = "extra == 'universr'", specifier = ">=2.0" },
+    { name = "torchinfo", marker = "extra == 'mossformer2'", specifier = ">=1.8" },
     { name = "transformers", marker = "extra == 'sidon'", specifier = ">=4.40" },
     { name = "universr", marker = "extra == 'universr'", git = "https://github.com/woongzip1/UniverSR?rev=d8636623fe0c0704296239c1d3d3c5b911ecb2e0" },
 ]
-provides-extras = ["vst3", "perceptual", "lavasr", "deepfilternet", "universr", "novasr", "unipase", "sidon", "wpe", "speaker", "dev"]
+provides-extras = ["vst3", "perceptual", "lavasr", "deepfilternet", "universr", "novasr", "unipase", "sidon", "mossformer2", "wpe", "speaker", "dev"]
 
 [[package]]
 name = "einops"
@@ -1518,6 +1528,19 @@ wheels = [
 ]
 
 [[package]]
+name = "rotary-embedding-torch"
+version = "0.9.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "einops" },
+    { name = "torch" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fc/63/776d55b395aed9d2815afc1740056e919691d1be1ceee203d101d33d1674/rotary_embedding_torch-0.9.1.tar.gz", hash = "sha256:f43c39cd9c0aaa17d47e876db89a552a203dd8af35e7980f484ab7ad7ea8bf69", size = 13246, upload-time = "2026-06-20T23:39:14.667Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ea/63/ca681366df98d207876c6ad7761ef6910668c83ec766fd5a70c56b9c3567/rotary_embedding_torch-0.9.1-py3-none-any.whl", hash = "sha256:489ef53e21ab4c4eb35c0c97b551d724f5eea71c2bca39acb8fee8d88b142a76", size = 17423, upload-time = "2026-06-20T23:39:13.427Z" },
+]
+
+[[package]]
 name = "safetensors"
 version = "0.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1817,6 +1840,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/87/ec/a40aa124660f0ee65e6760cb53df6a82ad91a1a3ef1da5e747f1336644dd/torchdiffeq-0.2.5.tar.gz", hash = "sha256:b50d3760d13fd138dcceac651f4b80396f44fefcebd037a033fecfeaa9cc12e7", size = 31197, upload-time = "2024-11-21T20:20:11.552Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b9/35/537f64f2d0b3cfebaae0f903b4e3a3b239abcc99d0f73cb15b9cee9b8212/torchdiffeq-0.2.5-py3-none-any.whl", hash = "sha256:aa1db4bed13bd04952f28a53cdf4336d1ab60417c1d9698d7a239fec1cf2bcf8", size = 32902, upload-time = "2024-11-21T20:20:09.938Z" },
+]
+
+[[package]]
+name = "torchinfo"
+version = "1.8.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/53/d9/2b811d1c0812e9ef23e6cf2dbe022becbe6c5ab065e33fd80ee05c0cd996/torchinfo-1.8.0.tar.gz", hash = "sha256:72e94b0e9a3e64dc583a8e5b7940b8938a1ac0f033f795457f27e6f4e7afa2e9", size = 25880, upload-time = "2023-05-14T19:23:26.377Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/72/25/973bd6128381951b23cdcd8a9870c6dcfc5606cb864df8eabd82e529f9c1/torchinfo-1.8.0-py3-none-any.whl", hash = "sha256:2e911c2918603f945c26ff21a3a838d12709223dc4ccf243407bce8b6e897b46", size = 23377, upload-time = "2023-05-14T19:23:24.141Z" },
 ]
 
 [[package]]
