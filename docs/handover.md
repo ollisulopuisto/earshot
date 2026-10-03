@@ -131,6 +131,17 @@ where attention is pointing, not as evidence. What would make it one:
 - its known fault measured on real material: it speaks into digital silence
   at −32.8 dBFS (contract kit), so gated audio wants `keepzero:unipase`.
 
+**Every UniverSR take in that first listen was broken** (fixed in ceab298).
+The engine handed upstream's `enhance()` 48 kHz audio labelled with the
+band's rate; upstream takes an array to be at that rate, so speech came out
+stretched six-fold — 1–3 kHz 49.7 dB down, 40–80 Hz 50 dB up. The UniverSR
+takes in `out/kuuntelu-bwe` and the first Colab `bwe-ears` are invalid, and
+so is the "+7 to +25 dB of low end" once reported for it. The contract kit
+checks length and alignment, not content; a test now requires the speech
+band through at r > 0.95. The lesson for every new engine: check that it
+returns the input where it claims to keep it, not only that it returns
+the right number of samples.
+
 ## What is not known, in priority order
 
 **1. ~~Whether any of this holds on real VoIP.~~ Answered — see the README's
