@@ -139,3 +139,12 @@ def test_body_is_a_balance_not_a_level(clean):
     run = probes.run_all(engines.load("passthrough:6"), clean, RATE,
                          degrade.by_name("clean"))
     assert abs(run.value("body", "after")) < 0.1
+
+
+def test_removing_non_speech_counts_as_better():
+    """The owner's goal, stated 2026-10-03: for podcast production only the
+    voice is wanted — noise, hum, buzz and room sound are all to go. The
+    probe used to score keeping non-speech as better; it is the reverse."""
+    run = probes.preservation(engines.load("passthrough"))
+    overall = [r for r in run.results if r.metric == "overall"][0]
+    assert overall.better == "higher"

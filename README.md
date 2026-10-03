@@ -140,7 +140,9 @@ noise floor** with the speech level untouched, recovers **1.5 dB of
 log-spectral distance** in a band removed at 4 kHz, preserves phase below
 12 kHz while inventing everything above 14 kHz, and **deletes non-speech
 entirely** (−57 to −67 dB). Those are the numbers an open replacement has to
-beat, and they are the reason the `preservation` probe exists.
+beat. Deleting non-speech was first counted against it; for podcast
+production it is what the owner wants (2026-10-03), and the `preservation`
+probe now scores removal as better.
 
 The bench also found something no review reports: **its bandwidth extension is
 stochastic.** Below 1 kHz it repeats to +74 dB; in the bands it invents, two

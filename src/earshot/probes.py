@@ -14,9 +14,10 @@ decision at least once:
 ``origin``        Is the output still the input, band by band? Separates a
                   mask from a synthesiser. Nothing else reveals this.
 ``cleanup``       Did the floor come down without the speech coming with it?
-``preservation``  What happens to sound that is not a voice? A speech-only
-                  model deletes it, which is fine for a lone microphone and
-                  ruinous for a recording with a room in it.
+``preservation``  What happens to sound that is not a voice? For podcast
+                  production the owner wants it gone (2026-10-03): noise,
+                  hum, buzz, room — only voices stay. More removed is
+                  better; the probe used to score it the other way.
 ``stability``     Same input twice, how close? Decides whether results can
                   be cached and whether a measured difference is the setting
                   or the dice. Reported as a margin, not a yes/no — the
@@ -403,8 +404,8 @@ def preservation(loaded: Loaded, rate: int = 48000, seconds: float = 5.0) -> Run
         return run
 
     run.results.append(
-        Result("preservation", "overall", metrics.suppression(sweep, out), "dB", "lower",
-               "how much of a non-speech signal disappeared")
+        Result("preservation", "overall", metrics.suppression(sweep, out), "dB", "higher",
+               "how much of a non-speech signal disappeared; for podcasts, more is better")
     )
     # The sweep is logarithmic, so the time at which it passes a frequency is
     # known and each octave can be looked at where it actually happened.

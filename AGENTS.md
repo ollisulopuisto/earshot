@@ -13,7 +13,17 @@ not field recordings, not general audio.
 
 The design goal, in the owner's words: *restore human soundingness*. When a
 change would trade a speaker sounding like themselves for a better score,
-that is not an improvement, and the `origin` probe exists to catch it.
+that is not an improvement, and the `origin` and `speaker` probes exist to
+catch it.
+
+**Only voices are wanted.** One or more speakers per channel; everything
+else — steady or intermittent noise, hum, buzz, music beds, room sound — is
+to go (the owner, 2026-10-03). Removing non-speech is a feature, not
+collateral damage, and `preservation` scores it that way. The owner's
+working idea: a human voice is well described by a few parameters (pitch
+range, formants, timbre), and a podcast gives an hour of the same speaker,
+so a profile measured from the episode's clean stretches can guide what is
+rebuilt.
 
 ## The rule the whole bench rests on
 
