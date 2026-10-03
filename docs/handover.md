@@ -232,6 +232,25 @@ better in 8 of 16. LavaSR +0.003. The drift lives in finer structure than
 an EQ reaches, so a per-speaker profile would have to condition the model,
 not post-filter its output.
 
+**The `room` recipe was a hall, and WPE is the first thing that helps a
+real room** (2026-10-04). `room`'s impulse response measures a direct-to-
+reverberant ratio of −12.3 dB at RT60 0.6 s: a distant microphone in a hall,
+nothing like a podcast guest — which reframes every "nothing helps on room"
+result so far, the owner's "all bad" included. Two realistic recipes now:
+`room-laptop` (0 dB) and `room-near` (+6 dB). On five EARS excerpts:
+
+| engine | room-laptop SIG / LSD / speaker | room-near SIG / LSD / speaker |
+|---|---|---|
+| damaged | 2.36 / — / — | 3.11 / — / — |
+| WPE (60 taps) | 2.92 / +1.10 / **+0.011** | 3.36 / **+2.17** / **+0.024** |
+| UniPASE | 3.61 / +1.95 / −0.112 | 3.63 / +0.42 / −0.091 |
+| Sidon | 3.55 / **+2.80** / −0.101 | 3.51 / +1.23 / −0.103 |
+| WPE → UniPASE | 3.63 / +1.97 / −0.078 | 3.63 / +1.26 / −0.052 |
+
+(clean SIG 3.46.) The generative models clean a room further but cost a
+tenth of speaker similarity; WPE moves the voice *towards* its owner. The
+route now sends rooms to WPE, with WPE → UniPASE the stronger option.
+
 **Every UniverSR take in that first listen was broken** (fixed in ceab298).
 The engine handed upstream's `enhance()` 48 kHz audio labelled with the
 band's rate; upstream takes an array to be at that rate, so speech came out

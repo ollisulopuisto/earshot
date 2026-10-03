@@ -47,6 +47,8 @@ unipase = ["torch>=2.0", "torchaudio>=2.0", "omegaconf>=2.3", "einops>=0.7"]
 # Sidon: TorchScript exports, and transformers only for the SeamlessM4T
 # filterbank front end.
 sidon = ["torch>=2.0", "torchaudio>=2.0", "transformers>=4.40"]
+# WPE dereverberation (nara_wpe, MIT): numpy only.
+wpe = ["nara-wpe>=0.0.11"]
 # Speaker similarity (WeSpeaker ResNet34, ONNX). torchaudio for the Kaldi
 # filterbanks the model was trained on.
 speaker = ["onnxruntime>=1.17", "torch>=2.0", "torchaudio>=2.0"]

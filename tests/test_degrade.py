@@ -230,3 +230,26 @@ def test_hum_is_narrow_and_harmonic_not_broadband():
     # ...and nowhere else. Broadband would make it hiss, which already exists.
     off = (f > 400) & (f < 8000)
     assert abs(added[off]).max() < 1.0, "the hum leaked into the speech band"
+
+
+def _drr(ir, rate):
+    split = int(0.0025 * rate)
+    return 10 * np.log10(np.sum(ir[:split] ** 2) / np.sum(ir[split:] ** 2))
+
+
+def test_the_old_room_is_a_distant_microphone_in_a_hall():
+    """Measured 2026-10-04: the `room` impulse response has a direct-to-
+    reverberant ratio of -12.3 dB at RT60 0.6 s (first 2.5 ms against the
+    rest, the usual definition) — far wetter than any podcast microphone."""
+    assert _drr(degrade.room_response(48000, rt60=0.6), 48000) == pytest.approx(-12.3, abs=0.5)
+
+
+@pytest.mark.parametrize("drr", [0.0, 6.0])
+def test_a_room_can_be_given_its_direct_to_reverberant_ratio(drr):
+    assert _drr(degrade.room_response(48000, rt60=0.6, drr_db=drr), 48000) == pytest.approx(drr, abs=0.5)
+
+
+@pytest.mark.parametrize("name", ["room-laptop", "room-near"])
+def test_the_realistic_rooms_exist(name, clean):
+    out = degrade.by_name(name).apply(clean, RATE)
+    assert len(out) == len(clean)

@@ -132,15 +132,18 @@ def _load(argument: str) -> Loaded:
                          "clipped_percent": CLIPPED_PERCENT, "zero_percent": ZERO_PERCENT})
 
 
-# Which engine each damage goes to, from the pp53 bench (2026-10-03) where
-# it measured: Sidon led on every call-like damage (missing band), UniPASE on
-# room (SIG). Gated silence keeps its zeros. Clipping and hiss were not
-# measured head to head yet; these two are provisional.
+# Which engine each damage goes to, where it was measured. Missing band:
+# Sidon led on every call-like damage (pp53 bench, 2026-10-03). Room (SIG):
+# WPE, the one engine that moved speaker similarity *towards* the speaker
+# (+0.011/+0.024 on realistic rooms, 2026-10-04) while UniPASE and Sidon
+# cleaned further at -0.09 to -0.11 — the owner's rule puts the voice first;
+# "chain:wpe+unipase" is the stronger alternative. Gated silence keeps its
+# zeros. Clipping and hiss were not measured head to head yet: provisional.
 DEFAULT_ROUTE = {
     "band": "sidon",
     "zero": "keepzero:unipase",
     "clip": "chain:declip+unipase",
-    "sig": "unipase",
+    "sig": "wpe",
     "bak": "unipase",
 }
 

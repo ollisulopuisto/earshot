@@ -139,24 +139,46 @@ def clip(x: np.ndarray, rate: int, headroom_db: float = -6.0):
     return np.clip(x, -ceiling, ceiling).astype(np.float32)
 
 
-def reverb(x: np.ndarray, rate: int, rt60: float = 0.6, seed: int = 0):
-    """A guest in a live room.
+def room_response(rate: int, rt60: float = 0.6, seed: int = 0,
+                  drr_db: float | None = None) -> np.ndarray:
+    """A synthetic room impulse response of unit energy.
 
-    Exponentially decaying noise is not a real room, but it is the standard
-    stand-in and it has the property that matters: the tail is uncorrelated
-    with the direct sound, so an engine cannot subtract it, only recognise it.
+    Without ``drr_db`` it is the original recipe's: a direct sound of 3 on an
+    exponentially decaying noise tail, which measured (2026-10-04) a direct-
+    to-reverberant ratio of −12.3 dB at RT60 0.6 s — a distant microphone in a
+    hall. With
+    ``drr_db`` the direct sound is scaled so the direct-to-reverberant ratio
+    (first 2.5 ms against the rest) is that many dB: about 0 for a laptop
+    microphone at arm's length, +5 to +15 for a headset or close microphone
+    in an untreated room.
     """
     length = int(rt60 * rate)
     rng = np.random.default_rng(seed)
     ir = rng.normal(0.0, 1.0, length) * np.exp(-np.arange(length) / (rt60 * rate / 6.9))
     ir[0] += 3.0
+    if drr_db is not None:
+        split = int(0.0025 * rate)
+        tail = np.sum(ir[split:] ** 2)
+        ir[:split] = 0.0
+        ir[0] = np.sqrt(tail * 10 ** (drr_db / 10))
     # Normalise by energy, not by absolute sum. The L1 version spread the
     # gain over all 28,800 samples of a 0.6 s tail and cost 28.1 dB, so the
     # recipe was moving the speaker twenty times further from the microphone
     # as well as putting them in a live room. Two damages in one recipe means
     # no probe can say which of them an engine failed at. Convolving with an
     # IR of unit energy leaves an uncorrelated signal's level where it was.
-    ir /= np.sqrt(np.sum(ir**2))
+    return ir / np.sqrt(np.sum(ir**2))
+
+
+def reverb(x: np.ndarray, rate: int, rt60: float = 0.6, seed: int = 0,
+           drr_db: float | None = None):
+    """A guest in a live room.
+
+    Exponentially decaying noise is not a real room, but it is the standard
+    stand-in and it has the property that matters: the tail is uncorrelated
+    with the direct sound, so an engine cannot subtract it, only recognise it.
+    """
+    ir = room_response(rate, rt60, seed, drr_db)
     return signal.fftconvolve(x, ir)[: len(x)].astype(np.float32)
 
 
@@ -682,7 +704,8 @@ RECIPES: tuple[Damage, ...] = (
     ),
     Damage(
         "room",
-        "a live room, RT60 0.6 s",
+        "a live room, RT60 0.6 s, direct sound 12 dB under the reverberation "
+        "(a distant microphone in a hall; see room-laptop, room-near)",
         ((reverb, {"rt60": 0.6}),),
     ),
     Damage(
@@ -788,6 +811,18 @@ RECIPES: tuple[Damage, ...] = (
          (autogain, {"target_db": -20.0}),
          (opus_call, {"bitrate_kbps": 12, "loss": 0.05, "burst": 2.5})),
         needs="ffmpeg+libopus",
+    ),
+    Damage(
+        "room-laptop",
+        "a laptop microphone at arm's length in a live room: RT60 0.6 s, "
+        "direct and reverberant sound equal (0 dB)",
+        ((reverb, {"rt60": 0.6, "drr_db": 0.0}),),
+    ),
+    Damage(
+        "room-near",
+        "a close microphone in an untreated room: RT60 0.6 s, direct sound "
+        "6 dB over the reverberation",
+        ((reverb, {"rt60": 0.6, "drr_db": 6.0}),),
     ),
 )
 
