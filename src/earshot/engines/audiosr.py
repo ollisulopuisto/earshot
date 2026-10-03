@@ -74,6 +74,10 @@ class AudioSREngine:
             [python, str(WORKER), "--ckpt", str(checkpoint), "--model", "speech",
              "--steps", str(steps), "--seed", str(SEED)],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
+            # A notebook kernel exports its inline plotting backend, and
+            # AudioSR's older matplotlib refuses that name at import — the
+            # fourth Colab run died of it. AudioSR draws nothing anyway.
+            env={**os.environ, "MPLBACKEND": "Agg"},
         )
         if self._reply() != "ready":
             self.close()

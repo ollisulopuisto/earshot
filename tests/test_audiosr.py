@@ -18,10 +18,15 @@ from earshot.engines import audiosr
 
 FAKE_WORKER = textwrap.dedent(
     """
+    import os
     import sys
     import numpy as np
     import soundfile as sf
 
+    # On Colab the kernel's MPLBACKEND (matplotlib_inline) reached the real
+    # worker, and AudioSR's matplotlib refused it at import.
+    if os.environ.get("MPLBACKEND") != "Agg":
+        sys.exit("MPLBACKEND not set to Agg")
     print("ready", flush=True)
     for line in sys.stdin:
         source, target = line.rstrip("\\n").split("\\t")
