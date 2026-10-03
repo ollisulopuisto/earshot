@@ -127,6 +127,9 @@ def main() -> None:
     if head != commit:
         raise SystemExit(f"checked out {head}, asked for {commit}")
 
+    # The voip-call recipes decode through libopus; ffmpeg on Colab links it,
+    # but the bare library is what ctypes looks for.
+    _sh("apt-get install -y -qq libopus0 > /dev/null || true")
     flags = " ".join(f"--extra {e}" for e in ["dev", *extras])
     _sh(f"pip install -q uv && uv sync -q {flags}", cwd=CHECKOUT)
     if Path(UPLOAD_TAR).exists():

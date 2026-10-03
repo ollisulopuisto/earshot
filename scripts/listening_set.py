@@ -268,6 +268,42 @@ BWE_EARS = [
      "palauttaa sen, mikä oli tallessa.", BWE_TAKES_GATED + BWE_TAKES_AUDIOSR),
 ]
 
+# The believable damage (2026-10-03): a real Opus call with concealed bursty
+# loss, a landline, and a guest who drove the input past 0 dBFS. UniPASE
+# was the owner's first-listen favourite, so it is here with and without the
+# router and declip in front of it.
+CALL_TAKES = [
+    ("unipase", "UniPASE", "puhuu kaiken uudelleen"),
+    ("router:unipase", "UniPASE reitittimen kautta", ""),
+    ("lavasr", "LavaSR", ""),
+    ("router:lavasr", "LavaSR reitittimen kautta", ""),
+    ("universr", "UniverSR", ""),
+    ("audiosr", "AudioSR", "diffuusio, 50 askelta"),
+]
+OVERLOAD_TAKES = CALL_TAKES + [
+    ("declip", "Declip", "piirtää leikatut huiput uudelleen"),
+    ("chain:declip+unipase", "Declip → UniPASE", ""),
+]
+
+CALLS_EARS = [
+    ("01-voip-p001", "p001 freeform 01.wav", 75.0, "voip-call",
+     "VoIP-puhelu: Opus 12 kbit/s, 5 % paketeista hukassa purskeina",
+     "Hävinneet paketit on paikattu dekooderin omalla arvauksella, kuten "
+     "oikeassa puhelussa. Kuuntele venyneitä tavuja ja robottimaisuutta.", CALL_TAKES),
+    ("02-voip-p008", "p008 freeform 02.wav", 30.0, "voip-call",
+     "VoIP-puhelu, toinen ääni", "Sama vaurio toisella äänellä.", CALL_TAKES),
+    ("03-lankapuhelin", "p002 freeform 01.wav", 50.0, "landline",
+     "Lankapuhelin: 300–3400 Hz, G.711",
+     "Runko puuttuu alta ja ilmavuus päältä. Tuleeko kumpikaan takaisin?", CALL_TAKES),
+    ("04-ylikuormitus", "p008 freeform 01.wav", 42.0, "overload",
+     "Ylikuormitettu tulo: vahvistus 12 dB yli nollan",
+     "Huiput leikkautuivat muuntimessa. Kuuntele särön lisäksi, katoaako "
+     "puheen terävyys korjauksessa.", OVERLOAD_TAKES),
+    ("05-ylikuormitus-puhelu", "p001 freeform 02.wav", 60.0, "overload-call",
+     "Ylikuormitettu mikrofoni VoIP-puhelussa", "Pahin tapaus: molemmat yhtä aikaa.",
+     OVERLOAD_TAKES),
+]
+
 BWE_INTRO = """
 <p>Kaistanlaajennus: neljä mallia, kukin yksin ja reitittimen takana.
 Vertailut on tehty pp53-podcastin nyman- ja wancke-äänitteistä sekä yhdestä
@@ -280,6 +316,7 @@ SETS = {
     "ears": Plan(EARS, ("Alkuperäinen", "EARS-studioäänitys sellaisenaan: tähän verrataan"), EARS_INTRO, "Earshot-kuuntelu"),
     "podcast": Plan(PODCAST, ("Alkuperäinen", "pp53-podcastin puhdas äänite"), PODCAST_INTRO, "Podcast-kuuntelu (yksityinen)"),
     "bwe-ears": Plan(BWE_EARS, ORIGINAL, EARS_INTRO, "Kaistanlaajennus, EARS"),
+    "calls-ears": Plan(CALLS_EARS, ORIGINAL, EARS_INTRO, "Puhelut ja ylikuormitus, EARS"),
     "bwe": Plan(BWE, ("Alkuperäinen", "ennen vauriota; aidossa puhelussa puhelu itse"), BWE_INTRO, "Kaistanlaajennus (yksityinen)"),
 }
 
