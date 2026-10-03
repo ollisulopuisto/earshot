@@ -155,3 +155,23 @@ def test_chunking_is_asked_for_and_named(monkeypatch):
     assert len(out) == RATE * 10
     assert max(seen) <= 4 * RATE
     assert "chunk4s" in engine.name
+
+
+def test_the_real_model_keeps_the_band_it_was_given():
+    """UniverSR keeps the input's own bins below the band and generates
+    above; that is the property it was queued for. Given an array, upstream's
+    enhance() takes it to be *at* input_sr, so handing it 48 kHz audio
+    labelled 8 kHz stretched it six-fold: every UniverSR take rendered before
+    this test was speech-band silence and 40-80 Hz rumble (1-3 kHz measured
+    49.7 dB down, r -0.09), and the contract kit, which checks length and
+    alignment, passed it."""
+    try:
+        engine = universr.UniverSREngine(8000, ode_steps=1, guidance=None,
+                                         ode_method="euler")
+    except engines.EngineError as exc:
+        pytest.skip(f"universr unavailable here: {exc}")
+    x = _speechlike(seconds=2.0, ceiling_hz=3400.0)
+    y = engine.process(x, RATE)
+    sos = signal.butter(6, (500.0, 3000.0), btype="band", fs=RATE, output="sos")
+    a, b = signal.sosfiltfilt(sos, x), signal.sosfiltfilt(sos, y)
+    assert np.corrcoef(a, b)[0, 1] > 0.95

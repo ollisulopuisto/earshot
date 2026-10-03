@@ -185,7 +185,13 @@ class UniverSREngine:
 
         import torch
 
-        source = x if rate == MODEL_RATE else _resample(x, rate, MODEL_RATE)
+        # Upstream's enhance() takes an array to be *at* input_sr and
+        # upsamples it to 48 kHz itself. Handed 48 kHz audio labelled with the
+        # band, it stretched the speech six-fold, and every take rendered that
+        # way was rumble (1-3 kHz 49.7 dB down, measured 2026-10-03). So the
+        # input goes down to the band's rate first, which is the same low-pass
+        # upstream applies to a 48 kHz file, done here instead of there.
+        source = _resample(x, rate, band)
         try:
             out = self.model.enhance(
                 torch.from_numpy(np.ascontiguousarray(source)),
