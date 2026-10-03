@@ -206,13 +206,14 @@ section.cmp.playing { border-color: var(--live); }
 .take .gain { grid-column: 2; font: 11px/1.4 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
 .take[aria-pressed="true"] { border-color: var(--live); background: var(--live-soft); }
 .take[aria-pressed="true"] .n { color: var(--live); }
-.row { display: grid; grid-template-columns: 1fr auto; gap: 4px; }
+.row { display: grid; grid-template-columns: 1fr auto auto; gap: 4px; }
 .pick {
   cursor: pointer; font: inherit; font-size: 12px; font-weight: 600; color: var(--muted);
   border: 1px solid var(--line); background: var(--sunk); border-radius: 4px; padding: 0 10px;
   min-width: 44px; min-height: 44px;
 }
 .pick[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.pick.worst[aria-pressed="true"] { background: var(--live); color: var(--accent-ink); border-color: var(--live); }
 .saved { font-size: 12px; color: var(--muted); margin-top: 6px; min-height: 1em; }
 .reveal { margin-top: 10px; }
 button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -260,8 +261,11 @@ class Comparison {
     this.cmp = cmp; this.index = index; this.buffers = null; this.sources = [];
     this.gains = []; this.selected = 0; this.offset = 0; this.startedAt = 0;
     this.playing = false; this.revealed = false;
-    const remembered = recall("best." + cmp.id);
-    this.best = remembered === null ? null : Number(remembered);
+    this.picks = {};
+    for (const kind of ["best", "worst"]) {
+      const remembered = recall(kind + "." + cmp.id);
+      this.picks[kind] = remembered === null ? null : Number(remembered);
+    }
     // Blind order: the reference stays first, the rest are shuffled.
     const rest = shuffle(cmp.takes.length - 1, 7919 * (index + 3));
     this.order = [0, ...rest.map(i => i + 1)];
@@ -311,15 +315,18 @@ class Comparison {
       b.onclick = () => { this.select(takeIndex); if (!this.playing) this.play(); };
       const row = document.createElement("div");
       row.className = "row";
-      const pick = document.createElement("button");
-      pick.className = "pick";
-      pick.textContent = "Paras";
-      pick.setAttribute("aria-pressed", String(takeIndex === this.best));
-      pick.setAttribute("aria-label", "Paras: " + name);
-      pick.onclick = () => this.choose(takeIndex, name, blind);
+      const button = (kind, text) => {
+        const pick = document.createElement("button");
+        pick.className = "pick " + kind;
+        pick.textContent = text;
+        pick.setAttribute("aria-pressed", String(takeIndex === this.picks[kind]));
+        pick.setAttribute("aria-label", text + ": " + name);
+        pick.onclick = () => this.choose(kind, takeIndex, name, blind);
+        return pick;
+      };
       // The reference is the original before damage: best by definition.
       row.append(b);
-      if (takeIndex !== 0) row.append(pick);
+      if (takeIndex !== 0) row.append(button("best", "Paras"), button("worst", "Huonoin"));
       box.appendChild(row);
     });
     this.el.querySelector(".reveal").hidden = !(state.blind && !this.revealed);
@@ -327,17 +334,18 @@ class Comparison {
   // One pick per comparison, changeable. Sent to the server with the real
   // take behind the blind label and whether its name was showing, so a
   // pick made blind can be told from one made with names visible.
-  async choose(takeIndex, shownAs, blind) {
-    this.best = takeIndex; store("best." + this.cmp.id, String(takeIndex)); this.render();
+  async choose(kind, takeIndex, shownAs, blind) {
+    this.picks[kind] = takeIndex; store(kind + "." + this.cmp.id, String(takeIndex)); this.render();
     const t = this.cmp.takes[takeIndex];
     const status = this.el.querySelector(".saved");
+    const what = kind === "best" ? "Paras" : "Huonoin";
     try {
       const r = await fetch("vote", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ comparison: this.cmp.id, file: t.file, label: t.label,
-                               shown_as: shownAs, blind: blind, page: document.title }) });
-      status.textContent = r.ok ? "Valinta tallennettu." : "Valinta jäi vain tähän selaimeen (palvelin ei tallentanut).";
+                               shown_as: shownAs, blind: blind, kind: kind, page: document.title }) });
+      status.textContent = r.ok ? what + " tallennettu." : what + " jäi vain tähän selaimeen (palvelin ei tallentanut).";
     } catch (e) {
-      status.textContent = "Valinta jäi vain tähän selaimeen (palvelin ei tallentanut).";
+      status.textContent = what + " jäi vain tähän selaimeen (palvelin ei tallentanut).";
     }
   }
   async load() {
@@ -486,6 +494,7 @@ def serve(directory: Path, port: int = 8000, host: str = "0.0.0.0"):
                 self.send_error(400)
                 return
             kept = {k: vote[k] for k in (*VOTE_FIELDS, "page") if k in vote}
+            kept["kind"] = vote.get("kind") if vote.get("kind") in ("best", "worst") else "best"
             kept["at"] = datetime.datetime.now(datetime.timezone.utc).strftime(
                 "%Y-%m-%dT%H:%M:%SZ")
             with open(log, "a", encoding="utf-8") as out:
@@ -501,17 +510,20 @@ def serve(directory: Path, port: int = 8000, host: str = "0.0.0.0"):
 
 
 def votes(directory: Path) -> list[dict]:
-    """The latest pick per comparison, and how many picks it took to get there."""
+    """The latest best and worst pick per comparison, with how many picks
+    of that kind it took to get there. Picks from before the worst button
+    existed carry no kind and count as best."""
     log = Path(directory) / "votes.jsonl"
     if not log.exists():
         return []
-    latest: dict[str, dict] = {}
-    count: dict[str, int] = {}
+    latest: dict[tuple[str, str], dict] = {}
+    count: dict[tuple[str, str], int] = {}
     for line in log.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         vote = json.loads(line)
-        key = vote["comparison"]
+        vote.setdefault("kind", "best")
+        key = (vote["comparison"], vote["kind"])
         count[key] = count.get(key, 0) + 1
         if key not in latest or vote.get("at", "") >= latest[key].get("at", ""):
             latest[key] = vote

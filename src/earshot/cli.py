@@ -218,7 +218,7 @@ def _votes(args) -> int:
         return 0
     for vote in picked:
         how = "blind" if vote.get("blind") else "names showing"
-        print(f"{vote['comparison']:28s} {vote.get('label', '?'):32s} "
+        print(f"{vote['comparison']:28s} {vote['kind']:6s} {vote.get('label', '?'):32s} "
               f"({how}, shown as {vote.get('shown_as', '?')}; {vote['picks']} picks, last {vote.get('at', '?')})")
     return 0
 

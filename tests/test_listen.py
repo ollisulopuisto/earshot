@@ -58,7 +58,7 @@ def test_the_page_starts_blind(tmp_path):
 def test_every_take_can_be_picked_as_best(tmp_path):
     assert main(["listen", str(_set(tmp_path))]) == 0
     page = (tmp_path / "index.html").read_text(encoding="utf-8")
-    assert 'pick.className = "pick"' in page
+    assert 'pick.className = "pick " + kind' in page
     assert 'fetch("vote"' in page
 
 
@@ -121,4 +121,24 @@ def test_the_reference_cannot_be_picked(tmp_path):
     Paras button on it asked a question with no answer (owner, 2026-10-03)."""
     assert main(["listen", str(_set(tmp_path))]) == 0
     page = (tmp_path / "index.html").read_text(encoding="utf-8")
-    assert "if (takeIndex !== 0) row.append(pick)" in page
+    assert 'if (takeIndex !== 0) row.append(button("best", "Paras"), button("worst", "Huonoin"))' in page
+
+
+def test_the_worst_take_can_be_picked_too(tmp_path, capsys):
+    """The owner's notes on the pp53 set were as often "terrible" as "best":
+    the broken UniverSR takes, heard blind. A worst pick is kept beside the
+    best, per comparison, and summarised separately."""
+    assert main(["listen", str(_set(tmp_path))]) == 0
+    page = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert 'button("worst", "Huonoin")' in page and "kind: kind" in page
+    (tmp_path / "votes.jsonl").write_text("\n".join(json.dumps(v) for v in [
+        {"comparison": "hum", "file": "hum/01-a.wav", "label": "A", "shown_as": "Otto A",
+         "blind": True, "kind": "best", "at": "2026-10-03T10:00:00Z"},
+        {"comparison": "hum", "file": "hum/02-b.wav", "label": "B", "shown_as": "Otto B",
+         "blind": True, "kind": "worst", "at": "2026-10-03T10:01:00Z"},
+    ]) + "\n")
+    picked = listen.votes(tmp_path)
+    assert {(v["kind"], v["label"]) for v in picked} == {("best", "A"), ("worst", "B")}
+    assert main(["votes", str(tmp_path)]) == 0
+    out = capsys.readouterr().out
+    assert "best" in out and "worst" in out

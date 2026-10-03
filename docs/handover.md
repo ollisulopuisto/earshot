@@ -150,6 +150,19 @@ router variant never picked. Still one listener and one voice per damage,
 and the speaker-similarity question above is unanswered: the picks say
 which sounded best, not which still sounds like its speaker.
 
+**The pp53 set (`out/kuuntelu-bwe`), blind, same day.** Saved picks:
+UniPASE behind the router on the Nyman call, plain UniPASE on the wideband
+call, `keepzero:unipase` on the real call. The owner's spoken notes named
+four takes terrible or worst (clean microphone, Nyman call, platform, real
+call), and all four were the broken UniverSR — heard blind, before anyone
+had said it was broken. Everything else on the clean microphone "sounds
+pretty much the same", which is what a clean input should do.
+
+Mapping a spoken "Otto E" to a take by recomputing the page's shuffle went
+wrong twice: the page shuffles in JavaScript doubles, and an exact Python
+copy diverges once the product passes 2^53. The saved picks carry the
+real take; trust those, or reproduce the float arithmetic.
+
 **Every UniverSR take in that first listen was broken** (fixed in ceab298).
 The engine handed upstream's `enhance()` 48 kHz audio labelled with the
 band's rate; upstream takes an array to be at that rate, so speech came out
