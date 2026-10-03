@@ -17,6 +17,17 @@ from earshot import degrade, engines
 from earshot.engines import gate
 
 RATE = 48000
+EARS_CLEAN = "out/colab-calls/out/kuuntelu-bwe-ears/01-puhdas/00-alkuperainen.wav"
+
+
+@pytest.fixture(autouse=True)
+def _no_dnsmos_on_synthetic(request, monkeypatch):
+    """DNSMOS rightly reads the synthetic test voice as poor speech; the
+    mechanics are tested without it, and DNSMOS on real speech below."""
+    if "real_speech" not in request.keywords:
+        from earshot import quality
+
+        monkeypatch.setattr(quality, "available", lambda: False)
 
 
 def _voice(seconds=4.0):
@@ -92,3 +103,39 @@ def test_it_loads_around_any_engine_and_keeps_the_contract():
     from earshot.testing import assert_engine_contract
 
     assert_engine_contract(loaded.engine)
+
+
+def test_dnsmos_weights_are_pinned():
+    from earshot import quality
+
+    (asset,) = quality.ASSETS
+    assert len(asset.sha256) == 64
+    assert "/raw/master/" not in asset.url and "/raw/main/" not in asset.url
+
+
+@pytest.mark.real_speech
+def test_hiss_and_room_reach_the_engine_when_quality_is_available():
+    """The first detectors were blind to both (0/5 on pp53). DNSMOS measured
+    room at SIG 1.22-2.25 against clean 2.62-3.51, and hiss at BAK
+    2.64-3.64 against clean 3.55-3.95 (five pp53 excerpts, 2026-10-04)."""
+    from pathlib import Path
+
+    import soundfile as sf
+
+    from earshot import quality
+
+    if not quality.available():
+        pytest.skip("DNSMOS needs onnxruntime and its weights")
+    path = Path(__file__).parent.parent / EARS_CLEAN
+    if not path.exists():
+        pytest.skip("needs a real clean EARS excerpt in out/")
+    x, rate = sf.read(path, dtype="float32")
+    assert gate.reasons(x, rate) == []
+    assert any("background" in r for r in gate.reasons(degrade.noise(x, rate, snr_db=15.0), rate))
+    assert any("speech quality" in r for r in gate.reasons(degrade.reverb(x, rate, rt60=0.6), rate))
+
+
+def test_the_quality_detector_is_optional():
+    """CI has no onnxruntime; the gate must still run on its other detectors
+    (the autouse fixture plays the part of the missing model)."""
+    assert gate.reasons(_voice(), RATE) == []

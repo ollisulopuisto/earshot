@@ -70,6 +70,7 @@ artifacts = ["src/earshot/vendor/*.yaml", "src/earshot/vendor/LICENSE-*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["real_speech: needs real recorded speech, skipped without it"]
 
 [tool.uv]
 # UniverSR's own pyproject points torch at the CUDA 12.8 index, which has no

@@ -20,12 +20,30 @@ audio (three excerpts of Nyman and Wancke, 2026-10-03):
 * **gated silence** — at least ``ZERO_PERCENT`` of samples exactly zero.
   Platform audio measured 5.4–8.1 %, clean and the calls 0.0–0.1 %.
 
-**Blind spots, measured:** hiss and room reverberation moved none of these.
+* **speech quality and background** — DNSMOS SIG under ``SIG_BELOW`` or BAK
+  under ``BAK_BELOW``, when onnxruntime is installed (``earshot.quality``).
+  Added for the two damages the first three could not see.
+
+**Blind spots of the first three, measured:** hiss and room reverberation
+moved none of them.
 And clipping after band-limiting can hide the missing band: on a strongly
 harmonic test voice, `narrowband-voip`'s clipping refilled the top to
 13.4 kHz, though real pp53 speech under it read 4.3–6.4 kHz.
 Hiss even raises the band edge to 24 kHz by filling the top with noise. A
 learned quality estimate (DNSMOS background, UTMOS) is the next detector.
+
+**Measured, gate v2** (2026-10-04), share of excerpts sent for restoration:
+
+| damage | pp53, 5 (thresholds set here) | EARS, 10 (held out) |
+|---|---|---|
+| clean | 0/5 | 0/10 |
+| room | 5/5 | 10/10 |
+| hiss | 4/5 | 4/10 |
+| wideband-voip, narrowband-voip, landline, overload, overload-call | 5/5 each | 10/10 each |
+| voip-call | 5/5 | 8/10 |
+| platform-upload | 4/5 | 2/10 (the recipe's gate rarely closes on EARS) |
+
+Clean audio was never touched. Hiss at 20 dB SNR is the weak spot held out.
 
 The decision is for the whole input. Applied to an episode, run it through
 ``process_in_chunks`` so a guest's segment and the host's are judged apart.
@@ -42,6 +60,11 @@ from . import EngineError, Loaded, register
 BAND_EDGE_HZ = 10000.0
 CLIPPED_PERCENT = 0.3
 ZERO_PERCENT = 1.0
+# DNSMOS, when installed. Just under the clean minimums measured on five pp53
+# excerpts (SIG 2.62, BAK 3.55): room read SIG 1.22-2.25, hiss BAK 2.64-3.64.
+# Five excerpts is few; these move when more material is measured.
+SIG_BELOW = 2.45
+BAK_BELOW = 3.50
 
 
 def reasons(audio: np.ndarray, rate: int) -> list[str]:
@@ -62,6 +85,14 @@ def reasons(audio: np.ndarray, rate: int) -> list[str]:
     zeros = 100.0 * float(np.mean(x == 0.0))
     if zeros >= ZERO_PERCENT:
         found.append(f"{zeros:.1f} % exact zero")
+    from .. import quality
+
+    if quality.available():
+        scores = quality.dnsmos(x, rate)
+        if scores["sig"] < SIG_BELOW:
+            found.append(f"speech quality {scores['sig']:.2f} (DNSMOS SIG)")
+        if scores["bak"] < BAK_BELOW:
+            found.append(f"background {scores['bak']:.2f} (DNSMOS BAK)")
     return found
 
 
