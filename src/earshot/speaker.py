@@ -38,6 +38,7 @@ def _model():
     if _session is None:
         try:
             import onnxruntime
+            import torch  # noqa: F401  (the filterbanks are torchaudio's)
             import torchaudio  # noqa: F401
         except ImportError as exc:
             raise EngineError(
@@ -52,11 +53,15 @@ def embed(x: np.ndarray, rate: int) -> np.ndarray:
     """A unit-length speaker embedding of ``x``."""
     from math import gcd
 
+    # The model first: it is what says whether the extra is installed. Importing
+    # torch before it raised a bare ModuleNotFoundError where there is no torch,
+    # which callers that skip on EngineError did not catch (CI, 2026-10-03).
+    session = _model()
+
     import torch
     from scipy import signal
     from torchaudio.compliance import kaldi
 
-    session = _model()
     factor = gcd(int(rate), MODEL_RATE)
     y = signal.resample_poly(np.asarray(x, dtype=np.float64), MODEL_RATE // factor,
                              rate // factor).astype(np.float32)

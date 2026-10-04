@@ -55,3 +55,17 @@ def test_passthrough_changes_no_ones_voice():
                          RATE, degrade.by_name("narrowband-voip"))
     assert run.value("speaker", "after") == pytest.approx(run.value("speaker", "before"), abs=1e-4)
     assert abs(run.value("speaker", "change")) < 1e-4
+
+
+def test_without_torch_the_probe_says_so(monkeypatch):
+    """With no optional dependency installed, as in CI, embed() imported
+    torch before checking anything and raised a bare ModuleNotFoundError,
+    which callers that skip on EngineError did not catch: three tests failed
+    on every push from 2026-10-03 on."""
+    import sys
+
+    monkeypatch.setattr(speaker, "_session", None)
+    monkeypatch.setitem(sys.modules, "torch", None)
+    assert not speaker.available()
+    with pytest.raises(engines.EngineError):
+        speaker.embed(np.zeros(RATE, dtype=np.float32), RATE)
