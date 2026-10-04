@@ -4,7 +4,7 @@
     earshot bench --engine 'gate:chain:declip+unipase'
 
 Both lead candidates harm clean podcast audio — on the pp53 bench (2026-10-03)
-UniPASE cost −3.55 dB and Sidon −5.41 dB of log-spectral distance on input
+UniPASE cost −3.47 dB and Sidon −4.46 dB of log-spectral distance (mean of six excerpts) on input
 that needed nothing. A good microphone should come out as it went in, so the
 gate measures the input first and passes it through, bit for bit, unless a
 detector fires.

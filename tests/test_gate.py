@@ -1,7 +1,7 @@
 """A gate: restore only what is damaged, leave clean audio alone.
 
 Both lead candidates harm clean podcast audio (pp53 bench, 2026-10-03:
-UniPASE −3.55 dB, Sidon −5.41 dB of log-spectral distance on clean input).
+UniPASE −3.47 dB, Sidon −4.46 dB of log-spectral distance on clean input, mean of six).
 The gate decides from cheap measurements whether the input needs a
 generative engine at all. Its first detectors are the ones measured to
 separate damage from clean pp53 audio — a band edge under 10 kHz, flat-topped

@@ -188,40 +188,34 @@ the band edge and with it the identity. One embedding model, few
 comparisons per engine: a strong lead, not a verdict. The broken UniverSR
 scored −0.81, so the probe sees a voice that is gone.
 
-**First bench of the new candidates on podcast voices** (`results/
-2026-10-03-*-pp53-m1max.json`: six 8 s excerpts of pp53 Nyman and Wancke,
-nine damages, M1 Max CPU; UniverSR absent — 12 min a call on this CPU).
+**Correction (2026-10-04): the pp53 bench tables first reported here showed
+one excerpt, not six.** Result files hold a row per excerpt and no summary
+row; the summary script kept the last row. `scripts/summarise_results.py`
+now averages them. True means over six pp53 excerpts (log-spectral gain dB /
+speaker change):
 
-- **UniPASE recovers the most where there is something to recover:**
-  log-spectral gain +1.95 dB on room, +2.70 wideband call, +1.33 VoIP call,
-  +1.64 landline, +1.63 overload on a call; on the landline it also puts
-  back 11 dB of the 32 dB of low end the line removed (body −32.6 →
-  −21.1). Nothing else recovers more than +0.65 anywhere.
-- **It damages clean audio:** −3.55 dB, PESQ −1.06, speaker −0.109. Run
-  blind on everything, it would harm the good microphones; it needs a gate
-  that leaves full-band clean audio alone, as `universr` and the router do.
-- **Speaker similarity** moves −0.03 to −0.16 under UniPASE (+0.18 on the
-  gated platform audio); LavaSR is worse at −0.08 to −0.21. The router
-  variants read ±0.00 — but the speaker model hears only 0–8 kHz, and they
-  change nothing below their band edge, so that reading is blind to them.
-- **router(unipase) does almost nothing** on most damages, because the edge
-  sits high, and costs on narrowband (−1.47 dB, PESQ −0.33).
-- **declip → unipase** equals UniPASE on the overloaded call (the codec
-  smears the flat tops declip looks for) and is marginally better on plain
-  overload (−1.25 vs −1.40).
-- **PESQ falls under UniPASE** almost everywhere, as metrics.md predicts for
-  a generative engine; it is not the arbiter here.
+| damage | UniPASE | Sidon | LavaSR |
+|---|---|---|---|
+| clean | −3.47 / −0.167 | −4.46 / −0.226 | −2.71 / −0.139 |
+| room (the hall) | +0.94 / −0.194 | +0.27 / −0.070 | +0.11 / −0.109 |
+| wideband-voip | +1.36 / −0.111 | +1.55 / −0.164 | −1.63 / −0.126 |
+| narrowband-voip | +0.21 / −0.168 | +0.88 / −0.120 | +0.27 / +0.019 |
+| voip-call | +0.77 / −0.135 | +1.54 / −0.120 | +0.33 / −0.115 |
+| landline | +0.63 / −0.057 | +0.04 / −0.111 | +0.13 / +0.025 |
+| overload | −1.46 / −0.142 | −2.58 / −0.196 | −1.15 / −0.129 |
+| overload-call | +0.99 / −0.095 | +1.46 / −0.091 | +0.36 / −0.106 |
 
-**Sidon on the same bench** (`results/2026-10-03-sidon-pp53-m1max.json`):
-it out-recovers UniPASE on every call-like damage — wideband +3.28 vs
-+2.70 dB, narrowband +1.32 vs −0.44, VoIP call +2.93 vs +1.33, overloaded
-call +2.76 vs +1.63 — and puts the low end back (narrowband body −17.4 →
-+1.0, landline −32.6 → −1.2, where UniPASE leaves −17 and −21). It loses on
-room (+0.76 vs +1.95), plain overload (−3.41 vs −1.40) and clean audio,
-which it harms more than UniPASE (−5.41 dB, PESQ −3.15). Speaker drift is
-mixed: smaller on the calls (−0.010 vs −0.028 VoIP), larger on the landline
-(−0.161 vs −0.029). Neither wins everywhere — the case for a per-segment
-choice and a gate that leaves clean audio alone.
+What survives: Sidon leads on calls, UniPASE on room and landline, both
+harm clean audio. What was wrong: the margins, and both move voices further
+from their owners than first reported (−0.06 to −0.23, not −0.03 to −0.16).
+The route evaluations (`results/2026-10-04-route-*`) averaged directly and
+stand. Body after the engine: Sidon brings narrowband to −0.9 dB and
+landline to −1.4; UniPASE leaves −15.4 and −19.7.
+
+**UniverSR, properly wired, on the call damages** (three pp53 excerpts,
+`results/2026-10-04-*-callband-pp53-m1max.json`): −1.77 to +0.14 dB where
+Sidon gives +0.52 to +1.34; speaker unchanged because it changes little;
+no low end restored; 0.05× realtime on the CPU. Out of the route.
 
 **Identity loss is not spectral tilt** (2026-10-04, negative result). The
 research suggested part of UniPASE's speaker-similarity loss might be
