@@ -292,6 +292,19 @@ UniPASE +1.16 and Sidon +1.77; mean speaker change −0.017 against −0.046 and
 −0.063. Not yet heard by anyone — the morning `versus` set has it beside
 UniPASE and Sidon on the pp53 voices.
 
+**On the podcast voices too** (`results/2026-10-04-route-vs-models-pp53-
+m1max.json`, five pp53 excerpts, thirteen damages): route +2.13 dB mean,
+speaker −0.049 (worst −0.101); UniPASE +1.26 / −0.119 (worst −0.197); Sidon
++1.34 / −0.104 (worst −0.160). DNSMOS OVRL favours the resynthesisers (+0.71
+Sidon, +0.46 route) — the predicted trade.
+
+**A scoring trap found doing it.** The pp53 "clean" tracks have real room
+tone. When the route isolates the voice — what the owner asked for — the
+bench scores the removed ambience as damage against that reference (clean
+−0.79 dB, office −0.49). For the goal "only voices", the reference itself
+must be voice-only before it can be the target; until then, recovery on
+pp53 under-credits isolation.
+
 ## What is not known, in priority order
 
 **1. ~~Whether any of this holds on real VoIP.~~ Answered — see the README's
