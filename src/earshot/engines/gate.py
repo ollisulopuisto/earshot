@@ -34,16 +34,18 @@ learned quality estimate (DNSMOS background, UTMOS) is the next detector.
 
 **Measured, gate v2** (2026-10-04), share of excerpts sent for restoration:
 
-| damage | pp53, 5 (thresholds set here) | EARS, 10 (held out) |
+| damage | pp53, 5 (thresholds set here) | EARS, 5 (held out) |
 |---|---|---|
-| clean | 0/5 | 0/10 |
-| room | 5/5 | 10/10 |
-| hiss | 4/5 | 4/10 |
-| wideband-voip, narrowband-voip, landline, overload, overload-call | 5/5 each | 10/10 each |
-| voip-call | 5/5 | 8/10 |
-| platform-upload | 4/5 | 2/10 (the recipe's gate rarely closes on EARS) |
+| clean | 0/5 | 0/5 |
+| room | 5/5 | 5/5 |
+| hiss | 4/5 | 2/5 |
+| wideband-voip, narrowband-voip, landline, overload, overload-call | 5/5 each | 5/5 each |
+| voip-call | 5/5 | 4/5 |
+| platform-upload | 4/5 | 1/5 (the recipe's gate rarely closes on EARS) |
 
 Clean audio was never touched. Hiss at 20 dB SNR is the weak spot held out.
+(First recorded as ten EARS excerpts: the two EARS listening sets share the
+same five, so every one was counted twice. Proportions unchanged.)
 
 The decision is for the whole input. Applied to an episode, run it through
 ``process_in_chunks`` so a guest's segment and the host's are judged apart.
@@ -75,10 +77,12 @@ HISS_FLATNESS = 0.54
 # Real backgrounds (office, kitchen, cafeteria) moved neither DNSMOS nor the
 # flatness enough. What a voice isolator would take out does: MossFormer2's
 # removal relative to the input, measured 2026-10-04. EARS: clean at most
-# -19.0 dB, every background at least -10.8 dB; at -12 dB clean 0/10,
-# backgrounds 10/10 each. pp53: cafeteria 5/5, kitchen 4/5, office 3/5, and
+# -19.0 dB, every background at least -10.8 dB; at -12 dB clean 0/5,
+# backgrounds 5/5 each (five unique excerpts; first counted twice). pp53: cafeteria 5/5, kitchen 4/5, office 3/5, and
 # one clean excerpt of five touched — isolating it moved its speaker cosine to
-# 0.874, so this detector is a known cost on rooms with real ambience.
+# 0.874, so this detector is a known cost on rooms with real ambience. A guard
+# refusing isolation that moves cos(input, output) below a threshold does not
+# work: real backgrounds read lower still (0.58-0.98) than that clean case.
 ISOLATE_ABOVE_DB = -12.0
 _ISOLATOR = None
 

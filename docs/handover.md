@@ -274,7 +274,8 @@ through bit for bit.
   ≥0.3 % of samples at the peak, ≥1 % exact zero, DNSMOS SIG under 2.45
   (rooms), quiet-frame flatness ≥0.54 (white hiss), and what MossFormer2
   would remove above −12 dB (real backgrounds). Clean audio untouched on
-  every held-out EARS excerpt; one clean pp53 excerpt of five touched by the
+  every held-out EARS excerpt (five — the two EARS sets share them, and an
+  earlier count of ten counted each twice); one clean pp53 excerpt of five touched by the
   isolation detector (its speaker cosine after isolation 0.874).
 - **Route defaults**, each measured on five EARS excerpts: missing band →
   Sidon; room → WPE then MossFormer2; clipping → declip; hiss and

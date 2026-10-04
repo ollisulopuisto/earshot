@@ -199,7 +199,7 @@ def test_white_hiss_is_found_without_a_model():
 def test_a_kitchen_behind_the_voice_reaches_the_engine():
     """DNSMOS and flatness both missed real backgrounds (kitchen 0/5 on EARS).
     What a voice isolator would remove finds them: at -12 dB, EARS clean was
-    left alone 10/10 and office, kitchen and cafeteria caught 10/10 each
+    left alone 5/5 and office, kitchen and cafeteria caught 5/5 each
     (2026-10-04)."""
     from pathlib import Path
 
