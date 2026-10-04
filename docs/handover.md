@@ -300,6 +300,16 @@ bench scores the removed ambience as damage against that reference (clean
 must be voice-only before it can be the target; until then, recovery on
 pp53 under-credits isolation.
 
+**Sidon warbles** (owner, blind listening, 2026-10-04). Sidon won the room
+comparisons 4 of 4 but has "a small irritating feature", identified as a
+warble. Measured against the originals on twelve pp53 comparisons: a tone
+shift (body +2.2, 800–2500 Hz +2.7, top −1.2 to −2.5 dB — `tonematch:sidon`
+undoes it) and pitch wobble reduced to 0.65–0.81 of the original's; no
+envelope flutter and no 50 Hz frame-rate peak (+0.4 dB), so the warble is
+probably phase or pitch behaviour of the vocoder. Unresolved: whether
+upstream's CUDA export, which their demo uses, warbles too — it will not
+run on a CPU, so the comparison needs a GPU or the authors' Space.
+
 ## What is not known, in priority order
 
 **1. ~~Whether any of this holds on real VoIP.~~ Answered — see the README's
