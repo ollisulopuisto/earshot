@@ -360,6 +360,41 @@ VERSUS = [
      VERSUS_TAKES),
 ]
 
+# Clean microphones only (2026-10-04): in the versus set the owner picked
+# UniPASE over the untouched original on a clean pp53 track. Which processing
+# a good microphone should get — a resynthesiser, or only the room tone
+# taken out (MossFormer2 masks, keeping the speaker's own waveform)?
+CLEAN_TAKES = [
+    ("unipase", "UniPASE", ""),
+    ("sidon", "Sidon", ""),
+    ("mossformer2", "MossFormer2", "vain huonesävy ja tausta pois, oma aaltomuoto jää"),
+]
+CLEAN_MIC = [
+    ("01-nyman-a", "nyman a.wav", 48.0, "clean", "Nyman, lähimikki", "Mitään ei ole rikottu.", CLEAN_TAKES),
+    ("02-nyman-a2", "nyman a.wav", 70.0, "clean", "Nyman, toinen kohta", "", CLEAN_TAKES),
+    ("03-nyman-b", "nyman b.wav", 24.0, "clean", "Nyman, toinen äänite", "", CLEAN_TAKES),
+    ("04-wancke-a", "wancke a.wav", 64.0, "clean", "Wancke, lähimikki", "", CLEAN_TAKES),
+    ("05-wancke-a2", "wancke a.wav", 20.0, "clean", "Wancke, toinen kohta", "", CLEAN_TAKES),
+    ("06-wancke-b", "wancke b.wav", 72.0, "clean", "Wancke, toinen äänite", "", CLEAN_TAKES),
+]
+
+# Room, second round (2026-10-04): in the versus set Sidon beat the route's
+# WPE -> MossFormer2 on a laptop microphone, against what the speaker probe
+# preferred. Six excerpts to see whether that holds.
+ROOM_TAKES = [
+    ("sidon", "Sidon", ""),
+    ("unipase", "UniPASE", ""),
+    ("chain:wpe+mossformer2", "WPE → MossFormer2", "reitittimen nykyinen valinta"),
+    ("wpe", "WPE", "vain kaiun häntä pois"),
+]
+ROOM_LAPTOP = [
+    (f"{i:02d}-{name.split()[0]}-{int(start)}", name, start, "room-laptop",
+     "Läppärin mikki käsivarren päässä", "Suora ääni ja kaiku yhtä voimakkaat.", ROOM_TAKES)
+    for i, (name, start) in enumerate([("nyman a.wav", 12.0), ("nyman a.wav", 48.0),
+                                       ("nyman b.wav", 40.0), ("wancke a.wav", 40.0),
+                                       ("wancke b.wav", 20.0), ("wancke b.wav", 56.0)], 1)
+]
+
 BWE_INTRO = """
 <p>Kaistanlaajennus: neljä mallia, kukin yksin ja reitittimen takana.
 Vertailut on tehty pp53-podcastin nyman- ja wancke-äänitteistä sekä yhdestä
@@ -375,6 +410,8 @@ SETS = {
     "calls-ears": Plan(CALLS_EARS, ORIGINAL, EARS_INTRO, "Puhelut ja ylikuormitus, EARS"),
     "body": Plan(BODY, ("Alkuperäinen", "ennen vauriota; aidossa puhelussa puhelu itse"), BWE_INTRO, "Runko takaisin (yksityinen)"),
     "versus": Plan(VERSUS, ("Alkuperäinen", "ennen vauriota; aidossa puhelussa puhelu itse"), BWE_INTRO, "Sidon vai UniPASE (yksityinen)"),
+    "clean-mic": Plan(CLEAN_MIC, ("Alkuperäinen", "lähimikki sellaisenaan"), BWE_INTRO, "Puhdas lähimikki (yksityinen)"),
+    "room-laptop": Plan(ROOM_LAPTOP, ("Alkuperäinen", "ennen kaikua"), BWE_INTRO, "Huonekaiku, toinen kierros (yksityinen)"),
     "bwe": Plan(BWE, ("Alkuperäinen", "ennen vauriota; aidossa puhelussa puhelu itse"), BWE_INTRO, "Kaistanlaajennus (yksityinen)"),
 }
 
