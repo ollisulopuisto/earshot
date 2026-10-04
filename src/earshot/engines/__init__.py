@@ -223,6 +223,7 @@ from . import passthrough as _passthrough  # noqa: E402,F401  (registers itself)
 from . import plosive as _plosive  # noqa: E402,F401
 from . import router as _router  # noqa: E402,F401
 from . import sidon as _sidon  # noqa: E402,F401
+from . import tonematch as _tonematch  # noqa: E402,F401
 from . import unipase as _unipase  # noqa: E402,F401
 from . import universr as _universr  # noqa: E402,F401
 from . import vst3 as _vst3  # noqa: E402,F401
