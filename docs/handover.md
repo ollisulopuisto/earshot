@@ -11,7 +11,74 @@ every time: valid, accepted, and silently wrong, found by measuring the
 output rather than reading the code. The full list is in the README under
 *Corrections*.
 
-## Where it stands
+## Status, 5 October 2026 — start here
+
+Everything below this section is the history it came from, dated; this is
+the state.
+
+**What exists.** `route` is the current answer: it measures each input and
+sends each damage to the engine that measured best on it, and passes clean
+audio through untouched. Defaults (`earshot.engines.gate.DEFAULT_ROUTE`):
+missing band → `sidon`; room → `chain:wpe+mossformer2`; clipping → `declip`;
+hiss and backgrounds → `mossformer2`; gated silence → `keepzero:unipase`.
+Its detectors: band edge, clipping, exact zeros, DNSMOS SIG, quiet-frame
+flatness, and what MossFormer2 would remove. Engines added since September:
+`sidon`, `unipase`, `wpe`, `mossformer2`, `tonematch`, `gate`, `route`,
+`body`, `audiosr` (own Python), `universr` (out of the route: recovers
+nothing on calls, 0.05× realtime).
+
+**What is measured.** On thirteen damages the route out-recovers UniPASE
+and Sidon and moves voices about half as much (pp53: +2.13 dB, speaker
+−0.049 vs UniPASE +1.26/−0.119 and Sidon +1.34/−0.104). Results in
+`results/2026-10-04-*`; average result files with
+`scripts/summarise_results.py` (each file holds one row per excerpt — an
+ad-hoc summary once reported one excerpt as six).
+
+**What the owner heard, blind** (picks in each set's `votes.jsonl`, read
+with `earshot votes DIR`):
+- Sidon wins most: calls 5/5 (where the route already uses it), and room
+  and overload over the route's gentler choices; room again 4/4 on a second
+  set. Tone-matched Sidon (`tonematch:sidon`) vs plain: 1–1 so far.
+- UniPASE was preferred over the untouched original on a clean microphone:
+  the owner wants room tone gone too ("only voices", AGENTS.md).
+- **Sidon warbles** — the owner's word for its one flaw. Not envelope
+  flutter, not a 50 Hz frame artefact; probably the vocoder's phase or
+  pitch (its pitch wobble is 0.65–0.81 of the original's). Unknown whether
+  upstream's GPU export warbles too: it will not run on a CPU.
+
+**Open, for the owner:**
+1. Put a clip of *your own* voice through the authors' demo
+   (huggingface.co/spaces/sarulab-speech/sidon_demo_beta): if it warbles
+   there too, it is Sidon; if not, it is the CPU export used here.
+2. The route's rule: follow the ear (Sidon nearly everywhere, clean audio
+   processed too) or keep identity-first choices for room and overload.
+3. The scoring trap: pp53 "clean" references contain room tone, so
+   isolating the voice scores as damage; a voice-only reference would itself
+   be model-made.
+4. Install dxRevive on this Mac; then render Studio and Studio 2 at 25, 50,
+   75 as the yardstick (never as training material — AGENTS.md).
+5. Unfinished blind picks: `out/kuuntelu-puhdas-ja-huone` (clean half) and
+   `out/kuuntelu-sidon-savy`.
+
+**Open, for a session:** UniverSR/AudioSR on a GPU (Colab refused all of
+4 October: free-tier GPU allowance used up, 0 compute units); a speaker
+probe that hears above 8 kHz; dereverberation beyond WPE (SGMSE+); a gate
+that does not touch clean pp53 audio with real ambience (1 of 5 today).
+
+**Rules that are easy to miss:** dxRevive is studied and specified, used for
+evaluation, never trained on (AGENTS.md). Only the owner's own recordings
+(`olli-recording-*`) may go to Colab, uploaded directly and deleted after;
+other voices stay local. Gemma runs on this Mac 00:00–07:00 Helsinki: no
+heavy jobs then. Check the CI run after pushing — local runs have every
+model installed and hid a red CI for a day.
+
+**Listening pages** (`earshot listen DIR --serve PORT` keeps picks):
+`out/kuuntelu-versus` (8782), `out/kuuntelu-puhdas-ja-huone` (8783),
+`out/kuuntelu-sidon-savy` (8784).
+
+---
+
+## Where it stood, 25 August 2026
 
 The bench works, six engines are wired up and four have been measured on real
 podcast material. Every number quoted anywhere in this repo came from that
