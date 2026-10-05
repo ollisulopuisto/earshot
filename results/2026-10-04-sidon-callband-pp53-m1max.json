@@ -1,0 +1,4771 @@
+{
+  "earshot": "0.1.0",
+  "material": "3 excerpts of 8 s from clean, 2 speakers (nyman, wancke)",
+  "machine": {
+    "platform": "macOS-15.7.9-arm64-arm-64bit-Mach-O",
+    "processor": "arm",
+    "cpu": "Apple M1 Max"
+  },
+  "runs": [
+    {
+      "engine": "sidon",
+      "damage": "narrowband-voip",
+      "material": "nyman a.wav @ 48s",
+      "speaker": "nyman",
+      "results": [
+        {
+          "probe": "recovery",
+          "metric": "lsd_before",
+          "value": 8.54015827178955,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "3400–16000 Hz, damaged vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "lsd_after",
+          "value": 5.4205474853515625,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "3400–16000 Hz, restored vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "gained",
+          "value": 3.1196107864379883,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means closer to the original than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "before",
+          "value": -19.615474919811852,
+          "unit": "dB",
+          "better": "",
+          "detail": "80-250 Hz against 300-3000 Hz, damaged minus clean; negative is thin",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "after",
+          "value": -1.5463905528608892,
+          "unit": "dB",
+          "better": "",
+          "detail": "the same after the engine; 0 is the original's balance",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "restored",
+          "value": 18.069084366950964,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means nearer the original's balance than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "before",
+          "value": 0.6564760208129883,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "damaged against clean; 1 is the same voice",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "after",
+          "value": 0.663135290145874,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "change",
+          "value": 0.006659269332885742,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "negative means the engine moved the voice away from its owner",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_before",
+          "value": 1.9280974864959717,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_after",
+          "value": 1.7023262977600098,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_gained",
+          "value": -0.22577118873596191,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_before",
+          "value": 0.7389028705353455,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_after",
+          "value": 0.8099480950957852,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_gained",
+          "value": 0.07104522456043971,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "low",
+          "value": 0.1697518017091059,
+          "unit": "r",
+          "better": "",
+          "detail": "100–1000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "mid",
+          "value": 0.032674014986806624,
+          "unit": "r",
+          "better": "",
+          "detail": "1000–4000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "high",
+          "value": -0.0005145207596355306,
+          "unit": "r",
+          "better": "",
+          "detail": "6000–12000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "air",
+          "value": 0.0011333795875156207,
+          "unit": "r",
+          "better": "",
+          "detail": "14000–20000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "floor_change",
+          "value": -37.432385015956484,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "negative is a quieter noise floor",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "speech_change",
+          "value": -3.577151395210027,
+          "unit": "dB",
+          "better": "",
+          "detail": "should be near zero: cleaning is not turning down",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "range_gained",
+          "value": 33.85523362074645,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "speech-to-silence distance opened up by this much",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "overall",
+          "value": 204.67456854392532,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "how far below the signal two runs of the same input differ; >120 is bit-identical, >60 is inaudible but not a pure function",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "low",
+          "value": 204.19086170355996,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "100–1000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "mid",
+          "value": 193.25054844774667,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "1000–4000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "high",
+          "value": 185.4884788125741,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "6000–12000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "air",
+          "value": 173.72051266907948,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "14000–20000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "realtime",
+          "value": 3.070436632015437,
+          "unit": "x",
+          "better": "higher",
+          "detail": "seconds of audio per second of wall clock",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "cores",
+          "value": 3.293212161851317,
+          "unit": "",
+          "better": "",
+          "detail": "CPU seconds per wall second; 1.0 means single-threaded",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "load",
+          "value": 2.319932541809976,
+          "unit": "s",
+          "better": "lower",
+          "detail": "one-off cost of getting the engine ready",
+          "spread": 0.0,
+          "n": 1
+        }
+      ],
+      "skipped": "",
+      "failed": ""
+    },
+    {
+      "engine": "sidon",
+      "damage": "narrowband-voip",
+      "material": "nyman b.wav @ 8s",
+      "speaker": "nyman",
+      "results": [
+        {
+          "probe": "recovery",
+          "metric": "lsd_before",
+          "value": 5.605469226837158,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "3400–16000 Hz, damaged vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "lsd_after",
+          "value": 4.541471481323242,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "3400–16000 Hz, restored vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "gained",
+          "value": 1.063997745513916,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means closer to the original than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "before",
+          "value": -18.637933461166817,
+          "unit": "dB",
+          "better": "",
+          "detail": "80-250 Hz against 300-3000 Hz, damaged minus clean; negative is thin",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "after",
+          "value": -4.6178576281912695,
+          "unit": "dB",
+          "better": "",
+          "detail": "the same after the engine; 0 is the original's balance",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "restored",
+          "value": 14.020075832975547,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means nearer the original's balance than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "before",
+          "value": 0.6587275862693787,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "damaged against clean; 1 is the same voice",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "after",
+          "value": 0.6522649526596069,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "change",
+          "value": -0.0064626336097717285,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "negative means the engine moved the voice away from its owner",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_before",
+          "value": 2.43117356300354,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_after",
+          "value": 1.3237040042877197,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_gained",
+          "value": -1.1074695587158203,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_before",
+          "value": 0.7995853180201146,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_after",
+          "value": 0.7921519348023047,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_gained",
+          "value": -0.007433383217809841,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "low",
+          "value": 0.053222910684948804,
+          "unit": "r",
+          "better": "",
+          "detail": "100–1000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "mid",
+          "value": 0.10589572692929174,
+          "unit": "r",
+          "better": "",
+          "detail": "1000–4000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "high",
+          "value": -0.00076748289154777,
+          "unit": "r",
+          "better": "",
+          "detail": "6000–12000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "air",
+          "value": 0.0065159352184765654,
+          "unit": "r",
+          "better": "",
+          "detail": "14000–20000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "floor_change",
+          "value": -16.74404524332965,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "negative is a quieter noise floor",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "speech_change",
+          "value": 4.580035426773321,
+          "unit": "dB",
+          "better": "",
+          "detail": "should be near zero: cleaning is not turning down",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "range_gained",
+          "value": 21.324080670102973,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "speech-to-silence distance opened up by this much",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "overall",
+          "value": 212.28782689146098,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "how far below the signal two runs of the same input differ; >120 is bit-identical, >60 is inaudible but not a pure function",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "low",
+          "value": 211.8518435813729,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "100–1000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "mid",
+          "value": 201.13396038498416,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "1000–4000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "high",
+          "value": 185.60176044199045,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "6000–12000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "air",
+          "value": 169.02818064575493,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "14000–20000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "realtime",
+          "value": 3.46646947177378,
+          "unit": "x",
+          "better": "higher",
+          "detail": "seconds of audio per second of wall clock",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "cores",
+          "value": 3.4475221829497498,
+          "unit": "",
+          "better": "",
+          "detail": "CPU seconds per wall second; 1.0 means single-threaded",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "load",
+          "value": 2.319932541809976,
+          "unit": "s",
+          "better": "lower",
+          "detail": "one-off cost of getting the engine ready",
+          "spread": 0.0,
+          "n": 1
+        }
+      ],
+      "skipped": "",
+      "failed": ""
+    },
+    {
+      "engine": "sidon",
+      "damage": "narrowband-voip",
+      "material": "wancke a.wav @ 64s",
+      "speaker": "wancke",
+      "results": [
+        {
+          "probe": "recovery",
+          "metric": "lsd_before",
+          "value": 1.8445113897323608,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "3400–16000 Hz, damaged vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "lsd_after",
+          "value": 2.0103564262390137,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "3400–16000 Hz, restored vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "gained",
+          "value": -0.16584503650665283,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means closer to the original than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "before",
+          "value": -19.395767046839413,
+          "unit": "dB",
+          "better": "",
+          "detail": "80-250 Hz against 300-3000 Hz, damaged minus clean; negative is thin",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "after",
+          "value": -2.0725675877523333,
+          "unit": "dB",
+          "better": "",
+          "detail": "the same after the engine; 0 is the original's balance",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "restored",
+          "value": 17.32319945908708,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means nearer the original's balance than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "before",
+          "value": 0.6647020578384399,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "damaged against clean; 1 is the same voice",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "after",
+          "value": 0.3161061108112335,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "change",
+          "value": -0.3485959470272064,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "negative means the engine moved the voice away from its owner",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_before",
+          "value": 3.6194608211517334,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_after",
+          "value": 1.1119521856307983,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_gained",
+          "value": -2.507508635520935,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_before",
+          "value": 0.8337149008515998,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_after",
+          "value": 0.44868296540018965,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_gained",
+          "value": -0.3850319354514102,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "low",
+          "value": -0.03720036384482426,
+          "unit": "r",
+          "better": "",
+          "detail": "100–1000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "mid",
+          "value": -0.03609065283463604,
+          "unit": "r",
+          "better": "",
+          "detail": "1000–4000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "high",
+          "value": -0.0003242381247475668,
+          "unit": "r",
+          "better": "",
+          "detail": "6000–12000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "air",
+          "value": -0.00021215540426921782,
+          "unit": "r",
+          "better": "",
+          "detail": "14000–20000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "floor_change",
+          "value": -39.31560614262887,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "negative is a quieter noise floor",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "speech_change",
+          "value": 0.2210830064666034,
+          "unit": "dB",
+          "better": "",
+          "detail": "should be near zero: cleaning is not turning down",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "range_gained",
+          "value": 39.53668914909547,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "speech-to-silence distance opened up by this much",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "overall",
+          "value": 207.87221585364065,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "how far below the signal two runs of the same input differ; >120 is bit-identical, >60 is inaudible but not a pure function",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "low",
+          "value": 207.3792534083269,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "100–1000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "mid",
+          "value": 198.04924776176176,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "1000–4000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "high",
+          "value": 179.18841497381078,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "6000–12000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "air",
+          "value": 163.74320889426366,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "14000–20000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "realtime",
+          "value": 3.328116568524537,
+          "unit": "x",
+          "better": "higher",
+          "detail": "seconds of audio per second of wall clock",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "cores",
+          "value": 3.3823120347409628,
+          "unit": "",
+          "better": "",
+          "detail": "CPU seconds per wall second; 1.0 means single-threaded",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "load",
+          "value": 2.319932541809976,
+          "unit": "s",
+          "better": "lower",
+          "detail": "one-off cost of getting the engine ready",
+          "spread": 0.0,
+          "n": 1
+        }
+      ],
+      "skipped": "",
+      "failed": ""
+    },
+    {
+      "engine": "sidon",
+      "damage": "wideband-voip",
+      "material": "nyman a.wav @ 48s",
+      "speaker": "nyman",
+      "results": [
+        {
+          "probe": "recovery",
+          "metric": "lsd_before",
+          "value": 6.590048313140869,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "8000–16000 Hz, damaged vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "lsd_after",
+          "value": 4.26645565032959,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "8000–16000 Hz, restored vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "gained",
+          "value": 2.3235926628112793,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means closer to the original than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "before",
+          "value": 2.923653873010167,
+          "unit": "dB",
+          "better": "",
+          "detail": "80-250 Hz against 300-3000 Hz, damaged minus clean; negative is thin",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "after",
+          "value": 2.6280547984934857,
+          "unit": "dB",
+          "better": "",
+          "detail": "the same after the engine; 0 is the original's balance",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "restored",
+          "value": 0.29559907451668144,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means nearer the original's balance than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "before",
+          "value": 0.93454509973526,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "damaged against clean; 1 is the same voice",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "after",
+          "value": 0.838666558265686,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "change",
+          "value": -0.09587854146957397,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "negative means the engine moved the voice away from its owner",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_before",
+          "value": 2.366781711578369,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_after",
+          "value": 1.605243444442749,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_gained",
+          "value": -0.7615382671356201,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_before",
+          "value": 0.7647332088372426,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_after",
+          "value": 0.8410941931314037,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_gained",
+          "value": 0.07636098429416105,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "low",
+          "value": 0.03564762969224149,
+          "unit": "r",
+          "better": "",
+          "detail": "100–1000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "mid",
+          "value": 0.002696887362971765,
+          "unit": "r",
+          "better": "",
+          "detail": "1000–4000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "high",
+          "value": -0.0016377183180899737,
+          "unit": "r",
+          "better": "",
+          "detail": "6000–12000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "air",
+          "value": -0.013757125341540137,
+          "unit": "r",
+          "better": "",
+          "detail": "14000–20000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "floor_change",
+          "value": -21.805746309841616,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "negative is a quieter noise floor",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "speech_change",
+          "value": 0.43370668450187466,
+          "unit": "dB",
+          "better": "",
+          "detail": "should be near zero: cleaning is not turning down",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "range_gained",
+          "value": 22.23945299434349,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "speech-to-silence distance opened up by this much",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "overall",
+          "value": 208.82158544181408,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "how far below the signal two runs of the same input differ; >120 is bit-identical, >60 is inaudible but not a pure function",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "low",
+          "value": 208.46022754435657,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "100–1000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "mid",
+          "value": 194.68555169650628,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "1000–4000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "high",
+          "value": 190.60558418607857,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "6000–12000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "air",
+          "value": 175.80938449075148,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "14000–20000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "realtime",
+          "value": 3.378641562708778,
+          "unit": "x",
+          "better": "higher",
+          "detail": "seconds of audio per second of wall clock",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "cores",
+          "value": 3.4139855320962726,
+          "unit": "",
+          "better": "",
+          "detail": "CPU seconds per wall second; 1.0 means single-threaded",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "load",
+          "value": 2.319932541809976,
+          "unit": "s",
+          "better": "lower",
+          "detail": "one-off cost of getting the engine ready",
+          "spread": 0.0,
+          "n": 1
+        }
+      ],
+      "skipped": "",
+      "failed": ""
+    },
+    {
+      "engine": "sidon",
+      "damage": "wideband-voip",
+      "material": "nyman b.wav @ 8s",
+      "speaker": "nyman",
+      "results": [
+        {
+          "probe": "recovery",
+          "metric": "lsd_before",
+          "value": 4.433853626251221,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "8000–16000 Hz, damaged vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "lsd_after",
+          "value": 3.402536153793335,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "8000–16000 Hz, restored vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "gained",
+          "value": 1.0313174724578857,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means closer to the original than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "before",
+          "value": 2.9225469112440408,
+          "unit": "dB",
+          "better": "",
+          "detail": "80-250 Hz against 300-3000 Hz, damaged minus clean; negative is thin",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "after",
+          "value": 1.3602810208016298,
+          "unit": "dB",
+          "better": "",
+          "detail": "the same after the engine; 0 is the original's balance",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "restored",
+          "value": 1.562265890442411,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means nearer the original's balance than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "before",
+          "value": 0.9359092712402344,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "damaged against clean; 1 is the same voice",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "after",
+          "value": 0.8015910387039185,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "change",
+          "value": -0.13431823253631592,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "negative means the engine moved the voice away from its owner",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_before",
+          "value": 2.229583740234375,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_after",
+          "value": 1.277705192565918,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_gained",
+          "value": -0.951878547668457,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_before",
+          "value": 0.8465274655858631,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_after",
+          "value": 0.8289657537536805,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_gained",
+          "value": -0.01756171183218258,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "low",
+          "value": -0.07515593753655088,
+          "unit": "r",
+          "better": "",
+          "detail": "100–1000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "mid",
+          "value": -0.001566716325241152,
+          "unit": "r",
+          "better": "",
+          "detail": "1000–4000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "high",
+          "value": -0.0233932279288924,
+          "unit": "r",
+          "better": "",
+          "detail": "6000–12000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "air",
+          "value": -0.0048266290857295,
+          "unit": "r",
+          "better": "",
+          "detail": "14000–20000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "floor_change",
+          "value": -25.20259373730486,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "negative is a quieter noise floor",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "speech_change",
+          "value": 5.431371783383373,
+          "unit": "dB",
+          "better": "",
+          "detail": "should be near zero: cleaning is not turning down",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "range_gained",
+          "value": 30.633965520688232,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "speech-to-silence distance opened up by this much",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "overall",
+          "value": 213.57991405767106,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "how far below the signal two runs of the same input differ; >120 is bit-identical, >60 is inaudible but not a pure function",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "low",
+          "value": 213.07351188206812,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "100–1000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "mid",
+          "value": 200.3627434460741,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "1000–4000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "high",
+          "value": 188.97429398427715,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "6000–12000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "air",
+          "value": 169.84823917715283,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "14000–20000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "realtime",
+          "value": 3.448510780493116,
+          "unit": "x",
+          "better": "higher",
+          "detail": "seconds of audio per second of wall clock",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "cores",
+          "value": 3.447892203871859,
+          "unit": "",
+          "better": "",
+          "detail": "CPU seconds per wall second; 1.0 means single-threaded",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "load",
+          "value": 2.319932541809976,
+          "unit": "s",
+          "better": "lower",
+          "detail": "one-off cost of getting the engine ready",
+          "spread": 0.0,
+          "n": 1
+        }
+      ],
+      "skipped": "",
+      "failed": ""
+    },
+    {
+      "engine": "sidon",
+      "damage": "wideband-voip",
+      "material": "wancke a.wav @ 64s",
+      "speaker": "wancke",
+      "results": [
+        {
+          "probe": "recovery",
+          "metric": "lsd_before",
+          "value": 1.302040457725525,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "8000–16000 Hz, damaged vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "lsd_after",
+          "value": 1.4324872493743896,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "8000–16000 Hz, restored vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "gained",
+          "value": -0.13044679164886475,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means closer to the original than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "before",
+          "value": 2.7687835636903717,
+          "unit": "dB",
+          "better": "",
+          "detail": "80-250 Hz against 300-3000 Hz, damaged minus clean; negative is thin",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "after",
+          "value": -0.17345688111276658,
+          "unit": "dB",
+          "better": "",
+          "detail": "the same after the engine; 0 is the original's balance",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "restored",
+          "value": 2.595326682577605,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means nearer the original's balance than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "before",
+          "value": 0.9112205505371094,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "damaged against clean; 1 is the same voice",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "after",
+          "value": 0.625836968421936,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "change",
+          "value": -0.28538358211517334,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "negative means the engine moved the voice away from its owner",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_before",
+          "value": 3.20330548286438,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_after",
+          "value": 1.1048482656478882,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_gained",
+          "value": -2.0984572172164917,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_before",
+          "value": 0.8329223922901341,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_after",
+          "value": 0.4485250373229342,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_gained",
+          "value": -0.3843973549671999,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "low",
+          "value": -0.03658313562332232,
+          "unit": "r",
+          "better": "",
+          "detail": "100–1000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "mid",
+          "value": -0.023729631959744396,
+          "unit": "r",
+          "better": "",
+          "detail": "1000–4000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "high",
+          "value": -0.00694168287370023,
+          "unit": "r",
+          "better": "",
+          "detail": "6000–12000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "air",
+          "value": 0.0004240019779754145,
+          "unit": "r",
+          "better": "",
+          "detail": "14000–20000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "floor_change",
+          "value": -49.830296028818495,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "negative is a quieter noise floor",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "speech_change",
+          "value": -0.8874419223092147,
+          "unit": "dB",
+          "better": "",
+          "detail": "should be near zero: cleaning is not turning down",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "range_gained",
+          "value": 48.94285410650927,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "speech-to-silence distance opened up by this much",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "overall",
+          "value": 206.35282167787955,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "how far below the signal two runs of the same input differ; >120 is bit-identical, >60 is inaudible but not a pure function",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "low",
+          "value": 205.7652262183248,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "100–1000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "mid",
+          "value": 197.09912313755157,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "1000–4000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "high",
+          "value": 182.68665253831472,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "6000–12000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "air",
+          "value": 165.04686790614048,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "14000–20000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "realtime",
+          "value": 3.486464040619578,
+          "unit": "x",
+          "better": "higher",
+          "detail": "seconds of audio per second of wall clock",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "cores",
+          "value": 3.4607226049916733,
+          "unit": "",
+          "better": "",
+          "detail": "CPU seconds per wall second; 1.0 means single-threaded",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "load",
+          "value": 2.319932541809976,
+          "unit": "s",
+          "better": "lower",
+          "detail": "one-off cost of getting the engine ready",
+          "spread": 0.0,
+          "n": 1
+        }
+      ],
+      "skipped": "",
+      "failed": ""
+    },
+    {
+      "engine": "sidon",
+      "damage": "voip-call",
+      "material": "nyman a.wav @ 48s",
+      "speaker": "nyman",
+      "results": [
+        {
+          "probe": "recovery",
+          "metric": "lsd_before",
+          "value": 8.235847473144531,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "100–16000 Hz, damaged vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "lsd_after",
+          "value": 5.81932258605957,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "100–16000 Hz, restored vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "gained",
+          "value": 2.416524887084961,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means closer to the original than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "before",
+          "value": 3.400666800292471,
+          "unit": "dB",
+          "better": "",
+          "detail": "80-250 Hz against 300-3000 Hz, damaged minus clean; negative is thin",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "after",
+          "value": 2.006874483926553,
+          "unit": "dB",
+          "better": "",
+          "detail": "the same after the engine; 0 is the original's balance",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "restored",
+          "value": 1.3937923163659183,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means nearer the original's balance than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "before",
+          "value": 0.8879346251487732,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "damaged against clean; 1 is the same voice",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "after",
+          "value": 0.8475857377052307,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "change",
+          "value": -0.04034888744354248,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "negative means the engine moved the voice away from its owner",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_before",
+          "value": 2.058126211166382,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_after",
+          "value": 1.4924900531768799,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_gained",
+          "value": -0.565636157989502,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_before",
+          "value": 0.751902995244498,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_after",
+          "value": 0.7993964793632028,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_gained",
+          "value": 0.0474934841187048,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "low",
+          "value": -0.00975651761348091,
+          "unit": "r",
+          "better": "",
+          "detail": "100–1000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "mid",
+          "value": 0.00027686615882290737,
+          "unit": "r",
+          "better": "",
+          "detail": "1000–4000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "high",
+          "value": 0.024120614245540243,
+          "unit": "r",
+          "better": "",
+          "detail": "6000–12000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "air",
+          "value": 0.0005022786027101538,
+          "unit": "r",
+          "better": "",
+          "detail": "14000–20000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "floor_change",
+          "value": -14.794698034413727,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "negative is a quieter noise floor",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "speech_change",
+          "value": 4.7351922907891755,
+          "unit": "dB",
+          "better": "",
+          "detail": "should be near zero: cleaning is not turning down",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "range_gained",
+          "value": 19.529890325202903,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "speech-to-silence distance opened up by this much",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "overall",
+          "value": 212.28917213049945,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "how far below the signal two runs of the same input differ; >120 is bit-identical, >60 is inaudible but not a pure function",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "low",
+          "value": 211.83568432654863,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "100–1000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "mid",
+          "value": 199.0526991369441,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "1000–4000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "high",
+          "value": 195.8725405161449,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "6000–12000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "air",
+          "value": 181.8556950975423,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "14000–20000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "realtime",
+          "value": 3.3831121878653274,
+          "unit": "x",
+          "better": "higher",
+          "detail": "seconds of audio per second of wall clock",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "cores",
+          "value": 3.4986496979711657,
+          "unit": "",
+          "better": "",
+          "detail": "CPU seconds per wall second; 1.0 means single-threaded",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "load",
+          "value": 2.319932541809976,
+          "unit": "s",
+          "better": "lower",
+          "detail": "one-off cost of getting the engine ready",
+          "spread": 0.0,
+          "n": 1
+        }
+      ],
+      "skipped": "",
+      "failed": ""
+    },
+    {
+      "engine": "sidon",
+      "damage": "voip-call",
+      "material": "nyman b.wav @ 8s",
+      "speaker": "nyman",
+      "results": [
+        {
+          "probe": "recovery",
+          "metric": "lsd_before",
+          "value": 6.20479679107666,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "100–16000 Hz, damaged vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "lsd_after",
+          "value": 5.235335826873779,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "100–16000 Hz, restored vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "gained",
+          "value": 0.9694609642028809,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means closer to the original than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "before",
+          "value": 3.254287077636226,
+          "unit": "dB",
+          "better": "",
+          "detail": "80-250 Hz against 300-3000 Hz, damaged minus clean; negative is thin",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "after",
+          "value": 0.8903309824353411,
+          "unit": "dB",
+          "better": "",
+          "detail": "the same after the engine; 0 is the original's balance",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "restored",
+          "value": 2.363956095200885,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means nearer the original's balance than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "before",
+          "value": 0.8293921947479248,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "damaged against clean; 1 is the same voice",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "after",
+          "value": 0.7667496204376221,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "change",
+          "value": -0.06264257431030273,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "negative means the engine moved the voice away from its owner",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_before",
+          "value": 2.1779026985168457,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_after",
+          "value": 1.2297030687332153,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_gained",
+          "value": -0.9481996297836304,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_before",
+          "value": 0.7973347863958739,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_after",
+          "value": 0.7662210750993893,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_gained",
+          "value": -0.031113711296484547,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "low",
+          "value": -0.07004850572088651,
+          "unit": "r",
+          "better": "",
+          "detail": "100–1000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "mid",
+          "value": 0.03553992987531338,
+          "unit": "r",
+          "better": "",
+          "detail": "1000–4000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "high",
+          "value": -0.0035516050437367553,
+          "unit": "r",
+          "better": "",
+          "detail": "6000–12000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "air",
+          "value": 1.8362855771796757e-05,
+          "unit": "r",
+          "better": "",
+          "detail": "14000–20000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "floor_change",
+          "value": -19.12000784794951,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "negative is a quieter noise floor",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "speech_change",
+          "value": 1.8646590964761636,
+          "unit": "dB",
+          "better": "",
+          "detail": "should be near zero: cleaning is not turning down",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "range_gained",
+          "value": 20.984666944425673,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "speech-to-silence distance opened up by this much",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "overall",
+          "value": 209.24065333405048,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "how far below the signal two runs of the same input differ; >120 is bit-identical, >60 is inaudible but not a pure function",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "low",
+          "value": 208.73752610975026,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "100–1000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "mid",
+          "value": 196.3343291552496,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "1000–4000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "high",
+          "value": 187.10307797023628,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "6000–12000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "air",
+          "value": 168.18200518398055,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "14000–20000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "realtime",
+          "value": 3.30717541279266,
+          "unit": "x",
+          "better": "higher",
+          "detail": "seconds of audio per second of wall clock",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "cores",
+          "value": 3.4947840328156983,
+          "unit": "",
+          "better": "",
+          "detail": "CPU seconds per wall second; 1.0 means single-threaded",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "load",
+          "value": 2.319932541809976,
+          "unit": "s",
+          "better": "lower",
+          "detail": "one-off cost of getting the engine ready",
+          "spread": 0.0,
+          "n": 1
+        }
+      ],
+      "skipped": "",
+      "failed": ""
+    },
+    {
+      "engine": "sidon",
+      "damage": "voip-call",
+      "material": "wancke a.wav @ 64s",
+      "speaker": "wancke",
+      "results": [
+        {
+          "probe": "recovery",
+          "metric": "lsd_before",
+          "value": 4.724536895751953,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "100–16000 Hz, damaged vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "lsd_after",
+          "value": 4.2173285484313965,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "100–16000 Hz, restored vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "gained",
+          "value": 0.5072083473205566,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means closer to the original than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "before",
+          "value": 2.5492264197865118,
+          "unit": "dB",
+          "better": "",
+          "detail": "80-250 Hz against 300-3000 Hz, damaged minus clean; negative is thin",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "after",
+          "value": -0.09341891873538888,
+          "unit": "dB",
+          "better": "",
+          "detail": "the same after the engine; 0 is the original's balance",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "restored",
+          "value": 2.455807501051123,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means nearer the original's balance than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "before",
+          "value": 0.7961009740829468,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "damaged against clean; 1 is the same voice",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "after",
+          "value": 0.5359793305397034,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "change",
+          "value": -0.2601216435432434,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "negative means the engine moved the voice away from its owner",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_before",
+          "value": 2.170513391494751,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_after",
+          "value": 1.084786295890808,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_gained",
+          "value": -1.0857270956039429,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_before",
+          "value": 0.7483487821999335,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_after",
+          "value": 0.34797976372955197,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_gained",
+          "value": -0.40036901847038153,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "low",
+          "value": 0.020476520671096482,
+          "unit": "r",
+          "better": "",
+          "detail": "100–1000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "mid",
+          "value": -0.06849633027045922,
+          "unit": "r",
+          "better": "",
+          "detail": "1000–4000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "high",
+          "value": 0.00562976669248429,
+          "unit": "r",
+          "better": "",
+          "detail": "6000–12000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "air",
+          "value": -3.969879449437675e-05,
+          "unit": "r",
+          "better": "",
+          "detail": "14000–20000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "floor_change",
+          "value": -43.88782206675141,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "negative is a quieter noise floor",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "speech_change",
+          "value": 2.511597819419176,
+          "unit": "dB",
+          "better": "",
+          "detail": "should be near zero: cleaning is not turning down",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "range_gained",
+          "value": 46.399419886170584,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "speech-to-silence distance opened up by this much",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "overall",
+          "value": 208.66314568396905,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "how far below the signal two runs of the same input differ; >120 is bit-identical, >60 is inaudible but not a pure function",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "low",
+          "value": 207.95236789178256,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "100–1000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "mid",
+          "value": 200.30591704624973,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "1000–4000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "high",
+          "value": 185.19476230829525,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "6000–12000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "air",
+          "value": 168.90782775239475,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "14000–20000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "realtime",
+          "value": 3.3237711444612454,
+          "unit": "x",
+          "better": "higher",
+          "detail": "seconds of audio per second of wall clock",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "cores",
+          "value": 3.4836191927548534,
+          "unit": "",
+          "better": "",
+          "detail": "CPU seconds per wall second; 1.0 means single-threaded",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "load",
+          "value": 2.319932541809976,
+          "unit": "s",
+          "better": "lower",
+          "detail": "one-off cost of getting the engine ready",
+          "spread": 0.0,
+          "n": 1
+        }
+      ],
+      "skipped": "",
+      "failed": ""
+    },
+    {
+      "engine": "sidon",
+      "damage": "landline",
+      "material": "nyman a.wav @ 48s",
+      "speaker": "nyman",
+      "results": [
+        {
+          "probe": "recovery",
+          "metric": "lsd_before",
+          "value": 8.500036239624023,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "100–16000 Hz, damaged vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "lsd_after",
+          "value": 6.571658611297607,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "100–16000 Hz, restored vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "gained",
+          "value": 1.928377628326416,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means closer to the original than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "before",
+          "value": -34.856020301632476,
+          "unit": "dB",
+          "better": "",
+          "detail": "80-250 Hz against 300-3000 Hz, damaged minus clean; negative is thin",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "after",
+          "value": -3.0056587286683474,
+          "unit": "dB",
+          "better": "",
+          "detail": "the same after the engine; 0 is the original's balance",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "restored",
+          "value": 31.85036157296413,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means nearer the original's balance than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "before",
+          "value": 0.538253903388977,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "damaged against clean; 1 is the same voice",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "after",
+          "value": 0.5081378221511841,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "change",
+          "value": -0.03011608123779297,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "negative means the engine moved the voice away from its owner",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_before",
+          "value": 2.580620527267456,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_after",
+          "value": 1.4004267454147339,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_gained",
+          "value": -1.1801937818527222,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_before",
+          "value": 0.9002660552334805,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_after",
+          "value": 0.7664805226372999,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_gained",
+          "value": -0.13378553259618053,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "low",
+          "value": -0.20838528444570892,
+          "unit": "r",
+          "better": "",
+          "detail": "100–1000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "mid",
+          "value": 0.05450928114880988,
+          "unit": "r",
+          "better": "",
+          "detail": "1000–4000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "high",
+          "value": 0.0011188708271871318,
+          "unit": "r",
+          "better": "",
+          "detail": "6000–12000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "air",
+          "value": -0.003991565416700805,
+          "unit": "r",
+          "better": "",
+          "detail": "14000–20000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "floor_change",
+          "value": -20.899305288593624,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "negative is a quieter noise floor",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "speech_change",
+          "value": -3.5266780018487083,
+          "unit": "dB",
+          "better": "",
+          "detail": "should be near zero: cleaning is not turning down",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "range_gained",
+          "value": 17.372627286744915,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "speech-to-silence distance opened up by this much",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "overall",
+          "value": 192.75103770047986,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "how far below the signal two runs of the same input differ; >120 is bit-identical, >60 is inaudible but not a pure function",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "low",
+          "value": 192.42114533397415,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "100–1000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "mid",
+          "value": 180.8359494321111,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "1000–4000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "high",
+          "value": 166.88186022357468,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "6000–12000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "air",
+          "value": 155.03346094433002,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "14000–20000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "realtime",
+          "value": 3.5298924526491926,
+          "unit": "x",
+          "better": "higher",
+          "detail": "seconds of audio per second of wall clock",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "cores",
+          "value": 3.4779178749398265,
+          "unit": "",
+          "better": "",
+          "detail": "CPU seconds per wall second; 1.0 means single-threaded",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "load",
+          "value": 2.319932541809976,
+          "unit": "s",
+          "better": "lower",
+          "detail": "one-off cost of getting the engine ready",
+          "spread": 0.0,
+          "n": 1
+        }
+      ],
+      "skipped": "",
+      "failed": ""
+    },
+    {
+      "engine": "sidon",
+      "damage": "landline",
+      "material": "nyman b.wav @ 8s",
+      "speaker": "nyman",
+      "results": [
+        {
+          "probe": "recovery",
+          "metric": "lsd_before",
+          "value": 5.952274799346924,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "100–16000 Hz, damaged vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "lsd_after",
+          "value": 5.140517234802246,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "100–16000 Hz, restored vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "gained",
+          "value": 0.8117575645446777,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means closer to the original than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "before",
+          "value": -33.40563749895457,
+          "unit": "dB",
+          "better": "",
+          "detail": "80-250 Hz against 300-3000 Hz, damaged minus clean; negative is thin",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "after",
+          "value": -2.9118586473722887,
+          "unit": "dB",
+          "better": "",
+          "detail": "the same after the engine; 0 is the original's balance",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "restored",
+          "value": 30.49377885158228,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means nearer the original's balance than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "before",
+          "value": 0.5474671125411987,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "damaged against clean; 1 is the same voice",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "after",
+          "value": 0.5304837226867676,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "change",
+          "value": -0.016983389854431152,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "negative means the engine moved the voice away from its owner",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_before",
+          "value": 2.8348336219787598,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_after",
+          "value": 1.250165343284607,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_gained",
+          "value": -1.5846682786941528,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_before",
+          "value": 0.8921780916575804,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_after",
+          "value": 0.7801699141493155,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_gained",
+          "value": -0.11200817750826497,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "low",
+          "value": 0.12251542556380343,
+          "unit": "r",
+          "better": "",
+          "detail": "100–1000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "mid",
+          "value": -0.04851448091577131,
+          "unit": "r",
+          "better": "",
+          "detail": "1000–4000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "high",
+          "value": -0.0010712359329617396,
+          "unit": "r",
+          "better": "",
+          "detail": "6000–12000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "air",
+          "value": -0.0017108416822653723,
+          "unit": "r",
+          "better": "",
+          "detail": "14000–20000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "floor_change",
+          "value": -18.525959246623145,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "negative is a quieter noise floor",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "speech_change",
+          "value": 0.3322801552259307,
+          "unit": "dB",
+          "better": "",
+          "detail": "should be near zero: cleaning is not turning down",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "range_gained",
+          "value": 18.858239401849076,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "speech-to-silence distance opened up by this much",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "overall",
+          "value": 193.18905499162375,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "how far below the signal two runs of the same input differ; >120 is bit-identical, >60 is inaudible but not a pure function",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "low",
+          "value": 192.78351109946814,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "100–1000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "mid",
+          "value": 181.34469627202787,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "1000–4000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "high",
+          "value": 161.12166891922806,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "6000–12000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "air",
+          "value": 144.77647684581964,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "14000–20000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "realtime",
+          "value": 3.5135006437422316,
+          "unit": "x",
+          "better": "higher",
+          "detail": "seconds of audio per second of wall clock",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "cores",
+          "value": 3.4716570470131574,
+          "unit": "",
+          "better": "",
+          "detail": "CPU seconds per wall second; 1.0 means single-threaded",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "load",
+          "value": 2.319932541809976,
+          "unit": "s",
+          "better": "lower",
+          "detail": "one-off cost of getting the engine ready",
+          "spread": 0.0,
+          "n": 1
+        }
+      ],
+      "skipped": "",
+      "failed": ""
+    },
+    {
+      "engine": "sidon",
+      "damage": "landline",
+      "material": "wancke a.wav @ 64s",
+      "speaker": "wancke",
+      "results": [
+        {
+          "probe": "recovery",
+          "metric": "lsd_before",
+          "value": 2.681889533996582,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "100–16000 Hz, damaged vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "lsd_after",
+          "value": 3.8611221313476562,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "100–16000 Hz, restored vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "gained",
+          "value": -1.1792325973510742,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means closer to the original than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "before",
+          "value": -34.24476838028433,
+          "unit": "dB",
+          "better": "",
+          "detail": "80-250 Hz against 300-3000 Hz, damaged minus clean; negative is thin",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "after",
+          "value": -1.188975874307781,
+          "unit": "dB",
+          "better": "",
+          "detail": "the same after the engine; 0 is the original's balance",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "restored",
+          "value": 33.05579250597655,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means nearer the original's balance than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "before",
+          "value": 0.5430406332015991,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "damaged against clean; 1 is the same voice",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "after",
+          "value": 0.17582222819328308,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "change",
+          "value": -0.36721840500831604,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "negative means the engine moved the voice away from its owner",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_before",
+          "value": 3.8479318618774414,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_after",
+          "value": 1.082108736038208,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_gained",
+          "value": -2.7658231258392334,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_before",
+          "value": 0.8341548869495249,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_after",
+          "value": 0.4153138709004862,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_gained",
+          "value": -0.4188410160490387,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "low",
+          "value": -0.06501084087779731,
+          "unit": "r",
+          "better": "",
+          "detail": "100–1000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "mid",
+          "value": -0.026955924416868587,
+          "unit": "r",
+          "better": "",
+          "detail": "1000–4000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "high",
+          "value": 0.009172452176031229,
+          "unit": "r",
+          "better": "",
+          "detail": "6000–12000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "air",
+          "value": 0.0004861850048897687,
+          "unit": "r",
+          "better": "",
+          "detail": "14000–20000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "floor_change",
+          "value": -22.081377386631402,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "negative is a quieter noise floor",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "speech_change",
+          "value": -0.8184790685232173,
+          "unit": "dB",
+          "better": "",
+          "detail": "should be near zero: cleaning is not turning down",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "range_gained",
+          "value": 21.262898318108185,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "speech-to-silence distance opened up by this much",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "overall",
+          "value": 184.53453329465643,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "how far below the signal two runs of the same input differ; >120 is bit-identical, >60 is inaudible but not a pure function",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "low",
+          "value": 183.91997391248907,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "100–1000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "mid",
+          "value": 175.7038824546674,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "1000–4000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "high",
+          "value": 153.9314756845157,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "6000–12000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "air",
+          "value": 138.03562832834973,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "14000–20000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "realtime",
+          "value": 3.486829373621691,
+          "unit": "x",
+          "better": "higher",
+          "detail": "seconds of audio per second of wall clock",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "cores",
+          "value": 3.4523934467278083,
+          "unit": "",
+          "better": "",
+          "detail": "CPU seconds per wall second; 1.0 means single-threaded",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "load",
+          "value": 2.319932541809976,
+          "unit": "s",
+          "better": "lower",
+          "detail": "one-off cost of getting the engine ready",
+          "spread": 0.0,
+          "n": 1
+        }
+      ],
+      "skipped": "",
+      "failed": ""
+    },
+    {
+      "engine": "sidon",
+      "damage": "overload-call",
+      "material": "nyman a.wav @ 48s",
+      "speaker": "nyman",
+      "results": [
+        {
+          "probe": "recovery",
+          "metric": "lsd_before",
+          "value": 8.005064010620117,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "100–16000 Hz, damaged vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "lsd_after",
+          "value": 5.67758321762085,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "100–16000 Hz, restored vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "gained",
+          "value": 2.3274807929992676,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means closer to the original than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "before",
+          "value": 2.745908530770773,
+          "unit": "dB",
+          "better": "",
+          "detail": "80-250 Hz against 300-3000 Hz, damaged minus clean; negative is thin",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "after",
+          "value": 1.3724571792152607,
+          "unit": "dB",
+          "better": "",
+          "detail": "the same after the engine; 0 is the original's balance",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "restored",
+          "value": 1.3734513515555125,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means nearer the original's balance than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "before",
+          "value": 0.8421386480331421,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "damaged against clean; 1 is the same voice",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "after",
+          "value": 0.8157902956008911,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "change",
+          "value": -0.026348352432250977,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "negative means the engine moved the voice away from its owner",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_before",
+          "value": 1.7612128257751465,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_after",
+          "value": 1.4483314752578735,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_gained",
+          "value": -0.31288135051727295,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_before",
+          "value": 0.7709223601936133,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_after",
+          "value": 0.8019444829909042,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_gained",
+          "value": 0.031022122797290885,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "low",
+          "value": -0.22618657911769666,
+          "unit": "r",
+          "better": "",
+          "detail": "100–1000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "mid",
+          "value": 0.00042969200620178357,
+          "unit": "r",
+          "better": "",
+          "detail": "1000–4000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "high",
+          "value": -0.009484493322679687,
+          "unit": "r",
+          "better": "",
+          "detail": "6000–12000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "air",
+          "value": 0.0002291120560748341,
+          "unit": "r",
+          "better": "",
+          "detail": "14000–20000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "floor_change",
+          "value": -15.41853412852931,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "negative is a quieter noise floor",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "speech_change",
+          "value": 1.7559946596766345,
+          "unit": "dB",
+          "better": "",
+          "detail": "should be near zero: cleaning is not turning down",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "range_gained",
+          "value": 17.174528788205944,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "speech-to-silence distance opened up by this much",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "overall",
+          "value": 211.886522504111,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "how far below the signal two runs of the same input differ; >120 is bit-identical, >60 is inaudible but not a pure function",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "low",
+          "value": 211.48074399191523,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "100–1000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "mid",
+          "value": 198.3399196089292,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "1000–4000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "high",
+          "value": 194.57400965248164,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "6000–12000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "air",
+          "value": 180.15358873392654,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "14000–20000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "realtime",
+          "value": 3.244822298160712,
+          "unit": "x",
+          "better": "higher",
+          "detail": "seconds of audio per second of wall clock",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "cores",
+          "value": 3.4141983716996225,
+          "unit": "",
+          "better": "",
+          "detail": "CPU seconds per wall second; 1.0 means single-threaded",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "load",
+          "value": 2.319932541809976,
+          "unit": "s",
+          "better": "lower",
+          "detail": "one-off cost of getting the engine ready",
+          "spread": 0.0,
+          "n": 1
+        }
+      ],
+      "skipped": "",
+      "failed": ""
+    },
+    {
+      "engine": "sidon",
+      "damage": "overload-call",
+      "material": "nyman b.wav @ 8s",
+      "speaker": "nyman",
+      "results": [
+        {
+          "probe": "recovery",
+          "metric": "lsd_before",
+          "value": 6.1257195472717285,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "100–16000 Hz, damaged vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "lsd_after",
+          "value": 5.243755340576172,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "100–16000 Hz, restored vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "gained",
+          "value": 0.8819642066955566,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means closer to the original than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "before",
+          "value": 3.108684710818107,
+          "unit": "dB",
+          "better": "",
+          "detail": "80-250 Hz against 300-3000 Hz, damaged minus clean; negative is thin",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "after",
+          "value": 1.6072679478185585,
+          "unit": "dB",
+          "better": "",
+          "detail": "the same after the engine; 0 is the original's balance",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "restored",
+          "value": 1.5014167629995483,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means nearer the original's balance than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "before",
+          "value": 0.8064925074577332,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "damaged against clean; 1 is the same voice",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "after",
+          "value": 0.7801030278205872,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "change",
+          "value": -0.026389479637145996,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "negative means the engine moved the voice away from its owner",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_before",
+          "value": 1.8548269271850586,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_after",
+          "value": 1.1964107751846313,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_gained",
+          "value": -0.6584161520004272,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_before",
+          "value": 0.7987686252346398,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_after",
+          "value": 0.7743568857024257,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_gained",
+          "value": -0.024411739532214094,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "low",
+          "value": 0.0016563275825014511,
+          "unit": "r",
+          "better": "",
+          "detail": "100–1000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "mid",
+          "value": 0.03799938335882498,
+          "unit": "r",
+          "better": "",
+          "detail": "1000–4000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "high",
+          "value": -0.02106031411188257,
+          "unit": "r",
+          "better": "",
+          "detail": "6000–12000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "air",
+          "value": -0.00044916686579059284,
+          "unit": "r",
+          "better": "",
+          "detail": "14000–20000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "floor_change",
+          "value": -20.054732961741145,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "negative is a quieter noise floor",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "speech_change",
+          "value": 1.0931037537805146,
+          "unit": "dB",
+          "better": "",
+          "detail": "should be near zero: cleaning is not turning down",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "range_gained",
+          "value": 21.14783671552166,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "speech-to-silence distance opened up by this much",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "overall",
+          "value": 209.35612829312947,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "how far below the signal two runs of the same input differ; >120 is bit-identical, >60 is inaudible but not a pure function",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "low",
+          "value": 208.85831800656683,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "100–1000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "mid",
+          "value": 195.79895786038026,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "1000–4000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "high",
+          "value": 186.30305526544433,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "6000–12000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "air",
+          "value": 167.769697395656,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "14000–20000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "realtime",
+          "value": 3.227972968455422,
+          "unit": "x",
+          "better": "higher",
+          "detail": "seconds of audio per second of wall clock",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "cores",
+          "value": 3.3941873490504957,
+          "unit": "",
+          "better": "",
+          "detail": "CPU seconds per wall second; 1.0 means single-threaded",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "load",
+          "value": 2.319932541809976,
+          "unit": "s",
+          "better": "lower",
+          "detail": "one-off cost of getting the engine ready",
+          "spread": 0.0,
+          "n": 1
+        }
+      ],
+      "skipped": "",
+      "failed": ""
+    },
+    {
+      "engine": "sidon",
+      "damage": "overload-call",
+      "material": "wancke a.wav @ 64s",
+      "speaker": "wancke",
+      "results": [
+        {
+          "probe": "recovery",
+          "metric": "lsd_before",
+          "value": 4.68816614151001,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "100–16000 Hz, damaged vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "lsd_after",
+          "value": 4.1395158767700195,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "100–16000 Hz, restored vs clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "recovery",
+          "metric": "gained",
+          "value": 0.5486502647399902,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means closer to the original than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "before",
+          "value": 2.6113310262713947,
+          "unit": "dB",
+          "better": "",
+          "detail": "80-250 Hz against 300-3000 Hz, damaged minus clean; negative is thin",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "after",
+          "value": 0.9372091160208837,
+          "unit": "dB",
+          "better": "",
+          "detail": "the same after the engine; 0 is the original's balance",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "body",
+          "metric": "restored",
+          "value": 1.674121910250511,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "positive means nearer the original's balance than the damage was",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "before",
+          "value": 0.753242015838623,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "damaged against clean; 1 is the same voice",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "after",
+          "value": 0.5550042390823364,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "speaker",
+          "metric": "change",
+          "value": -0.19823777675628662,
+          "unit": "cos",
+          "better": "higher",
+          "detail": "negative means the engine moved the voice away from its owner",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_before",
+          "value": 2.121016263961792,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_after",
+          "value": 1.085290551185608,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "pesq_gained",
+          "value": -1.035725712776184,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_before",
+          "value": 0.7469173886961601,
+          "unit": "",
+          "better": "higher",
+          "detail": "damaged against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_after",
+          "value": 0.3570608462877682,
+          "unit": "",
+          "better": "higher",
+          "detail": "restored against clean",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "perceptual",
+          "metric": "stoi_gained",
+          "value": -0.3898565424083919,
+          "unit": "",
+          "better": "higher",
+          "detail": "positive means the engine improved the score",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "low",
+          "value": 0.041606395840221584,
+          "unit": "r",
+          "better": "",
+          "detail": "100–1000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "mid",
+          "value": 0.022313574317927357,
+          "unit": "r",
+          "better": "",
+          "detail": "1000–4000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "high",
+          "value": 0.005545077364966037,
+          "unit": "r",
+          "better": "",
+          "detail": "6000–12000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "origin",
+          "metric": "air",
+          "value": 9.79211586538114e-05,
+          "unit": "r",
+          "better": "",
+          "detail": "14000–20000 Hz; ~1 filtered, ~0 synthesised",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "floor_change",
+          "value": -46.350359939732655,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "negative is a quieter noise floor",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "speech_change",
+          "value": -0.12152645269150497,
+          "unit": "dB",
+          "better": "",
+          "detail": "should be near zero: cleaning is not turning down",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "cleanup",
+          "metric": "range_gained",
+          "value": 46.22883348704115,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "speech-to-silence distance opened up by this much",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "overall",
+          "value": 207.16969237050847,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "how far below the signal two runs of the same input differ; >120 is bit-identical, >60 is inaudible but not a pure function",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "low",
+          "value": 206.53865428793586,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "100–1000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "mid",
+          "value": 198.29276701829892,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "1000–4000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "high",
+          "value": 182.56842580912996,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "6000–12000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "stability",
+          "metric": "air",
+          "value": 166.4298481858113,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "14000–20000 Hz; low means this band is generated afresh each run",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "realtime",
+          "value": 3.254551324541492,
+          "unit": "x",
+          "better": "higher",
+          "detail": "seconds of audio per second of wall clock",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "cores",
+          "value": 3.428131598979159,
+          "unit": "",
+          "better": "",
+          "detail": "CPU seconds per wall second; 1.0 means single-threaded",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "load",
+          "value": 2.319932541809976,
+          "unit": "s",
+          "better": "lower",
+          "detail": "one-off cost of getting the engine ready",
+          "spread": 0.0,
+          "n": 1
+        }
+      ],
+      "skipped": "",
+      "failed": ""
+    },
+    {
+      "engine": "sidon",
+      "damage": "speed",
+      "material": "",
+      "speaker": "",
+      "results": [
+        {
+          "probe": "throughput",
+          "metric": "realtime",
+          "value": 3.5620668549393097,
+          "unit": "x",
+          "better": "higher",
+          "detail": "",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "spread",
+          "value": 1.0623880115593562,
+          "unit": "x",
+          "better": "lower",
+          "detail": "",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "cores",
+          "value": 3.44685375056284,
+          "unit": "",
+          "better": "",
+          "detail": "",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "throughput",
+          "metric": "load",
+          "value": 2.319932541809976,
+          "unit": "s",
+          "better": "lower",
+          "detail": "",
+          "spread": 0.0,
+          "n": 1
+        }
+      ],
+      "skipped": "",
+      "failed": ""
+    },
+    {
+      "engine": "sidon",
+      "damage": "sweep",
+      "material": "",
+      "speaker": "",
+      "results": [
+        {
+          "probe": "preservation",
+          "metric": "overall",
+          "value": 15.626134394258123,
+          "unit": "dB",
+          "better": "higher",
+          "detail": "how much of a non-speech signal disappeared; for podcasts, more is better",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "preservation",
+          "metric": "100-500Hz",
+          "value": 34.892388258060144,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "positive means this octave was removed",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "preservation",
+          "metric": "500-2000Hz",
+          "value": 10.751985473437422,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "positive means this octave was removed",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "preservation",
+          "metric": "2000-6000Hz",
+          "value": 17.033850978632206,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "positive means this octave was removed",
+          "spread": 0.0,
+          "n": 1
+        },
+        {
+          "probe": "preservation",
+          "metric": "6000-16000Hz",
+          "value": 40.13620222697277,
+          "unit": "dB",
+          "better": "lower",
+          "detail": "positive means this octave was removed",
+          "spread": 0.0,
+          "n": 1
+        }
+      ],
+      "skipped": "",
+      "failed": ""
+    }
+  ]
+}

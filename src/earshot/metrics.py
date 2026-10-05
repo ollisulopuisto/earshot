@@ -162,6 +162,40 @@ def spectral_tilt(x: np.ndarray, rate: int, low: float = 200.0, high: float = 80
     return float(np.polyfit(octaves, decibels, 1)[0])
 
 
+BODY_BAND_HZ = (80.0, 250.0)
+SPEECH_BAND_HZ = (300.0, 3000.0)
+
+
+def body(x: np.ndarray, rate: int) -> float:
+    """The level of 80–250 Hz against 300–3000 Hz, in dB.
+
+    Where a voice's fundamental and second harmonic live, against where its
+    intelligibility does: a balance, so a fader move leaves it alone. A
+    telephone band cuts at 300 Hz and takes this about 20 dB down (measured
+    on the listening sets, 2026-10-03), which is the thinness the owner heard.
+    """
+    from scipy import signal
+
+    x = np.asarray(x, dtype=np.float64)
+    if len(x) < 256:
+        return float("nan")
+    f, p = signal.welch(x, rate, nperseg=min(8192, len(x)))
+    low = p[(f >= BODY_BAND_HZ[0]) & (f < BODY_BAND_HZ[1])].sum()
+    mid = p[(f >= SPEECH_BAND_HZ[0]) & (f < SPEECH_BAND_HZ[1])].sum()
+    return float(10 * np.log10((low + 1e-30) / (mid + 1e-30)))
+
+
+def speaker_similarity(a: np.ndarray, b: np.ndarray, rate: int) -> float:
+    """Cosine between speaker embeddings of ``a`` and ``b``; 1 is one voice.
+
+    Raises EngineError when the speaker model is unavailable, so a caller
+    reports a skip rather than a number about nothing.
+    """
+    from . import speaker
+
+    return float(np.dot(speaker.embed(a, rate), speaker.embed(b, rate)))
+
+
 def repeatability(first: np.ndarray, second: np.ndarray) -> float:
     """How far below the signal the difference between two runs sits, in dB.
 
@@ -244,3 +278,26 @@ def perceptual(reference: np.ndarray, degraded: np.ndarray, rate: int) -> dict:
     except Exception:
         pass
     return out
+
+
+def line_residue(error: np.ndarray, reference: np.ndarray, rate: int,
+                 fundamental: float = 50.0, top: float = 6000.0) -> float:
+    """Energy of ``error`` at the harmonics of ``fundamental``, in dB of speech.
+
+    Each harmonic's window widens with its number, because drift of a few
+    tenths of a hertz at the fundamental is k times that at the k-th
+    harmonic. What falls between the harmonics is not counted: that is the
+    voice, and other probes answer for it.
+    """
+    e = np.asarray(error, dtype=np.float64)
+    r = np.asarray(reference, dtype=np.float64)
+    window = np.hanning(len(e))
+    spectrum = np.abs(np.fft.rfft(e * window)) ** 2
+    freqs = np.fft.rfftfreq(len(e), 1 / rate)
+    lines = np.zeros_like(freqs, dtype=bool)
+    k = 1
+    while k * fundamental < min(top, rate / 2 * 0.95):
+        lines |= np.abs(freqs - k * fundamental) <= 1.0 + 0.3 * k
+        k += 1
+    speech = np.sum(np.abs(np.fft.rfft(r * window)) ** 2) + 1e-30
+    return float(10 * np.log10(spectrum[lines].sum() / speech + 1e-30))

@@ -182,9 +182,49 @@ def check_contract(before: np.ndarray, after: np.ndarray, name: str) -> np.ndarr
     return after
 
 
+def torch_device() -> str:
+    """The device PyTorch engines run on: ``EARSHOT_DEVICE``, else CUDA if
+    present, else the CPU.
+
+    The Apple GPU is never chosen unasked. Measured with UniverSR on an
+    M1 Max: 11 s per model pass on MPS against 15 s on the CPU, and the first
+    MPS attempt sat waiting on the GPU for over ten minutes.
+    """
+    import os
+    import re
+
+    chosen = os.environ.get("EARSHOT_DEVICE", "").strip()
+    if chosen:
+        if not re.fullmatch(r"(cpu|mps|cuda(:\d+)?)", chosen):
+            raise EngineError(
+                f"EARSHOT_DEVICE must be cpu, mps, cuda or cuda:N, got {chosen!r}"
+            )
+        return chosen
+    try:
+        import torch
+    except ImportError:
+        return "cpu"
+    return "cuda" if torch.cuda.is_available() else "cpu"
+
+
+from . import audiosr as _audiosr  # noqa: E402,F401
+from . import body as _body  # noqa: E402,F401
 from . import chain as _chain  # noqa: E402,F401
+from . import declip as _declip  # noqa: E402,F401
 from . import deepfilternet as _deepfilternet  # noqa: E402,F401
+from . import dehum as _dehum  # noqa: E402,F401
+from . import gate as _gate  # noqa: E402,F401
+from . import keepzero as _keepzero  # noqa: E402,F401
 from . import lavasr as _lavasr  # noqa: E402,F401
+from . import mossformer2 as _mossformer2  # noqa: E402,F401
+from . import notch as _notch  # noqa: E402,F401
+from . import novasr as _novasr  # noqa: E402,F401
 from . import passthrough as _passthrough  # noqa: E402,F401  (registers itself)
+from . import plosive as _plosive  # noqa: E402,F401
 from . import router as _router  # noqa: E402,F401
+from . import sidon as _sidon  # noqa: E402,F401
+from . import tonematch as _tonematch  # noqa: E402,F401
+from . import unipase as _unipase  # noqa: E402,F401
+from . import universr as _universr  # noqa: E402,F401
 from . import vst3 as _vst3  # noqa: E402,F401
+from . import wpe as _wpe  # noqa: E402,F401

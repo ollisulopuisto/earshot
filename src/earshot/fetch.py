@@ -31,9 +31,18 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
-from .engines import EngineError
+
+
+def _engine_error():
+    # Imported late: the engines import this module for Asset, so importing
+    # them at the top made `import earshot.fetch` fail whenever it came
+    # first — test_fetch.py alone could not be collected.
+    from .engines import EngineError
+
+    return EngineError
 
 CHUNK = 1 << 20
+ATTEMPTS = 3
 
 
 @dataclass(frozen=True)
@@ -96,7 +105,7 @@ def ensure(asset: Asset) -> Path:
         target.unlink()
 
     if os.environ.get("EARSHOT_NO_DOWNLOAD"):
-        raise EngineError(
+        raise _engine_error()(
             f"{asset.name} is not present and downloading is disabled "
             f"(EARSHOT_NO_DOWNLOAD). Fetch it by hand:\n"
             f"  curl -L -o {target} {asset.url}"
@@ -105,21 +114,41 @@ def ensure(asset: Asset) -> Path:
     note = f" — {asset.about}" if asset.about else ""
     print(f"earshot: fetching {asset.name}{note}\n  from {asset.url}", file=sys.stderr)
     part = target.with_suffix(target.suffix + ".part")
-    try:
-        with urllib.request.urlopen(asset.url) as response, open(part, "wb") as out:
-            while True:
-                block = response.read(CHUNK)
-                if not block:
-                    break
-                out.write(block)
-    except Exception as exc:
+    for attempt in range(1, ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(asset.url) as response, open(part, "wb") as out:
+                expected = int(response.headers.get("Content-Length") or 0)
+                received = 0
+                while True:
+                    block = response.read(CHUNK)
+                    if not block:
+                        break
+                    out.write(block)
+                    received += len(block)
+        except Exception as exc:
+            part.unlink(missing_ok=True)
+            raise _engine_error()(f"could not fetch {asset.name}: {exc}") from exc
+        # A connection that ends early can look like a finished file. On
+        # Colab the 6.2 GB AudioSR checkpoint failed its digest that way while
+        # the same pinned revision verified on the Mac. Short is a broken
+        # transfer, not a different model, so it is fetched again.
+        if not expected or received == expected:
+            break
+        print(
+            f"earshot: {asset.name} cut short at {received} of {expected} bytes "
+            f"(attempt {attempt} of {ATTEMPTS}), fetching again",
+            file=sys.stderr,
+        )
         part.unlink(missing_ok=True)
-        raise EngineError(f"could not fetch {asset.name}: {exc}") from exc
+    else:
+        raise _engine_error()(
+            f"{asset.name} arrived short {ATTEMPTS} times; the connection keeps dropping"
+        )
 
     got = digest(part)
     if got != asset.sha256:
         part.unlink(missing_ok=True)
-        raise EngineError(
+        raise _engine_error()(
             f"{asset.name} downloaded but the checksum is wrong.\n"
             f"  expected {asset.sha256}\n  got      {got}\n"
             "Either the file upstream changed — in which case every number "
@@ -152,7 +181,7 @@ def ensure_all(assets) -> list[Path]:
         if absent:
             lines = "\n".join(f"  curl -L --create-dirs -o {a.path} {a.url}"
                                for a in absent)
-            raise EngineError(
+            raise _engine_error()(
                 f"{len(absent)} file(s) missing and downloading is disabled "
                 f"(EARSHOT_NO_DOWNLOAD). Fetch them by hand:\n{lines}"
             )

@@ -27,6 +27,34 @@ lavasr = ["onnxruntime>=1.17", "pyyaml>=6.0"]
 # its inference is stateful and hand-porting it would turn a bug into a
 # quality difference rather than a crash.
 deepfilternet = ["deepfilternet>=0.5", "torch>=2.0", "torchaudio>=2.0"]
+# UniverSR, pinned to a commit: it is not on PyPI, and an unpinned git
+# dependency would let the code behind every stored number change silently.
+universr = [
+    "universr @ git+https://github.com/woongzip1/UniverSR@d8636623fe0c0704296239c1d3d3c5b911ecb2e0",
+    "torch>=2.0",
+    "torchaudio>=2.0",
+]
+# NovaSR, also not on PyPI and pinned for the same reason.
+novasr = [
+    "NovaSR @ git+https://github.com/ysharma3501/NovaSR@5e3cb7946c70a537222dc26a24da460aff8b923b",
+    "torch>=2.0",
+    "torchaudio>=2.0",
+]
+# UniPASE. The inference is vendored (earshot/vendor/unipase); espnet, which
+# it imports for one base class and one lookup, is replaced at the call site
+# rather than installed.
+unipase = ["torch>=2.0", "torchaudio>=2.0", "omegaconf>=2.3", "einops>=0.7"]
+# Sidon: TorchScript exports, and transformers only for the SeamlessM4T
+# filterbank front end.
+sidon = ["torch>=2.0", "torchaudio>=2.0", "transformers>=4.40"]
+# MossFormer2 SE 48K (ClearerVoice-Studio, Apache-2.0): the network is
+# vendored; it imports rotary-embedding-torch, and torchinfo at module level.
+mossformer2 = ["torch>=2.0", "torchaudio>=2.0", "rotary-embedding-torch>=0.8", "torchinfo>=1.8"]
+# WPE dereverberation (nara_wpe, MIT): numpy only.
+wpe = ["nara-wpe>=0.0.11"]
+# Speaker similarity (WeSpeaker ResNet34, ONNX). torchaudio for the Kaldi
+# filterbanks the model was trained on.
+speaker = ["onnxruntime>=1.17", "torch>=2.0", "torchaudio>=2.0"]
 dev = ["pytest>=8.0"]
 
 [project.scripts]
@@ -36,6 +64,10 @@ earshot = "earshot.cli:main"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.metadata]
+# Needed for the git-pinned extras above.
+allow-direct-references = true
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/earshot"]
 # Vendattu konfiguraatio ja lisenssi kuuluvat pakettiin, eivät vain repoon.
@@ -43,3 +75,33 @@ artifacts = ["src/earshot/vendor/*.yaml", "src/earshot/vendor/LICENSE-*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["real_speech: needs real recorded speech, skipped without it"]
+
+[tool.uv]
+# UniverSR's own pyproject points torch at the CUDA 12.8 index, which has no
+# macOS wheels, and uv honours a git dependency's sources. Declaring its
+# requirements here stops uv reading them from upstream. Copied from its
+# pyproject at the pinned commit; review this when that pin moves.
+[[tool.uv.dependency-metadata]]
+name = "universr"
+version = "0.1.5"
+requires-dist = [
+    "torch>=2.0",
+    "torchaudio>=2.0",
+    "torchdiffeq>=0.2.3",
+    "einops>=0.7",
+    "timm>=0.9",
+    "huggingface_hub>=0.20",
+    "pyyaml>=6.0",
+    "soundfile>=0.12",
+    "numpy>=1.24",
+    "tqdm>=4.60",
+]
+
+# NovaSR requires torchcodec, which only its file loader uses and the engine
+# never calls; it has no wheel for every platform torch has. Copied from its
+# setup.py at the pinned commit, without torchcodec.
+[[tool.uv.dependency-metadata]]
+name = "novasr"
+version = "0.0.2"
+requires-dist = ["soxr", "timm", "torchaudio", "torch", "einops"]

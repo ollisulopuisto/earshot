@@ -11,7 +11,74 @@ every time: valid, accepted, and silently wrong, found by measuring the
 output rather than reading the code. The full list is in the README under
 *Corrections*.
 
-## Where it stands
+## Status, 5 October 2026 — start here
+
+Everything below this section is the history it came from, dated; this is
+the state.
+
+**What exists.** `route` is the current answer: it measures each input and
+sends each damage to the engine that measured best on it, and passes clean
+audio through untouched. Defaults (`earshot.engines.gate.DEFAULT_ROUTE`):
+missing band → `sidon`; room → `chain:wpe+mossformer2`; clipping → `declip`;
+hiss and backgrounds → `mossformer2`; gated silence → `keepzero:unipase`.
+Its detectors: band edge, clipping, exact zeros, DNSMOS SIG, quiet-frame
+flatness, and what MossFormer2 would remove. Engines added since September:
+`sidon`, `unipase`, `wpe`, `mossformer2`, `tonematch`, `gate`, `route`,
+`body`, `audiosr` (own Python), `universr` (out of the route: recovers
+nothing on calls, 0.05× realtime).
+
+**What is measured.** On thirteen damages the route out-recovers UniPASE
+and Sidon and moves voices about half as much (pp53: +2.13 dB, speaker
+−0.049 vs UniPASE +1.26/−0.119 and Sidon +1.34/−0.104). Results in
+`results/2026-10-04-*`; average result files with
+`scripts/summarise_results.py` (each file holds one row per excerpt — an
+ad-hoc summary once reported one excerpt as six).
+
+**What the owner heard, blind** (picks in each set's `votes.jsonl`, read
+with `earshot votes DIR`):
+- Sidon wins most: calls 5/5 (where the route already uses it), and room
+  and overload over the route's gentler choices; room again 4/4 on a second
+  set. Tone-matched Sidon (`tonematch:sidon`) vs plain: 1–1 so far.
+- UniPASE was preferred over the untouched original on a clean microphone:
+  the owner wants room tone gone too ("only voices", AGENTS.md).
+- **Sidon warbles** — the owner's word for its one flaw. Not envelope
+  flutter, not a 50 Hz frame artefact; probably the vocoder's phase or
+  pitch (its pitch wobble is 0.65–0.81 of the original's). Unknown whether
+  upstream's GPU export warbles too: it will not run on a CPU.
+
+**Open, for the owner:**
+1. Put a clip of *your own* voice through the authors' demo
+   (huggingface.co/spaces/sarulab-speech/sidon_demo_beta): if it warbles
+   there too, it is Sidon; if not, it is the CPU export used here.
+2. The route's rule: follow the ear (Sidon nearly everywhere, clean audio
+   processed too) or keep identity-first choices for room and overload.
+3. The scoring trap: pp53 "clean" references contain room tone, so
+   isolating the voice scores as damage; a voice-only reference would itself
+   be model-made.
+4. Install dxRevive on this Mac; then render Studio and Studio 2 at 25, 50,
+   75 as the yardstick (never as training material — AGENTS.md).
+5. Unfinished blind picks: `out/kuuntelu-puhdas-ja-huone` (clean half) and
+   `out/kuuntelu-sidon-savy`.
+
+**Open, for a session:** UniverSR/AudioSR on a GPU (Colab refused all of
+4 October: free-tier GPU allowance used up, 0 compute units); a speaker
+probe that hears above 8 kHz; dereverberation beyond WPE (SGMSE+); a gate
+that does not touch clean pp53 audio with real ambience (1 of 5 today).
+
+**Rules that are easy to miss:** dxRevive is studied and specified, used for
+evaluation, never trained on (AGENTS.md). Only the owner's own recordings
+(`olli-recording-*`) may go to Colab, uploaded directly and deleted after;
+other voices stay local. Gemma runs on this Mac 00:00–07:00 Helsinki: no
+heavy jobs then. Check the CI run after pushing — local runs have every
+model installed and hid a red CI for a day.
+
+**Listening pages** (`earshot listen DIR --serve PORT` keeps picks):
+`out/kuuntelu-versus` (8782), `out/kuuntelu-puhdas-ja-huone` (8783),
+`out/kuuntelu-sidon-savy` (8784).
+
+---
+
+## Where it stood, 25 August 2026
 
 The bench works, six engines are wired up and four have been measured on real
 podcast material. Every number quoted anywhere in this repo came from that
@@ -25,6 +92,11 @@ material on an Apple M2, not from a vendor's claim or a paper.
 | `deepfilternet` | denoise only, PyTorch, `:N` bounds attenuation | yes |
 | `chain:a+b` | engines in series, contract checked between stages | yes |
 | `router:e` | the adaptive one: engine only where the input is empty | yes |
+| `dehum[:50\|60][@bw]` | mains hum and buzz, subtracted per harmonic | on EARS |
+| `deplosive[:corner]` | dynamic low band against the speaker's own balance | on EARS |
+| `highpass:N` | the global filter `deplosive` has to beat | on EARS |
+| `declip` | cubic redraw of short plateaus | on EARS |
+| `keepzero:e` | puts a gate's digital silence back after `e` | listening only |
 
 Seven result sets in `results/`, summarised by `earshot scoreboard`.
 
@@ -54,8 +126,11 @@ was measured on `hiss`, which has not changed.
 > have been. Corrected, LavaSR's `room` numbers moved from −6.12 dB to
 > +0.13 dB and its apparent +19.67 dB of added floor to +1.56. DeepFilterNet
 > was not re-measured — it needs an extra that is not installed — so
-> `deepfilternet:12` may be a leash on an artefact. **This is the most
-> valuable single thing left to re-run in this repo.**
+> `deepfilternet:12` may be a leash on an artefact. ~~This is the most
+> valuable single thing left to re-run in this repo.~~ **Re-run 22 September
+> on EARS: it was the artefact.** Unbounded DFN takes 5.0 dB of speech on
+> the corrected `room`, not 60; @20 dB takes 4.45 and recovers the most,
+> +0.81 dB. Still to repeat on the podcast material.
 
 **The router does what it was built to do, conservatively.** On material that
 needs nothing it changes nothing at all — `origin` +1.00 in every band,
@@ -74,6 +149,233 @@ always-on engine does (+0.35 against +0.42) while holding `origin` far higher.
 −6.12 dB on clean against dxRevive's −3.78: the second generative stage
 overwrites the first's work with its own guess. Routing the second stage
 fixes it exactly.
+
+## 22 September 2026: repairs, EARS, and a listening page
+
+Picked up from a planning spec written without knowledge of this repo. What
+was taken from it, and what was not, is in the PR that added this section
+(#9). In short: the spec's model-free repairs (hum, plosives, sparse
+clipping) were built as engines; its architecture (DAG scheduler, device
+workers, remote queue) was not, because nothing measured here needs it yet.
+
+**The DeepFilterNet re-measure is done.** Corrected `room`, unbounded DFN
+takes 5.0 dB of speech, not 60; the 20 dB bound recovers most (+0.81 dB).
+Numbers in the README under *The denoiser*.
+
+**Second-opinion material.** The session had no podcast audio, so it used
+EARS (Meta, CC BY-NC 4.0): anechoic studio speech, 48 kHz, 107 speakers,
+fetched from GitHub releases. Three speakers are in `material/local/ears/`
+on the machine that ran it and nowhere else. It is English and anechoic,
+which makes it good ground truth and a poor stand-in for a Finnish podcast
+room. Do not commit it: NC is not compatible with this repo's licence.
+
+**Listening.** `earshot listen DIR` builds the synced, loudness-matched page;
+`scripts/listening_set.py` renders ten comparisons into `out/kuuntelu/`.
+The set from this session is published as a private artifact for the owner.
+
+**Blocked, not tried.** AP-BWE (Google Drive), FlashSR, Resemble Enhance,
+VoiceFixer and ClearerVoice (Hugging Face) all host weights where the cloud
+session could not reach. DeepFilterNet's own download URL also returned 403
+there; its weights were taken from a sparse git checkout of the upstream
+repository instead, which is the same file.
+
+## 3 October 2026: four new candidates, and a first impression
+
+UniverSR, NovaSR, UniPASE and AudioSR are wired as engines (see the README's
+candidates table); none is benched yet. Two listening sets exist: `bwe`
+(pp53 voices and the real 7.5 kHz call, rendered locally) and `bwe-ears`
+(EARS, rendered on Colab via `scripts/colab.py`).
+
+**First impression, not a finding.** The owner's quick listening: UniPASE
+was usually the most promising. Not blind, not on headphones, and stated by
+the owner as very preliminary. It is recorded so the next session knows
+where attention is pointing, not as evidence. What would make it one:
+
+- a blind listen on headphones, the page's *Sokko* mode;
+- a speaker-similarity probe, since UniPASE resynthesises everything and
+  keeps no sample of the input — `origin` will read near zero by design and
+  cannot say whether the voice is still its owner's;
+- its known fault measured on real material: it speaks into digital silence
+  at −32.8 dBFS (contract kit), so gated audio wants `keepzero:unipase`.
+
+**Blind picks, same day** (`votes.jsonl` beside each set, Sokko on, owner,
+15:08–15:14 Helsinki). One best take per comparison, on EARS voices:
+
+| set | comparison | picked |
+|---|---|---|
+| calls-ears | VoIP call, p001 | UniPASE |
+| calls-ears | VoIP call, p008 | UniverSR (4 s chunks) |
+| calls-ears | overload | declip → UniPASE |
+| calls-ears | overload on a call | UniPASE |
+| bwe-ears | telephone band, p001 | UniPASE |
+| bwe-ears | telephone band, p002 | UniPASE |
+| bwe-ears | wideband call | UniPASE |
+| bwe-ears | platform upload | UniPASE |
+
+UniPASE 7 of 8, blind this time, and LavaSR, NovaSR, AudioSR and every
+router variant never picked. Still one listener and one voice per damage,
+and the speaker-similarity question above is unanswered: the picks say
+which sounded best, not which still sounds like its speaker.
+
+**The pp53 set (`out/kuuntelu-bwe`), blind, same day.** Saved picks:
+UniPASE behind the router on the Nyman call, plain UniPASE on the wideband
+call, `keepzero:unipase` on the real call. The owner's spoken notes named
+four takes terrible or worst (clean microphone, Nyman call, platform, real
+call), and all four were the broken UniverSR — heard blind, before anyone
+had said it was broken. Everything else on the clean microphone "sounds
+pretty much the same", which is what a clean input should do.
+
+Mapping a spoken "Otto E" to a take by recomputing the page's shuffle went
+wrong twice: the page shuffles in JavaScript doubles, and an exact Python
+copy diverges once the product passes 2^53. The saved picks carry the
+real take; trust those, or reproduce the float arithmetic.
+
+**The podcast repairs set (`out/kuuntelu-podcast`), blind.** On the Nyman
+room the owner's best pick was *the damaged take*: every DeepFilterNet
+setting was worse than doing nothing ("all bad"). On hiss, unbounded
+DeepFilterNet. Nothing on the bench is built for dereverberation;
+UniPASE (trained with reverberation) and VoiceFixer are the next to try.
+
+**The body set (`out/kuuntelu-body`), blind.** Plain UniPASE was picked
+over UniPASE → Body on all three comparisons with a pick (Nyman call,
+landline, real call). The body probe says the repair restores most of the
+missing low end (−20 → −5..−8 dB); the ear did not prefer it. Unknown
+whether the synthesised harmonics sound artificial, or whether UniPASE's
+own low end was already enough — untested.
+
+**Speaker similarity says the opposite of the ear** (`earshot.speaker`,
+WeSpeaker ResNet34, cosine to the clean original, each take minus the
+damaged input of the same comparison, all rendered sets): plain UniPASE
+−0.041 median, worse than the damage it was given in 13 of 16
+comparisons (worst −0.179); UniPASE behind the router +0.001, better in 11
+of 13; LavaSR −0.026; UniPASE → Body −0.052. The owner's blind favourite
+is the take that moves the voice furthest from its owner — the trade the
+project's rule is about. The router keeps the speaker's own signal below
+the band edge and with it the identity. One embedding model, few
+comparisons per engine: a strong lead, not a verdict. The broken UniverSR
+scored −0.81, so the probe sees a voice that is gone.
+
+**Correction (2026-10-04): the pp53 bench tables first reported here showed
+one excerpt, not six.** Result files hold a row per excerpt and no summary
+row; the summary script kept the last row. `scripts/summarise_results.py`
+now averages them. True means over six pp53 excerpts (log-spectral gain dB /
+speaker change):
+
+| damage | UniPASE | Sidon | LavaSR |
+|---|---|---|---|
+| clean | −3.47 / −0.167 | −4.46 / −0.226 | −2.71 / −0.139 |
+| room (the hall) | +0.94 / −0.194 | +0.27 / −0.070 | +0.11 / −0.109 |
+| wideband-voip | +1.36 / −0.111 | +1.55 / −0.164 | −1.63 / −0.126 |
+| narrowband-voip | +0.21 / −0.168 | +0.88 / −0.120 | +0.27 / +0.019 |
+| voip-call | +0.77 / −0.135 | +1.54 / −0.120 | +0.33 / −0.115 |
+| landline | +0.63 / −0.057 | +0.04 / −0.111 | +0.13 / +0.025 |
+| overload | −1.46 / −0.142 | −2.58 / −0.196 | −1.15 / −0.129 |
+| overload-call | +0.99 / −0.095 | +1.46 / −0.091 | +0.36 / −0.106 |
+
+What survives: Sidon leads on calls, UniPASE on room and landline, both
+harm clean audio. What was wrong: the margins, and both move voices further
+from their owners than first reported (−0.06 to −0.23, not −0.03 to −0.16).
+The route evaluations (`results/2026-10-04-route-*`) averaged directly and
+stand. Body after the engine: Sidon brings narrowband to −0.9 dB and
+landline to −1.4; UniPASE leaves −15.4 and −19.7.
+
+**UniverSR, properly wired, on the call damages** (three pp53 excerpts,
+`results/2026-10-04-*-callband-pp53-m1max.json`): −1.77 to +0.14 dB where
+Sidon gives +0.52 to +1.34; speaker unchanged because it changes little;
+no low end restored; 0.05× realtime on the CPU. Out of the route.
+
+**Identity loss is not spectral tilt** (2026-10-04, negative result). The
+research suggested part of UniPASE's speaker-similarity loss might be
+long-term spectrum, since speaker embeddings shift strongly under EQ. Tested
+in the best case — each UniPASE take EQ-matched (third-octave, ±12 dB) to the
+*original's* own spectrum: median cosine 0.817 → 0.823, change +0.000,
+better in 8 of 16. LavaSR +0.003. The drift lives in finer structure than
+an EQ reaches, so a per-speaker profile would have to condition the model,
+not post-filter its output.
+
+**The `room` recipe was a hall, and WPE is the first thing that helps a
+real room** (2026-10-04). `room`'s impulse response measures a direct-to-
+reverberant ratio of −12.3 dB at RT60 0.6 s: a distant microphone in a hall,
+nothing like a podcast guest — which reframes every "nothing helps on room"
+result so far, the owner's "all bad" included. Two realistic recipes now:
+`room-laptop` (0 dB) and `room-near` (+6 dB). On five EARS excerpts:
+
+| engine | room-laptop SIG / LSD / speaker | room-near SIG / LSD / speaker |
+|---|---|---|
+| damaged | 2.36 / — / — | 3.11 / — / — |
+| WPE (60 taps) | 2.92 / +1.10 / **+0.011** | 3.36 / **+2.17** / **+0.024** |
+| UniPASE | 3.61 / +1.95 / −0.112 | 3.63 / +0.42 / −0.091 |
+| Sidon | 3.55 / **+2.80** / −0.101 | 3.51 / +1.23 / −0.103 |
+| WPE → UniPASE | 3.63 / +1.97 / −0.078 | 3.63 / +1.26 / −0.052 |
+
+(clean SIG 3.46.) The generative models clean a room further but cost a
+tenth of speaker similarity; WPE moves the voice *towards* its owner. The
+route now sends rooms to WPE, with WPE → UniPASE the stronger option.
+
+**Every UniverSR take in that first listen was broken** (fixed in ceab298).
+The engine handed upstream's `enhance()` 48 kHz audio labelled with the
+band's rate; upstream takes an array to be at that rate, so speech came out
+stretched six-fold — 1–3 kHz 49.7 dB down, 40–80 Hz 50 dB up. The UniverSR
+takes in `out/kuuntelu-bwe` and the first Colab `bwe-ears` are invalid, and
+so is the "+7 to +25 dB of low end" once reported for it. The contract kit
+checks length and alignment, not content; a test now requires the speech
+band through at r > 0.95. The lesson for every new engine: check that it
+returns the input where it claims to keep it, not only that it returns
+the right number of samples.
+
+## 4 October 2026, night: a route instead of a model
+
+The research survey (`docs/research/`) said no single open model beats
+UniPASE outright and that the URGENT winners kept more of the original. The
+night's work built that: **`route`**, which measures the input and sends each
+damage to the engine that measured best on it, and passes clean audio
+through bit for bit.
+
+- **Gate** (`gate:<engine>`, `earshot.engines.gate`): band edge under 10 kHz,
+  ≥0.3 % of samples at the peak, ≥1 % exact zero, DNSMOS SIG under 2.45
+  (rooms), quiet-frame flatness ≥0.54 (white hiss), and what MossFormer2
+  would remove above −12 dB (real backgrounds). Clean audio untouched on
+  every held-out EARS excerpt (five — the two EARS sets share them, and an
+  earlier count of ten counted each twice); one clean pp53 excerpt of five touched by the
+  isolation detector (its speaker cosine after isolation 0.874).
+- **Route defaults**, each measured on five EARS excerpts: missing band →
+  Sidon; room → WPE then MossFormer2; clipping → declip; hiss and
+  backgrounds → MossFormer2; gated silence → keepzero:unipase.
+- **New engines**: Sidon, WPE (nara_wpe, 60 taps), MossFormer2 SE 48K
+  (vendored), and DNSMOS as `earshot.quality`.
+- **New damage**: `room-laptop` and `room-near` (the old `room` is a hall,
+  DRR −12.3 dB), and real backgrounds `office`, `kitchen`, `cafeteria` from
+  DEMAND.
+- **Negative result**: an EQ match does not recover UniPASE's identity drift.
+
+Route against single models (ten damages, EARS, `results/2026-10-04-route-
+vs-models-ears-m1max.json`): mean log-spectral gain +2.37 dB against
+UniPASE +1.16 and Sidon +1.77; mean speaker change −0.017 against −0.046 and
+−0.063. Not yet heard by anyone — the morning `versus` set has it beside
+UniPASE and Sidon on the pp53 voices.
+
+**On the podcast voices too** (`results/2026-10-04-route-vs-models-pp53-
+m1max.json`, five pp53 excerpts, thirteen damages): route +2.13 dB mean,
+speaker −0.049 (worst −0.101); UniPASE +1.26 / −0.119 (worst −0.197); Sidon
++1.34 / −0.104 (worst −0.160). DNSMOS OVRL favours the resynthesisers (+0.71
+Sidon, +0.46 route) — the predicted trade.
+
+**A scoring trap found doing it.** The pp53 "clean" tracks have real room
+tone. When the route isolates the voice — what the owner asked for — the
+bench scores the removed ambience as damage against that reference (clean
+−0.79 dB, office −0.49). For the goal "only voices", the reference itself
+must be voice-only before it can be the target; until then, recovery on
+pp53 under-credits isolation.
+
+**Sidon warbles** (owner, blind listening, 2026-10-04). Sidon won the room
+comparisons 4 of 4 but has "a small irritating feature", identified as a
+warble. Measured against the originals on twelve pp53 comparisons: a tone
+shift (body +2.2, 800–2500 Hz +2.7, top −1.2 to −2.5 dB — `tonematch:sidon`
+undoes it) and pitch wobble reduced to 0.65–0.81 of the original's; no
+envelope flutter and no 50 Hz frame-rate peak (+0.4 dB), so the warble is
+probably phase or pitch behaviour of the vocoder. Unresolved: whether
+upstream's CUDA export, which their demo uses, warbles too — it will not
+run on a CPU, so the comparison needs a GPU or the authors' Space.
 
 ## What is not known, in priority order
 
@@ -153,6 +455,21 @@ that names it.
 applied −28.1 dB along with the reverberation. Every recipe is now checked by
 `test_a_recipe_is_damage_and_not_a_fader`, which asserts no recipe smuggles a
 level change past the ones that level on purpose.
+
+**A recipe calibrated on one material can do nothing on another.** The
+`platform-upload` gate sits 18 dB under the speech because podcast room tone
+sits 22 dB under; EARS pauses sit 18 dB under, and on EARS the gate never
+closed. The bench ran, produced a full table, and measured a 15 kHz
+low-pass. Check that a damage did what its name says (here: the fraction of
+exact zeros) before reading a table about it.
+
+**LSD cannot see hum.** A few narrow bins vanish into a band average: dehum
+scored +0.01 dB of `gained` while removing 6.6 dB at the harmonics. The
+`tonal` probe measures the lines themselves.
+
+**Synthetic material fools the hum detector.** `probes.default_material` is a
+pulse train that dwells near 450 Hz long enough to look like a ninth
+harmonic. Tests that need "no hum" use a gliding tone instead.
 
 **Fading a chunk in place rewrites the caller's array.** An engine that
 returns its input unchanged returns a *view*. This nearly shipped in
