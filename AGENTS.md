@@ -13,7 +13,17 @@ not field recordings, not general audio.
 
 The design goal, in the owner's words: *restore human soundingness*. When a
 change would trade a speaker sounding like themselves for a better score,
-that is not an improvement, and the `origin` probe exists to catch it.
+that is not an improvement, and the `origin` and `speaker` probes exist to
+catch it.
+
+**Only voices are wanted.** One or more speakers per channel; everything
+else — steady or intermittent noise, hum, buzz, music beds, room sound — is
+to go (the owner, 2026-10-03). Removing non-speech is a feature, not
+collateral damage, and `preservation` scores it that way. The owner's
+working idea: a human voice is well described by a few parameters (pitch
+range, formants, timbre), and a podcast gives an hour of the same speaker,
+so a profile measured from the episode's clean stretches can guide what is
+rebuilt.
 
 ## The rule the whole bench rests on
 
@@ -70,6 +80,22 @@ licence. Vendoring is a fork unless the drift is handled, so:
 
 Weights are never vendored: they are fetched and verified against a digest,
 which pins them just as firmly without putting tens of megabytes in the repo.
+
+## dxRevive: study it, write it down, never train on it
+
+dxRevive (Accentize) is the commercial yardstick. The owner's rule
+(2026-10-03), a clean-room split:
+
+- **Studying it** — running it, measuring it, characterising what it does
+  — produces a written specification: `docs/dxrevive.md`. Measurements and
+  behaviour go there, never its audio as training material.
+- **Building** uses only open models, open data and this repo's damage
+  recipes, guided by that specification.
+- **Its output is for evaluation only:** reference takes in listening sets
+  and bench rows to beat. No model, fine-tune or parameter search here is
+  ever fitted to dxRevive's output. A model that has learned from it cannot
+  have that removed afterwards, so the line is drawn before training, not
+  after.
 
 ## Adding an engine
 

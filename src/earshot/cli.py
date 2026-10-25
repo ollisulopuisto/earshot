@@ -93,6 +93,23 @@ def main(argv: list[str] | None = None) -> int:
     listing = sub.add_parser("damages", help="list the damage recipes")
     listing.set_defaults(func=_damages)
 
+    listen = sub.add_parser(
+        "listen", help="build a synced, loudness-matched listening page for a "
+                       "directory of comparison folders",
+    )
+    listen.add_argument("directory", metavar="DIR",
+                        help="one sub-folder of WAV files per comparison")
+    listen.add_argument("--title", default="Earshot-kuuntelu")
+    listen.add_argument("--serve", type=int, metavar="PORT",
+                        help="serve the page and keep best-take picks in votes.jsonl")
+    listen.add_argument("--no-build", action="store_true",
+                        help="serve the page as it is, keeping its title and intro")
+    listen.set_defaults(func=_listen)
+
+    tally = sub.add_parser("votes", help="the takes picked as best on a served listening page")
+    tally.add_argument("directory", metavar="DIR")
+    tally.set_defaults(func=_votes)
+
     board = sub.add_parser(
         "scoreboard", help="one table across stored results (default results/*.json)"
     )
@@ -173,6 +190,36 @@ def _restore(args) -> int:
             f"  speech {before.speech:+.1f} -> {after.speech:+.1f} dBFS, "
             f"floor {before.floor:+.1f} -> {after.floor:+.1f} dBFS"
         )
+    return 0
+
+
+def _listen(args) -> int:
+    from . import listen
+
+    directory = Path(args.directory)
+    if not getattr(args, "no_build", False):
+        print(f"wrote {listen.build(directory, title=args.title)}")
+    if getattr(args, "serve", None):
+        server = listen.serve(directory, port=args.serve)
+        print(f"serving {directory} on port {args.serve}; picks go to {directory / 'votes.jsonl'}")
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+    return 0
+
+
+def _votes(args) -> int:
+    from . import listen
+
+    picked = listen.votes(Path(args.directory))
+    if not picked:
+        print("no picks yet")
+        return 0
+    for vote in picked:
+        how = "blind" if vote.get("blind") else "names showing"
+        print(f"{vote['comparison']:28s} {vote['kind']:6s} {vote.get('label', '?'):32s} "
+              f"({how}, shown as {vote.get('shown_as', '?')}; {vote['picks']} picks, last {vote.get('at', '?')})")
     return 0
 
 

@@ -14,9 +14,10 @@ decision at least once:
 ``origin``        Is the output still the input, band by band? Separates a
                   mask from a synthesiser. Nothing else reveals this.
 ``cleanup``       Did the floor come down without the speech coming with it?
-``preservation``  What happens to sound that is not a voice? A speech-only
-                  model deletes it, which is fine for a lone microphone and
-                  ruinous for a recording with a room in it.
+``preservation``  What happens to sound that is not a voice? For podcast
+                  production the owner wants it gone (2026-10-03): noise,
+                  hum, buzz, room — only voices stay. More removed is
+                  better; the probe used to score it the other way.
 ``stability``     Same input twice, how close? Decides whether results can
                   be cached and whether a measured difference is the setting
                   or the dice. Reported as a margin, not a yes/no — the
@@ -25,6 +26,8 @@ decision at least once:
                   Here for comparability with published claims, not because
                   they are the truth: both are referenced and both were
                   designed for telephony.
+``tonal``         On hum and buzz only: how much is left at the mains
+                  harmonics. The only way to see hum; LSD averages it away.
 ``throughput``    How much faster than realtime, and on how many cores.
 
 Every probe returns ``Result`` objects with ``better`` set, so the report
@@ -232,6 +235,59 @@ def run_all(
                    "positive means closer to the original than the damage was"),
         ]
 
+    # --- tonal: what is left at the mains harmonics, when the damage put
+    # something there. Hum lives in a few narrow bins, and a log-spectral
+    # distance averaged over the whole band does not see it: measured on six
+    # EARS excerpts, a subtraction that took one excerpt's error from -61.3
+    # to -67.7 dBFS scored +0.01 dB of `gained`.
+    tonal = [o for f, o in damage.steps if f in (degrade.hum, degrade.mains)]
+    if tonal:
+        fundamental = float(tonal[0].get("mains_hz", 50.0))
+        before = metrics.line_residue(broken - clean, clean, rate, fundamental)
+        after = metrics.line_residue(restored - clean, clean, rate, fundamental)
+        run.results += [
+            Result("tonal", "before", before, "dB", "lower",
+                   "error at the mains harmonics, relative to the speech"),
+            Result("tonal", "after", after, "dB", "lower",
+                   "the same after the engine"),
+            Result("tonal", "removed", before - after, "dB", "higher",
+                   "positive means less hum than the damage left"),
+        ]
+
+    # --- body: the low end a voice sounds full with, against the original.
+    # Asked because the owner heard restorations without it: the telephone
+    # band takes 80-250 Hz about 20 dB down, and LavaSR, NovaSR and the
+    # router all pass that loss straight through (listening sets, 2026-10-03).
+    reference_body = metrics.body(clean, rate)
+    before = metrics.body(broken, rate) - reference_body
+    after = metrics.body(restored, rate) - reference_body
+    run.results += [
+        Result("body", "before", before, "dB", "",
+               "80-250 Hz against 300-3000 Hz, damaged minus clean; negative is thin"),
+        Result("body", "after", after, "dB", "",
+               "the same after the engine; 0 is the original's balance"),
+        Result("body", "restored", abs(before) - abs(after), "dB", "higher",
+               "positive means nearer the original's balance than the damage was"),
+    ]
+
+    # --- speaker: is the take still its owner's voice? UniPASE, the owner's
+    # blind favourite (7 of 8 picks, 2026-10-03), re-speaks everything and
+    # keeps no input sample, so `origin` cannot say; this can. Optional, like
+    # the perceptual scores: without the model it is left out, not guessed.
+    from . import speaker as _speaker
+
+    if _speaker.available():
+        before = metrics.speaker_similarity(clean, broken, rate)
+        after = metrics.speaker_similarity(clean, restored, rate)
+        run.results += [
+            Result("speaker", "before", before, "cos", "higher",
+                   "damaged against clean; 1 is the same voice"),
+            Result("speaker", "after", after, "cos", "higher",
+                   "restored against clean"),
+            Result("speaker", "change", after - before, "cos", "higher",
+                   "negative means the engine moved the voice away from its owner"),
+        ]
+
     # --- perceptual: the literature's numbers, for comparison with papers
     before_scores = metrics.perceptual(clean, broken, rate)
     after_scores = metrics.perceptual(clean, restored, rate)
@@ -348,8 +404,8 @@ def preservation(loaded: Loaded, rate: int = 48000, seconds: float = 5.0) -> Run
         return run
 
     run.results.append(
-        Result("preservation", "overall", metrics.suppression(sweep, out), "dB", "lower",
-               "how much of a non-speech signal disappeared")
+        Result("preservation", "overall", metrics.suppression(sweep, out), "dB", "higher",
+               "how much of a non-speech signal disappeared; for podcasts, more is better")
     )
     # The sweep is logarithmic, so the time at which it passes a frequency is
     # known and each octave can be looked at where it actually happened.
@@ -371,8 +427,9 @@ def _damaged_band(damage: degrade.Damage, rate: int) -> tuple[float, float]:
     """Which band to score recovery in, given what the damage did.
 
     Band-limiting removes a specific region and that is where the question
-    lies. Everything else damages the whole signal, so the whole signal is
-    the band.
+    lies. A mains hum is narrower still and sits below where the default band
+    even starts. Everything else damages the whole signal, so the whole signal
+    is the band.
     """
     ceiling = min(16000.0, rate / 2 * 0.95)
     for function, options in damage.steps:
@@ -380,13 +437,41 @@ def _damaged_band(damage: degrade.Damage, rate: int) -> tuple[float, float]:
             high = float(options.get("high") or 0)
             if 0 < high < ceiling:
                 return high, ceiling
+        if function is degrade.hum:
+            # The fundamental is the loudest part and the default floor of
+            # 100 Hz sat above it, so the damage was outside the measurement
+            # and an engine that removed 21 to 37 dB of hum scored +0.00.
+            # The top follows the harmonics rather than the spectrum: scored
+            # to 16 kHz, a narrowband change is diluted into nothing.
+            mains = float(options.get("mains_hz") or 50.0)
+            count = int(options.get("harmonics") or 6)
+            return mains * 0.4, min(mains * (count + 1), ceiling)
     return 100.0, ceiling
 
 
 def _have(tool: str) -> bool:
+    """Whether every ``+``-joined requirement is present: a program on PATH,
+    or ``libopus``, which is a library rather than a program."""
     import shutil
 
-    return shutil.which(tool) is not None
+    for part in tool.split("+"):
+        if part == "demand":
+            # Recorded noise: present in the cache, or fetchable.
+            import os
+
+            from .degrade import ENVIRONMENTS
+            from .fetch import missing
+
+            if missing(ENVIRONMENTS.values()) and os.environ.get("EARSHOT_NO_DOWNLOAD"):
+                return False
+        elif part == "libopus":
+            from .degrade import _libopus
+
+            if _libopus() is None:
+                return False
+        elif shutil.which(part) is None:
+            return False
+    return True
 
 
 def _cpu_seconds() -> float:

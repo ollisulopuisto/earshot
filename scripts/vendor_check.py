@@ -20,7 +20,7 @@ RAW = "https://raw.githubusercontent.com/{repo}/{ref}/{path}"
 def upstream(pin: vendor.Pinned, ref: str = "HEAD") -> str | None:
     repo = pin.url.removeprefix("https://github.com/")
     # The file may be named differently upstream than in our tree.
-    name = pin.path.replace("lavasr_config.yaml", "config.yaml")
+    name = pin.upstream or pin.path.replace("lavasr_config.yaml", "config.yaml")
     url = RAW.format(repo=repo, ref=ref, path=name)
     try:
         with urllib.request.urlopen(url) as response:
