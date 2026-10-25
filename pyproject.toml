@@ -15,46 +15,46 @@ dependencies = [
 [project.optional-dependencies]
 # The VST3 engine. Optional because the bench itself must run in CI, where
 # no plug-in is installed and none can be.
-vst3 = ["pedalboard>=0.9"]
+vst3 = ["pedalboard>=0.9.26"]
 # PESQ and STOI. Optional because they are the metrics of the literature
 # rather than of this bench: they exist so our numbers can be held against a
 # paper's, and the bench must still run without them.
 perceptual = ["pesq>=0.0.4", "pystoi>=0.4"]
 # LavaSR. onnxruntime only -- the inference itself is vendored numpy, and
 # the weights are fetched and checksummed rather than shipped.
-lavasr = ["onnxruntime>=1.17", "pyyaml>=6.0"]
+lavasr = ["onnxruntime>=1.31.0", "pyyaml>=6.0"]
 # DeepFilterNet's own code, which needs PyTorch. Heavy, and deliberately so:
 # its inference is stateful and hand-porting it would turn a bug into a
 # quality difference rather than a crash.
-deepfilternet = ["deepfilternet>=0.5", "torch>=2.0", "torchaudio>=2.0"]
+deepfilternet = ["deepfilternet>=0.5", "torch>=2.14.1", "torchaudio>=2.0"]
 # UniverSR, pinned to a commit: it is not on PyPI, and an unpinned git
 # dependency would let the code behind every stored number change silently.
 universr = [
     "universr @ git+https://github.com/woongzip1/UniverSR@d8636623fe0c0704296239c1d3d3c5b911ecb2e0",
-    "torch>=2.0",
+    "torch>=2.14.1",
     "torchaudio>=2.0",
 ]
 # NovaSR, also not on PyPI and pinned for the same reason.
 novasr = [
     "NovaSR @ git+https://github.com/ysharma3501/NovaSR@5e3cb7946c70a537222dc26a24da460aff8b923b",
-    "torch>=2.0",
+    "torch>=2.14.1",
     "torchaudio>=2.0",
 ]
 # UniPASE. The inference is vendored (earshot/vendor/unipase); espnet, which
 # it imports for one base class and one lookup, is replaced at the call site
 # rather than installed.
-unipase = ["torch>=2.0", "torchaudio>=2.0", "omegaconf>=2.3", "einops>=0.7"]
+unipase = ["torch>=2.14.1", "torchaudio>=2.0", "omegaconf>=2.4.0", "einops>=0.7"]
 # Sidon: TorchScript exports, and transformers only for the SeamlessM4T
 # filterbank front end.
-sidon = ["torch>=2.0", "torchaudio>=2.0", "transformers>=4.40"]
+sidon = ["torch>=2.14.1", "torchaudio>=2.0", "transformers>=5.20.2"]
 # MossFormer2 SE 48K (ClearerVoice-Studio, Apache-2.0): the network is
 # vendored; it imports rotary-embedding-torch, and torchinfo at module level.
-mossformer2 = ["torch>=2.0", "torchaudio>=2.0", "rotary-embedding-torch>=0.8", "torchinfo>=1.8"]
+mossformer2 = ["torch>=2.14.1", "torchaudio>=2.0", "rotary-embedding-torch>=0.8", "torchinfo>=1.8"]
 # WPE dereverberation (nara_wpe, MIT): numpy only.
 wpe = ["nara-wpe>=0.0.11"]
 # Speaker similarity (WeSpeaker ResNet34, ONNX). torchaudio for the Kaldi
 # filterbanks the model was trained on.
-speaker = ["onnxruntime>=1.17", "torch>=2.0", "torchaudio>=2.0"]
+speaker = ["onnxruntime>=1.31.0", "torch>=2.14.1", "torchaudio>=2.0"]
 dev = ["pytest>=8.0"]
 
 [project.scripts]
@@ -86,7 +86,7 @@ markers = ["real_speech: needs real recorded speech, skipped without it"]
 name = "universr"
 version = "0.1.5"
 requires-dist = [
-    "torch>=2.0",
+    "torch>=2.14.1",
     "torchaudio>=2.0",
     "torchdiffeq>=0.2.3",
     "einops>=0.7",
