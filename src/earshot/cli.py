@@ -158,8 +158,11 @@ def _restore(args) -> int:
     if out_dir:
         out_dir.mkdir(parents=True, exist_ok=True)
 
+    # Targets are settled before anything is processed: two inputs that
+    # would write the same output (two session folders each holding a
+    # "host.wav", say) are found here, not after half the batch has run.
+    plan: list[tuple[Path, Path]] = []
     for path in files:
-        audio, rate = audio_io.read(path)
         if out_dir:
             target = out_dir / path.name
         elif args.out and len(files) == 1:
@@ -169,20 +172,39 @@ def _restore(args) -> int:
         if target.resolve() == path.resolve():
             print(f"error: refusing to write over {path}", file=sys.stderr)
             return 2
+        plan.append((path, target))
+    claimed: dict[Path, Path] = {}
+    for path, target in plan:
+        other = claimed.get(target.resolve())
+        if other is not None:
+            print(f"error: {path} and {other} would both write {target}",
+                  file=sys.stderr)
+            return 2
+        claimed[target.resolve()] = path
 
+    # A batch is hours of work, so one unreadable or unprocessable file
+    # fails that file, not the batch: the rest are still restored and the
+    # failures are listed at the end.
+    failures: list[Path] = []
+    for path, target in plan:
         started = _time.perf_counter()
+        # The whole per-file operation sits inside the try: a file that
+        # cannot be read, processed, written or measured fails that file,
+        # not the batch. Exception, not BaseException - a KeyboardInterrupt
+        # still stops the run.
         try:
+            audio, rate = audio_io.read(path)
             done = engines.process_in_chunks(
                 loaded.engine, audio, rate,
                 chunk_seconds=args.chunk, overlap_seconds=args.overlap,
             )
-        except engines.EngineError as exc:
+            elapsed = _time.perf_counter() - started
+            audio_io.write(target, done, rate)
+            before, after = metrics.dynamics(audio, rate), metrics.dynamics(done, rate)
+        except Exception as exc:
             print(f"error: {path.name}: {exc}", file=sys.stderr)
-            return 1
-        elapsed = _time.perf_counter() - started
-
-        audio_io.write(target, done, rate)
-        before, after = metrics.dynamics(audio, rate), metrics.dynamics(done, rate)
+            failures.append(path)
+            continue
         print(
             f"{path.name} -> {target.name}\n"
             f"  {len(audio) / rate / 60:.1f} min in {elapsed:.1f} s "
@@ -190,6 +212,10 @@ def _restore(args) -> int:
             f"  speech {before.speech:+.1f} -> {after.speech:+.1f} dBFS, "
             f"floor {before.floor:+.1f} -> {after.floor:+.1f} dBFS"
         )
+    if failures:
+        names = ", ".join(p.name for p in failures)
+        print(f"failed: {len(failures)} of {len(plan)} ({names})", file=sys.stderr)
+        return 1
     return 0
 
 

@@ -101,3 +101,81 @@ def test_restore_refuses_to_overwrite(tmp_path, capsys):
 def test_restore_reports_a_bad_engine_before_reading_anything(tmp_path, capsys):
     assert cli.main(["restore", str(tmp_path), "--engine", "nope"]) == 2
     assert "nope" in capsys.readouterr().err
+
+
+def test_restore_directory_continues_past_a_bad_file(tmp_path, capsys):
+    """A batch is hours of work: one unreadable file fails that file, not
+    the batch, and the failure is named at the end."""
+    import soundfile as sf
+
+    from earshot import probes
+
+    rate = 48000
+    good = tmp_path / "good.wav"
+    sf.write(good, probes.default_material(rate, 2.0), rate)
+    (tmp_path / "broken.wav").write_bytes(b"this is not audio")
+
+    code = cli.main(["restore", str(tmp_path), "--engine", "passthrough"])
+    assert code == 1
+    err = capsys.readouterr().err
+    assert "broken.wav" in err and "failed" in err
+    written = [p for p in tmp_path.iterdir() if p.name.startswith("good [")]
+    assert len(written) == 1
+
+
+def test_restore_directory_refuses_colliding_output_names(tmp_path, capsys):
+    """Two session folders each holding a "host.wav" would write the same
+    target; that is found before anything is processed, not after."""
+    import soundfile as sf
+
+    from earshot import probes
+
+    rate = 48000
+    for folder in ("session-a", "session-b"):
+        (tmp_path / folder).mkdir()
+        sf.write(tmp_path / folder / "host.wav",
+                 probes.default_material(rate, 2.0), rate)
+    out_dir = tmp_path / "out"
+
+    code = cli.main(["restore", str(tmp_path), "-o", str(out_dir),
+                     "--engine", "passthrough"])
+    assert code == 2
+    assert "would both write" in capsys.readouterr().err
+    assert not list(out_dir.glob("*.wav"))
+
+
+def test_restore_directory_does_not_ingest_its_own_output(tmp_path, capsys):
+    """Restoring a directory twice must not compound: "take [passthrough].wav"
+    is a result, not an input, or the second run would restore it into
+    "take [passthrough] [passthrough].wav", and so on."""
+    import soundfile as sf
+
+    from earshot import probes
+
+    rate = 48000
+    sf.write(tmp_path / "take.wav", probes.default_material(rate, 2.0), rate)
+    assert cli.main(["restore", str(tmp_path), "--engine", "passthrough"]) == 0
+    assert cli.main(["restore", str(tmp_path), "--engine", "passthrough"]) == 0
+    capsys.readouterr()
+    names = sorted(p.name for p in tmp_path.iterdir())
+    assert names == ["take [passthrough].wav", "take.wav"]
+
+
+def test_restore_directory_continues_past_an_unwritable_target(tmp_path, capsys):
+    """The per-file guard covers writing, not just reading and processing:
+    an unwritable target fails that file, the rest of the batch runs."""
+    import soundfile as sf
+
+    from earshot import probes
+
+    rate = 48000
+    sf.write(tmp_path / "good.wav", probes.default_material(rate, 2.0), rate)
+    sf.write(tmp_path / "block.wav", probes.default_material(rate, 2.0), rate)
+    (tmp_path / "block [passthrough].wav").mkdir()  # a directory: not writable
+
+    code = cli.main(["restore", str(tmp_path), "--engine", "passthrough"])
+    assert code == 1
+    err = capsys.readouterr().err
+    assert "block.wav" in err and "failed" in err
+    written = [p for p in tmp_path.iterdir() if p.name.startswith("good [")]
+    assert len(written) == 1 and written[0].is_file()
