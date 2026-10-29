@@ -179,3 +179,32 @@ def test_restore_directory_continues_past_an_unwritable_target(tmp_path, capsys)
     assert "block.wav" in err and "failed" in err
     written = [p for p in tmp_path.iterdir() if p.name.startswith("good [")]
     assert len(written) == 1 and written[0].is_file()
+
+
+def test_restore_streams_a_file_longer_than_one_chunk(tmp_path, capsys):
+    """End to end through the command: a multi-chunk file comes out
+    identical to the array chunker it replaces."""
+    import numpy as np
+    import soundfile as sf
+
+    from earshot import engines
+
+    rate = 48000
+    rng = np.random.default_rng(17)
+    x = (rng.standard_normal(int(2.7 * rate)) * 0.05).astype(np.float32)
+    source = tmp_path / "take.wav"
+    sf.write(source, x, rate)
+
+    assert cli.main(["restore", str(source), "--engine", "passthrough:3",
+                     "--chunk", "1", "--overlap", "0.25"]) == 0
+    written = [p for p in tmp_path.iterdir() if p.name.startswith("take [")]
+    assert len(written) == 1
+
+    on_disk, _ = sf.read(source, dtype="float32")
+    spec = engines.load("passthrough:3")
+    expected = engines.process_in_chunks(spec.engine, on_disk, rate,
+                                         chunk_seconds=1.0, overlap_seconds=0.25)
+    got, got_rate = sf.read(written[0], dtype="float32")
+    assert got_rate == rate and len(got) == len(expected)
+    np.testing.assert_allclose(got, expected, atol=2**-22)
+    assert "realtime" in capsys.readouterr().out

@@ -558,3 +558,16 @@ and cross-directory bracketed source. No resume/skip, model or sample-contract
 changes. Independent no-download Linux test pass: 301 passed, 28 skipped; model,
 private-material and native/listening acceptance are not implied. Human merge
 remains the next gate.
+
+## 2026-10-29: streaming restore PR review
+
+Independent application onto609407a:322passed28skipped with
+EARSHOT_NO_DOWNLOAD=1. The first candidate left a valid truncated final output
+when an engine failed on chunk2; rejected before publication. Revised candidate
+uses sibling temporary output, atomic replace, finally cleanup, and parent
+creation. Independently replayed late failure, previous-target preservation and
+KeyboardInterrupt: no partial final result, old bytes intact, no partial leaks.
+Tests compare gain/filter chunk outputs within PCM24quantization, not real model
+quality/listening or Mac performance. Four-minute Linux synthetic VmPeak test
+passes;102MB/23MB are worker measurements, not a new native/model claim.
+Human merge pending; no weights, new service, workflow, release or model run.

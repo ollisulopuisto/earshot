@@ -27,3 +27,7 @@ def read(path: str | Path, seconds: float = 0.0, start: float = 0.0):
 def write(path: str | Path, audio: np.ndarray, rate: int) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     sf.write(str(path), np.asarray(audio, dtype=np.float32), rate, subtype="PCM_24")
+
+def rate_of(path: str | Path) -> int:
+    """A file's sample rate without reading its audio."""
+    return sf.info(str(path)).samplerate

@@ -496,12 +496,22 @@ anything is processed, not after half the batch has run. And a restore
 output — `take [lavasr].wav` beside `take.wav` — is not picked up as input,
 so a directory can be restored twice without compounding.
 
-Long recordings are processed in overlapping chunks, because memory scales
-with the length of a single `process()` call and not with the file. Measured
-with LavaSR in a fresh process: 0.30 GB for 5 s of audio, 1.41 GB for 160 s,
-which puts a 56 minute episode somewhere between 10 and 25 GB. Chunked, that
-episode restores in 187.8 s at 18× realtime with a 3.41 GB peak. `--chunk 0`
-processes the whole file at once if you have the memory and want it.
+Long recordings are processed in overlapping chunks, because the engine's
+workspace scales with the length of a single `process()` call and not with
+the file. Measured with LavaSR in a fresh process: 0.30 GB for 5 s of audio,
+1.41 GB for 160 s, which puts a 56 minute episode somewhere between 10 and
+25 GB. Chunked, that episode restores in 187.8 s at 18× realtime with a
+3.41 GB peak. `--chunk 0` processes the whole file at once if you have the
+memory and want it.
+
+The recording itself is streamed too — read a chunk at a time, written as it
+is processed — so the episode and its result are no longer held whole on top
+of the engine's workspace. That 3.41 GB peak predates streaming and includes
+about 1.3 GB of whole-file arrays that no longer scale with length; on a
+four minute file with a trivial engine, peak allocation over the interpreter
+dropped from 102 MB to 23 MB. The audio is unchanged: the streamed path runs
+the same chunker with the same fades, and the tests hold it sample-for-sample
+against the array version.
 
 Chunking a *generative* engine does not reproduce its whole-file output, and
 cannot. LavaSR is bit-deterministic but neither linear nor local: halving its

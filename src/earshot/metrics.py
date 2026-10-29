@@ -137,6 +137,44 @@ def dynamics(x: np.ndarray, rate: int, fraction: float = 0.2) -> Dynamics:
     )
 
 
+class DynamicsMeter:
+    """``dynamics()`` over a signal that arrives in blocks.
+
+    Streaming restore cannot hand ``dynamics()`` the whole recording - not
+    holding it is the point. Frames are counted from the start of the
+    stream, not of any block, and only complete frames count, so
+    ``result()`` equals ``dynamics()`` over the whole signal, partial tail
+    frame dropped the same way.
+    """
+
+    def __init__(self, rate: int, fraction: float = 0.2):
+        self._frame = max(1, int(0.4 * rate))
+        self._fraction = fraction
+        self._carry = np.empty(0, dtype=np.float32)
+        self._levels: list[float] = []
+
+    def add(self, x: np.ndarray) -> None:
+        x = np.concatenate([self._carry, np.asarray(x).reshape(-1)])
+        whole = len(x) // self._frame * self._frame
+        for i in range(0, whole, self._frame):
+            self._levels.append(rms_db(x[i : i + self._frame]))
+        self._carry = x[whole:]
+
+    def result(self) -> Dynamics:
+        if self._levels:
+            levels = np.array(self._levels)
+        else:
+            # Shorter than one frame: dynamics() scores the whole signal as
+            # a single short frame, so the carry - everything seen - is it.
+            levels = np.array([rms_db(self._carry)])
+        take = max(1, int(len(levels) * self._fraction))
+        order = np.argsort(levels)
+        return Dynamics(
+            speech=float(levels[order[-take:]].mean()),
+            floor=float(levels[order[:take]].mean()),
+        )
+
+
 def suppression(before: np.ndarray, after: np.ndarray) -> float:
     """How much quieter the output is than the input, in dB.
 

@@ -79,9 +79,9 @@ def main(argv: list[str] | None = None) -> int:
     restore.add_argument(
         "--chunk", metavar="SECONDS", type=float, default=60.0,
         help="process in chunks this long, 0 for the whole file at once. "
-             "Memory scales with the length of one call: LavaSR needs about "
-             "0.3 GB for 5 s and 1.4 GB for 160 s, so a whole episode does "
-             "not fit on most machines (default: 60)",
+             "The file is streamed, so peak memory is one chunk plus the "
+             "engine's own workspace, which scales with the chunk: LavaSR "
+             "needs about 0.3 GB for 5 s and 1.4 GB for 160 s (default: 60)",
     )
     restore.add_argument(
         "--overlap", metavar="SECONDS", type=float, default=2.0,
@@ -193,22 +193,33 @@ def _restore(args) -> int:
         # not the batch. Exception, not BaseException - a KeyboardInterrupt
         # still stops the run.
         try:
-            audio, rate = audio_io.read(path)
-            done = engines.process_in_chunks(
-                loaded.engine, audio, rate,
+            # Streamed: peak memory is one chunk plus the engine's own
+            # workspace, not the episode held twice over. The meters see
+            # every sample as it passes and report exactly what
+            # metrics.dynamics would over the whole file.
+            rate = audio_io.rate_of(path)
+            before, after = metrics.DynamicsMeter(rate), metrics.DynamicsMeter(rate)
+
+            def measure(_start, incoming, outgoing,
+                        _before=before, _after=after):
+                _before.add(incoming)
+                _after.add(outgoing)
+
+            frames, rate = engines.process_file_in_chunks(
+                loaded.engine, path, target,
                 chunk_seconds=args.chunk, overlap_seconds=args.overlap,
+                on_block=measure,
             )
             elapsed = _time.perf_counter() - started
-            audio_io.write(target, done, rate)
-            before, after = metrics.dynamics(audio, rate), metrics.dynamics(done, rate)
+            before, after = before.result(), after.result()
         except Exception as exc:
             print(f"error: {path.name}: {exc}", file=sys.stderr)
             failures.append(path)
             continue
         print(
             f"{path.name} -> {target.name}\n"
-            f"  {len(audio) / rate / 60:.1f} min in {elapsed:.1f} s "
-            f"({len(audio) / rate / max(elapsed, 1e-9):.0f}x realtime)\n"
+            f"  {frames / rate / 60:.1f} min in {elapsed:.1f} s "
+            f"({frames / rate / max(elapsed, 1e-9):.0f}x realtime)\n"
             f"  speech {before.speech:+.1f} -> {after.speech:+.1f} dBFS, "
             f"floor {before.floor:+.1f} -> {after.floor:+.1f} dBFS"
         )
