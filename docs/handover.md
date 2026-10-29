@@ -546,3 +546,15 @@ twice, a program trim that was normalised away by the next stage. Every one
 was found by measuring the output rather than trusting the code.
 
 Measure first. A claim without a number is not a finding.
+
+## Restore batch reliability, 29 October 2026
+
+Source PR prepared from main 08ac7c2: per-file read/process/write/measurement
+failures are summarized while later inputs continue; target collisions are
+refused before processing; directory discovery excludes generated bracket-suffix
+outputs only when a base exists beside them, not in another folder. Regressions
+cover a corrupt input, unwritable target, duplicate target names, repeat restore
+and cross-directory bracketed source. No resume/skip, model or sample-contract
+changes. Independent no-download Linux test pass: 301 passed, 28 skipped; model,
+private-material and native/listening acceptance are not implied. Human merge
+remains the next gate.
