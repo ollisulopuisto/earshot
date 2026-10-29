@@ -488,6 +488,14 @@ never writes over its input and keeps the length and sample rate — the same
 contract the bench enforces, because an engine that shifts a file is useless
 to an editor however it scores.
 
+Restoring a **directory** continues past a file that cannot be read or
+processed: the rest of the batch still runs, the failures are named at the
+end, and the command exits 1. Two inputs that would write the same output
+name (two session folders each holding a `host.wav`) are refused before
+anything is processed, not after half the batch has run. And a restore
+output — `take [lavasr].wav` beside `take.wav` — is not picked up as input,
+so a directory can be restored twice without compounding.
+
 Long recordings are processed in overlapping chunks, because memory scales
 with the length of a single `process()` call and not with the file. Measured
 with LavaSR in a fresh process: 0.30 GB for 5 s of audio, 1.41 GB for 160 s,
