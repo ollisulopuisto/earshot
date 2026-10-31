@@ -35,6 +35,8 @@ the textbook one.
 
 from __future__ import annotations
 
+import functools
+
 import numpy as np
 
 from . import EngineError, Loaded, register
@@ -115,17 +117,38 @@ def _blocks(shifted: np.ndarray, block: int) -> np.ndarray:
     return head
 
 
+@functools.lru_cache(maxsize=32)
+def _smoothing_sos(bandwidth_hz: float, block_rate: float) -> np.ndarray:
+    """Cached SOS filter coefficients for baseband smoothing.
+
+    Calculating butterworth SOS sections repeatedly per harmonic and neighbour
+    involves significant overhead (designing analog filter, bilinear transform,
+    pairing poles/zeros into SOS). Caching by (bandwidth_hz, block_rate) avoids
+    thousands of redundant filter designs per file.
+    """
+    from scipy import signal
+
+    cutoff = bandwidth_hz / 2
+    return signal.butter(2, cutoff / (block_rate / 2), output="sos")
+
+
 def _smooth(z: np.ndarray, bandwidth_hz: float, block_rate: float) -> np.ndarray:
-    """Zero-phase lowpass of a complex baseband, so the estimate has no lag."""
+    """Zero-phase lowpass of a complex baseband, so the estimate has no lag.
+
+    Filters real and imaginary parts concurrently in a single 2D pass along
+    the last axis instead of two separate `sosfiltfilt` invocations.
+    """
     from scipy import signal
 
     cutoff = bandwidth_hz / 2
     if len(z) < 16 or cutoff >= block_rate / 2:
         return np.full_like(z, z.mean())
-    sos = signal.butter(2, cutoff / (block_rate / 2), output="sos")
+    sos = _smoothing_sos(bandwidth_hz, block_rate)
     pad = min(len(z) - 1, int(3 * block_rate / cutoff))
-    return (signal.sosfiltfilt(sos, z.real, padlen=pad, padtype="even")
-            + 1j * signal.sosfiltfilt(sos, z.imag, padlen=pad, padtype="even"))
+    # Stack real and imag components into shape (2, N) to run sosfiltfilt once
+    stacked = np.stack((z.real, z.imag), axis=0)
+    filtered = signal.sosfiltfilt(sos, stacked, axis=-1, padlen=pad, padtype="even")
+    return filtered[0] + 1j * filtered[1]
 
 
 class DehumEngine:
