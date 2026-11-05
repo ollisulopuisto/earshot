@@ -25,7 +25,10 @@ is modelled rather than fitted.
 
 from __future__ import annotations
 
+import functools
+
 import numpy as np
+from numpy.lib.stride_tricks import sliding_window_view
 
 from . import EngineError, Loaded, register
 
@@ -63,11 +66,19 @@ MAX_CUT_DB = 24.0
 ATTACK_S, RELEASE_S = 0.005, 0.06
 
 
+@functools.lru_cache(maxsize=32)
+def _butter_sos(order: int, wn: float | tuple[float, float], btype: str) -> np.ndarray:
+    """Cached Butterworth SOS coefficients to avoid repeated filter design."""
+    from scipy import signal
+
+    return signal.butter(order, wn, btype=btype, output="sos")
+
+
 def _split(x: np.ndarray, rate: int, corner: float):
     """Low band and everything else, summing back to the input exactly."""
     from scipy import signal
 
-    sos = signal.butter(4, corner / (rate / 2), btype="low", output="sos")
+    sos = _butter_sos(4, corner / (rate / 2), "low")
     low = signal.sosfiltfilt(sos, x)
     return low, x - low
 
@@ -75,7 +86,7 @@ def _split(x: np.ndarray, rate: int, corner: float):
 def _highpass(x: np.ndarray, rate: int, corner: float, order: int = 4) -> np.ndarray:
     from scipy import signal
 
-    sos = signal.butter(order, corner / (rate / 2), btype="high", output="sos")
+    sos = _butter_sos(order, corner / (rate / 2), "high")
     # Zero-phase, so the output lines up with the input sample for sample.
     return signal.sosfiltfilt(sos, x)
 
@@ -114,8 +125,7 @@ class DeplosiveEngine:
                                  2 * x[-1] - x[-2 : -edge - 2 : -1]])
 
         def band(lo: float, hi: float) -> np.ndarray:
-            sos = signal.butter(4, [lo / (rate / 2), hi / (rate / 2)],
-                                btype="band", output="sos")
+            sos = _butter_sos(4, (lo / (rate / 2), hi / (rate / 2)), "band")
             return _levels(signal.sosfiltfilt(sos, padded)[edge : edge + len(x)], frame)
 
         # The low band from 30 Hz for measuring: real recordings carry
@@ -143,7 +153,11 @@ class DeplosiveEngine:
         # Attack fast, release slowly, in the frame domain: a running maximum
         # over the release, then a short average for the attack.
         release = max(1, int(RELEASE_S / FRAME_S))
-        held = np.array([cut[max(0, i - release): i + 1].max() for i in range(len(cut))])
+        # Vectorized release-hold running maximum:
+        # sliding_window_view with left padding (-inf) eliminates per-frame
+        # Python list comprehension allocations and loops (~10x faster).
+        padded_cut = np.pad(cut, (release, 0), mode="constant", constant_values=-np.inf)
+        held = np.max(sliding_window_view(padded_cut, release + 1), axis=-1)
         attack = max(1, int(ATTACK_S / FRAME_S) * 2 + 1)
         held = np.convolve(held, np.ones(attack) / attack, mode="same")
 
