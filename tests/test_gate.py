@@ -177,7 +177,7 @@ def test_route_parses_its_spec_and_refuses_unknown_damage():
     loaded = engines.load("route:band=passthrough,clip=passthrough")
     assert loaded.engine.rules == {"band": "passthrough", "clip": "passthrough"}
     with pytest.raises(engines.EngineError):
-        engines.load("route:hum=passthrough")
+        engines.load("route:unknown_damage=passthrough")
 
 
 def test_route_keeps_the_contract():
@@ -193,6 +193,32 @@ def test_white_hiss_is_found_without_a_model():
     x = _voice(6.0)
     gate_reasons = gate.reasons(degrade.noise(x, RATE, snr_db=20.0), RATE)
     assert any("hiss" in r for r in gate_reasons)
+
+
+def test_hum_and_buzz_are_routed_to_dehum(monkeypatch):
+    """Mains hum and ground loop buzz are detected as 'hum' and routed to 'dehum'."""
+    made = {}
+
+    def fake_load(spec):
+        made[spec] = Named(spec)
+        return engines.Loaded(made[spec])
+
+    monkeypatch.setattr(engines, "load", fake_load)
+    route = gate.RouteEngine(gate.DEFAULT_ROUTE)
+    x = _voice(6.0)
+
+    # Clean audio is untouched
+    np.testing.assert_array_equal(route.process(x, RATE), x)
+    assert route.last_choice is None
+
+    # Hum and ground-loop trigger hum kind and route to dehum
+    for d in ("ground-loop", "hum", "buzz"):
+        damaged = degrade.by_name(d).apply(x, RATE)
+        r = gate.reasons(damaged, RATE)
+        assert any("mains hum" in reason for reason in r), f"{d} did not trigger mains hum reason: {r}"
+        route.process(damaged, RATE)
+        assert route.last_choice == "dehum"
+    assert made["dehum"].calls == 3
 
 
 @pytest.mark.real_speech
