@@ -19,9 +19,20 @@ reported as if it had.
 
 from __future__ import annotations
 
+import functools
+
 import numpy as np
 
 from . import EngineError, Loaded, register
+
+
+@functools.lru_cache(maxsize=64)
+def _notch_ba(freq: float, quality: float, rate: int) -> tuple[np.ndarray, np.ndarray]:
+    """Cached digital notch filter coefficients."""
+    from scipy import signal
+
+    b, a = signal.iirnotch(freq, quality, fs=rate)
+    return b, a
 
 # Wide enough to catch the drift — mains wanders by a few hundredths of a
 # hertz with grid load, and a notch narrower than the wander leaves a residue
@@ -130,7 +141,7 @@ class NotchEngine:
             if not self._present(x, rate, freq):
                 continue
             self.notched.append(freq)
-            b, a = signal.iirnotch(freq, QUALITY, fs=rate)
+            b, a = _notch_ba(freq, QUALITY, rate)
             # Zero phase, so the notch does not smear transients in time. The
             # alignment contract makes this mandatory rather than a nicety.
             #

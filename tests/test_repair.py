@@ -47,6 +47,21 @@ def test_dehum_removes_a_drifting_hum_and_nothing_else():
     assert _db(out - clean) < _db(hummed - clean) - 15
 
 
+def test_dehum_tracking_zoomfft_exactness():
+    """ZoomFFT evaluation in DehumEngine matches the discrete DTFT definition."""
+    rng = np.random.default_rng(42)
+    piece = rng.standard_normal(4800).astype(np.float64)
+    rate = 2400.0
+    grid = np.arange(49.0, 51.0 + 1e-9, 0.02)
+    use = [1, 2, 3, 9]
+
+    engine = DehumEngine(50.0)
+    scores_zoom = engine._score_grid(piece, rate, grid, use)
+
+    scores_dtft = [engine._score(piece, int(rate), f, use) for f in grid]
+    np.testing.assert_allclose(scores_zoom, scores_dtft, atol=1e-12, rtol=1e-10)
+
+
 def test_dehum_leaves_a_recording_without_hum_bit_for_bit():
     # Not probes.default_material: its pulse train sweeps through 450 Hz and
     # holds still there long enough to look like a ninth harmonic, which is

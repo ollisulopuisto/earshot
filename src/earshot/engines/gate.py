@@ -59,7 +59,7 @@ import numpy as np
 
 from . import EngineError, Loaded, register
 
-KINDS = ("band", "zero", "clip", "sig", "bak")  # also the route's priority
+KINDS = ("band", "zero", "clip", "hum", "sig", "bak")  # also the route's priority
 
 BAND_EDGE_HZ = 10000.0
 CLIPPED_PERCENT = 0.3
@@ -138,6 +138,19 @@ def findings(audio: np.ndarray, rate: int) -> list[tuple[str, str]]:
     zeros = 100.0 * float(np.mean(x == 0.0))
     if zeros >= ZERO_PERCENT:
         found.append(("zero", f"{zeros:.1f} % exact zero"))
+    from .notch import NotchEngine
+
+    notch_engine = NotchEngine(50.0)
+    spec, _ = notch_engine._steady_spectrum(x, rate)
+    if spec is not None:
+        detected_mains = []
+        for mains in (50.0, 60.0):
+            present = [k for k in range(1, 7) if notch_engine._present(x, rate, mains * k)]
+            if len(present) >= 2 or (len(present) == 1 and 1 in present):
+                detected_mains.append((mains, present))
+        if detected_mains:
+            mains, harmonics = max(detected_mains, key=lambda pair: len(pair[1]))
+            found.append(("hum", f"mains hum: {mains:.0f} Hz ({len(harmonics)} harmonics)"))
     isolator = _isolator()
     if isolator is not None and rate == 48000 and len(x) >= rate:
         kept = isolator.process(x, rate)
@@ -212,6 +225,7 @@ DEFAULT_ROUTE = {
     "band": "sidon",
     "zero": "keepzero:unipase",
     "clip": "declip",
+    "hum": "dehum",
     "sig": "chain:wpe+mossformer2",
     "bak": "mossformer2",
 }
