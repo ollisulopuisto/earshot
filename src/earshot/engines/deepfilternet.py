@@ -35,7 +35,7 @@ import types
 
 import numpy as np
 
-from . import EngineError, Loaded, register
+from . import EngineError, Loaded, configure_torch_threads, register
 
 MODEL_RATE = 48000
 
@@ -73,6 +73,7 @@ class DeepFilterNetEngine:
                 "the deepfilternet engine needs the 'deepfilternet' extra: "
                 "pip install earshot[deepfilternet]"
             ) from exc
+        configure_torch_threads()
         _shim_torchaudio()
         try:
             from df.enhance import init_df

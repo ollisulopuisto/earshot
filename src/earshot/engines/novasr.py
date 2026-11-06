@@ -24,7 +24,13 @@ import time
 import numpy as np
 
 from ..fetch import Asset, ensure_all
-from . import EngineError, Loaded, register
+from . import (
+    EngineError,
+    Loaded,
+    configure_torch_threads,
+    register,
+    torch_device,
+)
 
 _REVISION = "27c2a0f8836d80d3e10a3729f690b578a0c49e17"
 ASSETS: tuple[Asset, ...] = (
@@ -46,7 +52,7 @@ class NovaSREngine:
 
     name = "novasr"
 
-    def __init__(self):
+    def __init__(self, device: str | None = None):
         try:
             import torch  # noqa: F401
             from NovaSR import FastSR
@@ -55,9 +61,13 @@ class NovaSREngine:
                 "the novasr engine needs the 'novasr' extra: "
                 "pip install earshot[novasr]"
             ) from exc
+        configure_torch_threads()
         (path,) = ensure_all(ASSETS)
         try:
             self.model = FastSR(ckpt_path=str(path), half=False)
+            target_device = device or torch_device()
+            if hasattr(self.model, "to"):
+                self.model.to(target_device)
         except Exception as exc:
             raise EngineError(f"could not start NovaSR: {exc}") from exc
 

@@ -14,6 +14,7 @@ table that will eventually be wrong in a way nobody notices.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import sys
 from pathlib import Path
 
@@ -62,6 +63,11 @@ def main(argv: list[str] | None = None) -> int:
         help="print the results as JSON instead of a table; with --out, "
              "results.json is written either way",
     )
+    bench.add_argument(
+        "--jobs", metavar="N", type=int, default=None,
+        help="number of parallel probe evaluation jobs (default: responsive "
+             "CPU budget leaving 1 core free)",
+    )
 
     restore = sub.add_parser(
         "restore", help="process a real recording and write the result"
@@ -87,6 +93,11 @@ def main(argv: list[str] | None = None) -> int:
         "--overlap", metavar="SECONDS", type=float, default=2.0,
         help="crossfade between chunks; must cover whatever context the "
              "engine keeps (default: 2)",
+    )
+    restore.add_argument(
+        "--workers", metavar="N", type=int, default=None,
+        help="number of parallel file restoration workers (default: "
+             "responsive CPU budget leaving 1 core free)",
     )
     restore.set_defaults(func=_restore)
 
@@ -185,18 +196,15 @@ def _restore(args) -> int:
     # A batch is hours of work, so one unreadable or unprocessable file
     # fails that file, not the batch: the rest are still restored and the
     # failures are listed at the end.
+    import threading
+
+    print_lock = threading.Lock()
     failures: list[Path] = []
-    for path, target in plan:
+
+    def restore_one(item: tuple[int, tuple[Path, Path]]) -> Path | None:
+        _idx, (path, target) = item
         started = _time.perf_counter()
-        # The whole per-file operation sits inside the try: a file that
-        # cannot be read, processed, written or measured fails that file,
-        # not the batch. Exception, not BaseException - a KeyboardInterrupt
-        # still stops the run.
         try:
-            # Streamed: peak memory is one chunk plus the engine's own
-            # workspace, not the episode held twice over. The meters see
-            # every sample as it passes and report exactly what
-            # metrics.dynamics would over the whole file.
             rate = audio_io.rate_of(path)
             before, after = metrics.DynamicsMeter(rate), metrics.DynamicsMeter(rate)
 
@@ -211,18 +219,36 @@ def _restore(args) -> int:
                 on_block=measure,
             )
             elapsed = _time.perf_counter() - started
-            before, after = before.result(), after.result()
+            b_res, a_res = before.result(), after.result()
+            msg = (
+                f"{path.name} -> {target.name}\n"
+                f"  {frames / rate / 60:.1f} min in {elapsed:.1f} s "
+                f"({frames / rate / max(elapsed, 1e-9):.0f}x realtime)\n"
+                f"  speech {b_res.speech:+.1f} -> {a_res.speech:+.1f} dBFS, "
+                f"floor {b_res.floor:+.1f} -> {a_res.floor:+.1f} dBFS"
+            )
+            with print_lock:
+                print(msg)
+            return None
         except Exception as exc:
-            print(f"error: {path.name}: {exc}", file=sys.stderr)
-            failures.append(path)
-            continue
-        print(
-            f"{path.name} -> {target.name}\n"
-            f"  {frames / rate / 60:.1f} min in {elapsed:.1f} s "
-            f"({frames / rate / max(elapsed, 1e-9):.0f}x realtime)\n"
-            f"  speech {before.speech:+.1f} -> {after.speech:+.1f} dBFS, "
-            f"floor {before.floor:+.1f} -> {after.floor:+.1f} dBFS"
-        )
+            with print_lock:
+                print(f"error: {path.name}: {exc}", file=sys.stderr)
+            return path
+
+    max_workers = args.workers if args.workers is not None else engines.cpu_thread_budget()
+    max_workers = max(1, min(max_workers, len(plan)))
+
+    if max_workers == 1 or len(plan) == 1:
+        for item in enumerate(plan):
+            failed = restore_one(item)
+            if failed:
+                failures.append(failed)
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            for failed in executor.map(restore_one, enumerate(plan)):
+                if failed:
+                    failures.append(failed)
+
     if failures:
         names = ", ".join(p.name for p in failures)
         print(f"failed: {len(failures)} of {len(plan)} ({names})", file=sys.stderr)
@@ -314,14 +340,26 @@ def _bench(args) -> int:
     for _, item in loaded:
         probes.warm_up(item, pieces[0].rate)
 
+    bench_jobs = args.jobs if args.jobs is not None else engines.cpu_thread_budget()
+    bench_jobs = max(1, bench_jobs)
+
     for recipe in recipes:
-        runs: list[probes.Run] = []
-        for piece in pieces:
-            for _, item in loaded:
-                run = probes.run_all(item, piece.audio, piece.rate, recipe)
-                run.material = piece.label
-                run.speaker = piece.speaker
-                runs.append(run)
+        # Build tasks: (piece, item) pairs to preserve exact ordering
+        tasks = [(piece, item) for piece in pieces for _, item in loaded]
+
+        def eval_task(task):
+            piece, item = task
+            run = probes.run_all(item, piece.audio, piece.rate, recipe)
+            run.material = piece.label
+            run.speaker = piece.speaker
+            return run
+
+        if bench_jobs == 1 or len(tasks) <= 1:
+            runs = [eval_task(t) for t in tasks]
+        else:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=bench_jobs) as executor:
+                runs = list(executor.map(eval_task, tasks))
+
         every += runs
         sections.append(
             report.render(report.aggregate(runs), f"{recipe.name} — {recipe.describe}")

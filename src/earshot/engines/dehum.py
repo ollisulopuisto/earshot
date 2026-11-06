@@ -39,7 +39,7 @@ import functools
 
 import numpy as np
 
-from . import EngineError, Loaded, register
+from . import EngineError, Loaded, cpu_thread_budget, register
 
 # Tracking and averaging happen on a decimated baseband. 10 ms blocks are far
 # shorter than the averaging window, so the decimation costs nothing audible.
@@ -305,9 +305,12 @@ class DehumEngine:
         t_blocks = positions / rate
         sides = [np.exp(-2j * np.pi * offset * t_blocks) for offset in offsets]
 
+        import concurrent.futures
+
         estimate = np.zeros(n)
         treated = []
-        for k in harmonics:
+
+        def eval_harmonic(k: int):
             rotation = np.exp(-1j * k * phase)
             shifted = centred * rotation
             blocks = _blocks(shifted, block)
@@ -318,17 +321,25 @@ class DehumEngine:
                 for side in sides
             ]
             floor = float(np.median(around)) + 1e-12
-            # The survey saw a peak; this checks the tracked harmonic itself
-            # stands above its neighbours once drift is followed.
             if 20 * np.log10(level / floor + 1e-12) < LOCAL_PROMINENCE_DB:
-                continue
-            # Back to per-sample complex amplitude, then back up to the
-            # harmonic's own frequency. The factor 2 is the other half of a
-            # real sinusoid's spectrum.
+                return None
             re = np.interp(np.arange(n), positions, steady.real)
             im = np.interp(np.arange(n), positions, steady.imag)
-            estimate += 2 * np.real((re + 1j * im) * np.conj(rotation))
-            treated.append(k)
+            harm_est = 2 * np.real((re + 1j * im) * np.conj(rotation))
+            return k, harm_est
+
+        workers = max(1, min(cpu_thread_budget(), len(harmonics)))
+        if workers == 1 or len(harmonics) <= 1:
+            results = [eval_harmonic(k) for k in harmonics]
+        else:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+                results = list(pool.map(eval_harmonic, harmonics))
+
+        for res in results:
+            if res is not None:
+                k, harm_est = res
+                estimate += harm_est
+                treated.append(k)
 
         self.found.update(harmonics=treated, mean_frequency=float(frequency.mean()))
         return (x - estimate).astype(np.float32)
