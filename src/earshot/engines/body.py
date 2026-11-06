@@ -79,21 +79,32 @@ def pitch_track(x: np.ndarray, rate: int) -> np.ndarray:
     lags = np.arange(int(ANALYSIS_RATE / F0_RANGE[1]), int(ANALYSIS_RATE / F0_RANGE[0]) + 1)
     max_tau = lags[-1]
     count = max(0, (len(y) - FRAME - max_tau) // HOP + 1)
+    if count == 0:
+        return np.zeros(0)
     f0 = np.zeros(count)
     loudest = np.sqrt(np.mean(y**2)) + 1e-12
     threshold_energy = loudest * 10 ** (-40 / 20)
     denom = np.arange(1, max_tau + 1)
+
+    # Decomposing d(tau) = sum(frame - y_delayed)^2 into:
+    # sum(frame^2) + sum(y_delayed^2) - 2 * dot(windows, frame).
+    # Precomputing prefix sums over y^2 allows O(1) window energy queries,
+    # and hoisting sliding_window_view avoids per-hop view reconstruction.
+    all_frames = sliding_window_view(y, FRAME)
+    y_sq = y**2
+    cum_energy = np.concatenate(([0.0], np.cumsum(y_sq)))
+    tau_offsets = np.arange(max_tau + 1)
+
     for i in range(count):
         start = i * HOP
         frame = y[start: start + FRAME]
         if np.sqrt(np.mean(frame**2)) < threshold_energy:
             continue
-        # Vectorized YIN squared difference function across all lags tau in [0, max_tau]:
-        # sliding_window_view provides 2D windows without extra data copies;
-        # einsum computes row-wise dot products in C (~5x faster than Python loop).
-        windows = sliding_window_view(y[start : start + FRAME + max_tau], FRAME)
-        diff = windows - frame
-        d = np.einsum('ij,ij->i', diff, diff)
+        windows = all_frames[start : start + max_tau + 1]
+        win_energy = cum_energy[start + tau_offsets + FRAME] - cum_energy[start + tau_offsets]
+        dots = np.dot(windows, frame)
+        frame_energy = np.sum(frame**2)
+        d = np.maximum(win_energy + frame_energy - 2.0 * dots, 0.0)
         cumulative = np.cumsum(d[1:]) / denom
         normalised = np.ones_like(d)
         normalised[1:] = d[1:] / np.maximum(cumulative, 1e-12)

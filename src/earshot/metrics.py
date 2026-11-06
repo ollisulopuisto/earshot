@@ -128,7 +128,13 @@ def dynamics(x: np.ndarray, rate: int, fraction: float = 0.2) -> Dynamics:
     """
     frame = max(1, int(0.4 * rate))
     count = max(1, len(x) // frame)
-    levels = np.array([rms_db(x[i * frame : (i + 1) * frame]) for i in range(count)])
+    arr = np.asarray(x)
+    if len(arr) >= frame:
+        truncated = arr[: count * frame].reshape(count, frame)
+        means = np.mean(truncated**2, axis=1)
+        levels = 20 * np.log10(np.sqrt(means).astype(np.float64) + 1e-12)
+    else:
+        levels = np.array([rms_db(arr)])
     take = max(1, int(count * fraction))
     order = np.argsort(levels)
     return Dynamics(
