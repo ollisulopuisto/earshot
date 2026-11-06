@@ -22,6 +22,7 @@ Deterministic, no model, no dependency beyond scipy.
 
 from __future__ import annotations
 
+import functools
 import time
 
 import numpy as np
@@ -128,16 +129,34 @@ def pitch_track(x: np.ndarray, rate: int) -> np.ndarray:
     return f0
 
 
+@functools.lru_cache(maxsize=32)
+def _band_sos(order: int, low: float, high: float, rate: int) -> np.ndarray:
+    """Cached bandpass SOS filter coefficients to avoid redundant filter design."""
+    from scipy import signal
+
+    return signal.butter(order, (low, high), btype="band", fs=rate, output="sos")
+
+
 def frame_energies(x: np.ndarray, rate: int, low: float, high: float, hops: int) -> np.ndarray:
     """Mean power of ``low``–``high`` Hz in each analysis hop's frame."""
     from scipy import signal
 
-    sos = signal.butter(4, (low, high), btype="band", fs=rate, output="sos")
+    if hops == 0 or len(x) == 0:
+        return np.zeros(hops)
+    sos = _band_sos(4, low, high, rate)
     band = signal.sosfiltfilt(sos, np.asarray(x, dtype=np.float64)) ** 2
     hop = HOP * rate // ANALYSIS_RATE
     frame = FRAME * rate // ANALYSIS_RATE
-    return np.array([band[i * hop: i * hop + frame].mean() if i * hop < len(band) else 0.0
-                     for i in range(hops)])
+    # Evaluating slice means via prefix sums (cumsum) computes all frame
+    # energies simultaneously in O(1) per hop with zero Python slice looping.
+    cumsum = np.concatenate(([0.0], np.cumsum(band)))
+    indices = np.arange(hops)
+    starts = indices * hop
+    ends = np.minimum(starts + frame, len(band))
+    valid = starts < len(band)
+    res = np.zeros(hops, dtype=np.float64)
+    res[valid] = (cumsum[ends[valid]] - cumsum[starts[valid]]) / np.maximum(ends[valid] - starts[valid], 1)
+    return res
 
 
 class BodyEngine:
