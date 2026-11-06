@@ -37,7 +37,13 @@ import types
 import numpy as np
 
 from ..fetch import Asset, ensure_all
-from . import EngineError, Loaded, register, torch_device
+from . import (
+    EngineError,
+    Loaded,
+    configure_torch_threads,
+    register,
+    torch_device,
+)
 
 _REVISION = "f0b4d4c4411fe08fc2dddbf2d9f33260c27ac4a0"
 _BASE = f"https://huggingface.co/Xiaobin-Rong/unipase/resolve/{_REVISION}/"
@@ -124,6 +130,7 @@ class UniPASEEngine:
                 "the unipase engine needs the 'unipase' extra: "
                 "pip install earshot[unipase]"
             ) from exc
+        configure_torch_threads()
         _shim_espnet()
         paths = dict(zip((a.name for a in ASSETS), ensure_all(ASSETS)))
         try:

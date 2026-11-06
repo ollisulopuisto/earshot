@@ -321,9 +321,57 @@ def check_contract(before: np.ndarray, after: np.ndarray, name: str) -> np.ndarr
     return after
 
 
-def torch_device() -> str:
+def cpu_thread_budget(reserve: int = 1) -> int:
+    """The number of CPU threads or workers to use.
+
+    Maximizes CPU utilization while leaving ``reserve`` core(s) free (default 1)
+    so that the system/desktop remains responsive during processing.
+
+    Can be overridden via the ``EARSHOT_NUM_THREADS`` or ``EARSHOT_WORKERS``
+    environment variable.
+    """
+    import os
+
+    for env_var in ("EARSHOT_NUM_THREADS", "EARSHOT_WORKERS"):
+        val = os.environ.get(env_var, "").strip()
+        if val:
+            try:
+                num = int(val)
+                if num > 0:
+                    return num
+            except ValueError:
+                pass
+
+    count = None
+    if hasattr(os, "sched_getaffinity"):
+        try:
+            count = len(os.sched_getaffinity(0))
+        except OSError:
+            pass
+    if not count and hasattr(os, "process_cpu_count"):
+        count = os.process_cpu_count()
+    if not count:
+        count = os.cpu_count() or 1
+    return max(1, count - max(0, reserve))
+
+
+def configure_torch_threads(threads: int | None = None) -> int:
+    """Configure PyTorch's intra-op thread count to stay within the CPU budget."""
+    t = threads or cpu_thread_budget()
+    try:
+        import torch
+        torch.set_num_threads(t)
+    except (ImportError, RuntimeError, AttributeError):
+        pass
+    return t
+
+
+def torch_device(index: int = 0) -> str:
     """The device PyTorch engines run on: ``EARSHOT_DEVICE``, else CUDA if
     present, else the CPU.
+
+    When multiple CUDA devices are available, ``index`` distributes workloads
+    across ``cuda:0``, ``cuda:1``, etc.
 
     The Apple GPU is never chosen unasked. Measured with UniverSR on an
     M1 Max: 11 s per model pass on MPS against 15 s on the CPU, and the first
@@ -343,7 +391,11 @@ def torch_device() -> str:
         import torch
     except ImportError:
         return "cpu"
-    return "cuda" if torch.cuda.is_available() else "cpu"
+    if torch.cuda.is_available():
+        device_count_fn = getattr(torch.cuda, "device_count", None)
+        count = device_count_fn() if callable(device_count_fn) else 1
+        return f"cuda:{index % count}" if count > 1 else "cuda"
+    return "cpu"
 
 
 from . import audiosr as _audiosr  # noqa: E402,F401

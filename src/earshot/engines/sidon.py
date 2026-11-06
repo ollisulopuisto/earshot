@@ -25,7 +25,13 @@ import time
 import numpy as np
 
 from ..fetch import Asset, ensure_all
-from . import EngineError, Loaded, register, torch_device
+from . import (
+    EngineError,
+    Loaded,
+    configure_torch_threads,
+    register,
+    torch_device,
+)
 
 _REVISION = "b3b02d8bbd55fdbc410e6e46e76ef95ace4fbf52"
 _BASE = f"https://huggingface.co/sarulab-speech/sidon-v0.1/resolve/{_REVISION}/"
@@ -75,6 +81,7 @@ class SidonEngine:
             raise EngineError(
                 "the sidon engine needs the 'sidon' extra: pip install earshot[sidon]"
             ) from exc
+        configure_torch_threads()
         self.device = torch_device()
         if self.device == "mps":
             self.device = "cpu"  # exported for cpu and cuda only

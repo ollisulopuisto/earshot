@@ -37,7 +37,13 @@ from pathlib import Path
 import numpy as np
 
 from ..fetch import Asset, ensure_all
-from . import EngineError, Loaded, register, torch_device
+from . import (
+    EngineError,
+    Loaded,
+    configure_torch_threads,
+    register,
+    torch_device,
+)
 from .router import CLIFF_DB, REFERENCE_BAND_HZ
 
 # Pinned to a commit of the Hugging Face repository, not to main: the digest
@@ -138,6 +144,7 @@ class UniverSREngine:
                 "the universr engine needs the 'universr' extra: "
                 "pip install earshot[universr]"
             ) from exc
+        configure_torch_threads()
         paths = ensure_all(ASSETS)
         folder = Path(paths[0]).parent
         try:

@@ -30,7 +30,7 @@ from pathlib import Path
 import numpy as np
 
 from ..fetch import Asset, ensure_all
-from . import EngineError, Loaded, register
+from . import EngineError, Loaded, cpu_thread_budget, register
 
 # Model weights live on a GitHub release rather than in the repository, and
 # each is pinned by digest: a file that changed upstream would turn every
@@ -80,7 +80,7 @@ OUTPUT_RATE = 48000
 class LavaSREngine:
     """LavaSR behind the engine contract."""
 
-    def __init__(self, denoise: bool = False, threads: int = 0):
+    def __init__(self, denoise: bool = False, threads: int | None = None):
         try:
             import onnxruntime  # noqa: F401
         except ImportError as exc:  # pragma: no cover - depends on the extra
@@ -99,21 +99,20 @@ class LavaSREngine:
         config = Path(lavasr_core.__file__).parent / "lavasr_config.yaml"
         self.denoise = denoise
         self.name = "lavasr+denoise" if denoise else "lavasr"
+        thread_count = threads if threads is not None and threads > 0 else cpu_thread_budget()
         try:
             self.model = lavasr_core.LavaSR(
                 config=str(config),
                 denoiser_onnx=str(paths["lavasr/denoiser_core_legacy_fixed63.onnx"]),
                 enhancer_backbone_onnx=str(paths["lavasr/enhancer_backbone.onnx"]),
                 enhancer_spec_head_onnx=str(paths["lavasr/enhancer_spec_head.onnx"]),
-                ort_intra_op_num_threads=threads or 0,
+                ort_intra_op_num_threads=thread_count,
                 ort_inter_op_num_threads=1,
             )
         except Exception as exc:
             raise EngineError(f"could not start LavaSR: {exc}") from exc
 
     def process(self, audio: np.ndarray, rate: int) -> np.ndarray:
-        from scipy import signal
-
         x = np.asarray(audio, dtype=np.float32).reshape(-1)
         wanted = len(x)
         if wanted == 0:

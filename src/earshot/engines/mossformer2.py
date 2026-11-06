@@ -29,7 +29,14 @@ import time
 import numpy as np
 
 from ..fetch import Asset, ensure
-from . import EngineError, Loaded, process_in_chunks, register, torch_device
+from . import (
+    EngineError,
+    Loaded,
+    configure_torch_threads,
+    process_in_chunks,
+    register,
+    torch_device,
+)
 
 _REVISION = "eff8c97925c8bec812af707814b3e5d777fd4503"
 ASSETS: tuple[Asset, ...] = (
@@ -62,6 +69,7 @@ class MossFormer2Engine:
                 "the mossformer2 engine needs the 'mossformer2' extra: "
                 f"pip install earshot[mossformer2] ({exc})"
             ) from exc
+        configure_torch_threads()
         self.device = torch_device()
         if self.device == "mps":
             self.device = "cpu"
