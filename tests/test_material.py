@@ -65,3 +65,36 @@ def test_a_single_file_still_works(corpus):
 def test_an_empty_directory_says_so(tmp_path):
     with pytest.raises(FileNotFoundError):
         material.excerpts(tmp_path)
+
+
+
+def test_recordings_keeps_a_bracketed_source_with_no_base(tmp_path):
+    """The restore-output rule needs the base file to exist: a source that
+    happens to carry brackets in its name is still material."""
+    import soundfile as sf
+
+    from earshot import material, probes
+
+    rate = 48000
+    sf.write(tmp_path / "take [raw].wav", probes.default_material(rate, 1.0), rate)
+    assert [p.name for p in material.recordings(tmp_path)] == ["take [raw].wav"]
+
+
+
+def test_recordings_keeps_a_bracketed_source_in_another_directory(tmp_path):
+    """The restore-output rule is per-folder: folderB/take.wav does not make
+    folderA/take [raw].wav anyone's output."""
+    import soundfile as sf
+
+    from earshot import material, probes
+
+    rate = 48000
+    (tmp_path / "folderA").mkdir()
+    (tmp_path / "folderB").mkdir()
+    sf.write(tmp_path / "folderA" / "take [raw].wav",
+             probes.default_material(rate, 1.0), rate)
+    sf.write(tmp_path / "folderB" / "take.wav",
+             probes.default_material(rate, 1.0), rate)
+    assert [p.name for p in material.recordings(tmp_path)] == [
+        "take [raw].wav", "take.wav",
+    ]

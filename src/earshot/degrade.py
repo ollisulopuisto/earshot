@@ -80,30 +80,105 @@ def noise(x: np.ndarray, rate: int, snr_db: float = 20.0, seed: int = 0):
     return (x + n).astype(np.float32)
 
 
+def hum(
+    x: np.ndarray,
+    rate: int,
+    level_db: float = -30.0,
+    mains_hz: float = 50.0,
+    harmonics: int = 6,
+    drift_hz: float = 0.05,
+    seed: int = 0,
+):
+    """A ground loop: a mains fundamental and its harmonics, and nothing else.
+
+    The bench modelled broadband hiss and nothing narrowband, while a buzz
+    from a ground loop is the complaint that actually reaches a producer. It
+    is a different problem for an engine: a wideband denoiser has to notice
+    that a handful of bins are the enemy, and a notch filter that knows the
+    mains frequency removes it outright.
+
+    ``level_db`` is relative to the speech, not to full scale, because the
+    material arrives at every level. The default of -30 dB is an audible
+    ground loop rather than a measurement of this project's material: in the
+    owner's own recordings the 50 Hz family sits 32 to 51 dB below speech,
+    which is at or below the room tone and inaudible. Calibrating to that
+    would have modelled a problem nobody has.
+
+    Mains frequency drifts by a few hundredths of a hertz as grid load
+    changes, which is why a fixed notch leaves a residue and why the drift is
+    modelled rather than assumed away. 50 Hz is Europe; pass 60 for the US.
+    """
+    n = len(x)
+    t = np.arange(n) / rate
+    rng = np.random.default_rng(seed)
+
+    # A slow random walk in frequency, integrated into phase.
+    if drift_hz > 0:
+        steps = rng.normal(0.0, 1.0, n // rate + 2)
+        walk = np.interp(t, np.arange(len(steps)) * 1.0, np.cumsum(steps))
+        walk = drift_hz * walk / (np.abs(walk).max() + 1e-12)
+    else:
+        walk = np.zeros(n)
+
+    buzz = np.zeros(n)
+    for k in range(1, harmonics + 1):
+        # Harmonics fall away, and the odd ones sit higher: that is what a
+        # transformer-coupled loop looks like on an analyser.
+        weight = (1.0 / k) * (1.0 if k % 2 else 0.6)
+        phase = 2 * np.pi * (mains_hz * k * t + k * np.cumsum(walk) / rate)
+        buzz += weight * np.sin(phase + rng.uniform(0, 2 * np.pi))
+
+    buzz /= np.sqrt(np.mean(buzz**2)) + 1e-12
+    buzz *= _speech_rms(x, rate) * 10 ** (level_db / 20)
+    return (x + buzz).astype(np.float32)
+
+
 def clip(x: np.ndarray, rate: int, headroom_db: float = -6.0):
     """Hard clipping at a threshold below the signal's own peak."""
     ceiling = np.abs(x).max() * 10 ** (headroom_db / 20)
     return np.clip(x, -ceiling, ceiling).astype(np.float32)
 
 
-def reverb(x: np.ndarray, rate: int, rt60: float = 0.6, seed: int = 0):
-    """A guest in a live room.
+def room_response(rate: int, rt60: float = 0.6, seed: int = 0,
+                  drr_db: float | None = None) -> np.ndarray:
+    """A synthetic room impulse response of unit energy.
 
-    Exponentially decaying noise is not a real room, but it is the standard
-    stand-in and it has the property that matters: the tail is uncorrelated
-    with the direct sound, so an engine cannot subtract it, only recognise it.
+    Without ``drr_db`` it is the original recipe's: a direct sound of 3 on an
+    exponentially decaying noise tail, which measured (2026-10-04) a direct-
+    to-reverberant ratio of −12.3 dB at RT60 0.6 s — a distant microphone in a
+    hall. With
+    ``drr_db`` the direct sound is scaled so the direct-to-reverberant ratio
+    (first 2.5 ms against the rest) is that many dB: about 0 for a laptop
+    microphone at arm's length, +5 to +15 for a headset or close microphone
+    in an untreated room.
     """
     length = int(rt60 * rate)
     rng = np.random.default_rng(seed)
     ir = rng.normal(0.0, 1.0, length) * np.exp(-np.arange(length) / (rt60 * rate / 6.9))
     ir[0] += 3.0
+    if drr_db is not None:
+        split = int(0.0025 * rate)
+        tail = np.sum(ir[split:] ** 2)
+        ir[:split] = 0.0
+        ir[0] = np.sqrt(tail * 10 ** (drr_db / 10))
     # Normalise by energy, not by absolute sum. The L1 version spread the
     # gain over all 28,800 samples of a 0.6 s tail and cost 28.1 dB, so the
     # recipe was moving the speaker twenty times further from the microphone
     # as well as putting them in a live room. Two damages in one recipe means
     # no probe can say which of them an engine failed at. Convolving with an
     # IR of unit energy leaves an uncorrelated signal's level where it was.
-    ir /= np.sqrt(np.sum(ir**2))
+    return ir / np.sqrt(np.sum(ir**2))
+
+
+def reverb(x: np.ndarray, rate: int, rt60: float = 0.6, seed: int = 0,
+           drr_db: float | None = None):
+    """A guest in a live room.
+
+    Exponentially decaying noise is not a real room, but it is the standard
+    stand-in and it has the property that matters: the tail is uncorrelated
+    with the direct sound, so an engine cannot subtract it, only recognise it.
+    """
+    ir = room_response(rate, rt60, seed, drr_db)
     return signal.fftconvolve(x, ir)[: len(x)].astype(np.float32)
 
 
@@ -195,6 +270,115 @@ def autogain(
     return (x * np.clip(gain, 0.0, 100.0)).astype(np.float32)
 
 
+def mains(
+    x: np.ndarray,
+    rate: int,
+    mains_hz: float = 50.0,
+    level_db: float = -30.0,
+    harmonics: int = 6,
+    slope_db: float = -6.0,
+    odd_only: bool = False,
+    drift_hz: float = 0.15,
+    seed: int = 0,
+):
+    """Mains interference with a controllable spectrum, for hum and for buzz.
+
+    Written by a later session that did not know ``hum()`` existed. ``hum()``
+    is a ground loop with a fixed 1/k spectrum and a random-walk drift, and
+    its results were measured on the owner's own material; it is kept exactly
+    as it was so those numbers still mean what they say. This one adds what
+    ``hum()`` does not: a spectral slope and an odd-only mode, which a
+    rectifier's buzz reaching several kHz needs, and a larger drift.
+
+    Not measured on this project's material yet — no hum has been found in
+    the studio tracks, and the same-room recordings where a spec expects it
+    have not been through the bench. The shape is the textbook one: a
+    ground loop gives mostly 50 Hz and its low harmonics; a switched supply
+    or a rectifier gives a buzz whose harmonics reach several kHz, stronger
+    on the odd ones. European mains wander by a few tenths of a hertz, which
+    is what makes a fixed notch comb miss and why ``drift_hz`` is here.
+
+    ``level_db`` is the fundamental relative to the speech level, so the
+    same recipe is equally audible on a hot file and a quiet one. Harmonic
+    *n* sits ``slope_db`` per octave below it.
+    """
+    n = len(x)
+    rng = np.random.default_rng(seed)
+    t = np.arange(n) / rate
+    # A slow wander of the mains frequency: one full swing over roughly
+    # half a minute, which is the order of what grid frequency does.
+    wobble = drift_hz * np.sin(2 * np.pi * t / 27.0 + rng.uniform(0, 2 * np.pi))
+    phase = 2 * np.pi * np.cumsum(mains_hz + wobble) / rate
+    speech = _speech_rms(x, rate)
+    base = speech * 10 ** (level_db / 20) * np.sqrt(2)
+    y = np.zeros(n)
+    for k in range(1, harmonics + 1):
+        if odd_only and k > 1 and k % 2 == 0:
+            continue
+        if k * mains_hz >= rate / 2 * 0.9:
+            break
+        amplitude = base * 10 ** (slope_db * np.log2(k) / 20)
+        y += amplitude * np.sin(k * phase + rng.uniform(0, 2 * np.pi))
+    return (x + y).astype(np.float32)
+
+
+def plosive(
+    x: np.ndarray,
+    rate: int,
+    per_minute: float = 12.0,
+    level_db: float = 0.0,
+    seed: int = 0,
+):
+    """Breath hitting the capsule at the start of a word: a low thump.
+
+    A plosive pop is a pressure wave, not a sound: most of its energy sits
+    below 150 Hz, it lasts a few tens of milliseconds, and it lands on a
+    speech onset — a /p/ or /b/ — rather than at random. Its peak can exceed
+    the speech peak, which is why it clips as often as it thumps.
+
+    Modelled as a damped low-frequency swing starting at onsets picked from
+    the speech envelope: a rise of a few milliseconds, then a decay of
+    30–80 ms at 25–70 Hz. Not fitted to measured pops yet; the podcast
+    archive has not been searched for them. ``level_db`` is the pop's peak
+    relative to the speech's own 99.9th-percentile peak.
+    """
+    n = len(x)
+    rng = np.random.default_rng(seed)
+    y = x.astype(np.float64).copy()
+    envelope = _envelope(np.abs(x), rate, attack_ms=2.0, release_ms=60.0)
+    # The envelope follows peaks, so it is compared against its own loud
+    # level rather than against an RMS: against a quarter of the speech RMS,
+    # a fluent speaker was "loud" in 99.997 per cent of samples and had no
+    # onsets at all.
+    loud = envelope > 0.2 * np.percentile(envelope, 90)
+    # Onsets: where the envelope crosses into speech after at least 60 ms
+    # below it, so the pop lands on the start of a word. Longer rests found
+    # no onsets at all in twelve seconds of a fluent speaker.
+    rest = int(0.06 * rate)
+    counts = np.concatenate(([0], np.cumsum(~loud)))
+    quiet_run = (counts[1:] - counts[np.maximum(0, np.arange(1, n + 1) - rest)]) >= rest
+    onsets = np.flatnonzero(loud[1:] & ~loud[:-1] & quiet_run[:-1]) + 1
+    if not len(onsets):
+        return y.astype(np.float32)
+    wanted = max(1, int(round(per_minute * n / rate / 60)))
+    picked = rng.choice(onsets, size=min(wanted, len(onsets)), replace=False)
+    peak = float(np.percentile(np.abs(x), 99.9)) * 10 ** (level_db / 20)
+    for start in np.sort(picked):
+        # A few ms before the vowel: the release of the stop, not the vowel.
+        start = max(0, int(start - rng.uniform(0.0, 0.01) * rate))
+        decay = rng.uniform(0.03, 0.08)
+        frequency = rng.uniform(25.0, 70.0)
+        length = min(n - start, int(decay * 5 * rate))
+        if length <= 0:
+            continue
+        t = np.arange(length) / rate
+        shape = (1 - np.exp(-t / 0.003)) * np.exp(-t / decay)
+        burst = shape * np.sin(2 * np.pi * frequency * t)
+        burst *= peak / (np.max(np.abs(burst)) + 1e-12)
+        y[start : start + length] += burst * rng.choice((-1.0, 1.0))
+    return y.astype(np.float32)
+
+
 def codec(x: np.ndarray, rate: int, bitrate_kbps: int = 16, name: str = "opus"):
     """A real codec round trip through ffmpeg, when ffmpeg is available.
 
@@ -233,6 +417,248 @@ def codec(x: np.ndarray, rate: int, bitrate_kbps: int = 16, name: str = "opus"):
     return _align(np.asarray(y).reshape(-1), x).astype(np.float32)
 
 
+# Real background noise: DEMAND (Thiemann, Ito, Vincent 2013, CC BY 4.0),
+# recorded at 48 kHz with a 16-microphone array; one channel is used. Three
+# places a podcast guest might be. The cafeteria has other people's voices
+# in it — the hard case for an engine asked to keep only the speaker.
+def _demand(name: str, sha256: str):
+    from .fetch import Asset
+
+    return Asset(f"demand/{name}_48k.zip",
+                 f"https://zenodo.org/records/1227121/files/{name}_48k.zip?download=1",
+                 sha256, f"DEMAND {name}, 48 kHz noise recordings, CC BY 4.0")
+
+
+ENVIRONMENTS = {
+    "OOFFICE": _demand("OOFFICE", "5e0e50f3ab7750c795b71eaf3b001a9fe1d6e5e15a95c6b036d3eefaa5ec6eaf"),
+    "DKITCHEN": _demand("DKITCHEN", "4197f1a02dbb36c4c655a11d14cc4c5dca50eae52a4abaa2c61bfca9de6be17f"),
+    "PCAFETER": _demand("PCAFETER", "ea1defbc29d564d4cdbf8b34191783ebf8debba47cdd3a82c6026608b9788942"),
+}
+
+
+def _environment_audio(name: str) -> np.ndarray:
+    """Channel 1 of a DEMAND environment, unpacked once beside its archive."""
+    import zipfile
+
+    import soundfile as sf
+
+    from .fetch import ensure
+
+    archive = ensure(ENVIRONMENTS[name])
+    target = archive.parent / name / "ch01.wav"
+    if not target.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(archive) as z, open(target, "wb") as out:
+            out.write(z.read(f"{name}/ch01.wav"))
+    audio, _ = sf.read(target, dtype="float32")
+    return audio
+
+
+def background(x: np.ndarray, rate: int, environment: str = "OOFFICE",
+               snr_db: float = 15.0, seed: int = 0):
+    """A recorded place under the voice, at ``snr_db`` against the speech.
+
+    The excerpt starts at a seeded offset into the five-minute recording, so
+    every run hears the same seconds.
+    """
+    if rate != 48000:
+        raise RuntimeError("DEMAND backgrounds are 48 kHz; resample first")
+    noise_track = _environment_audio(environment)
+    rng = np.random.default_rng(seed)
+    start = int(rng.integers(0, max(1, len(noise_track) - len(x))))
+    n = np.resize(noise_track[start:], len(x)).astype(np.float64)
+    n *= _speech_rms(x, rate) / (np.sqrt(np.mean(n**2)) + 1e-12) * 10 ** (-snr_db / 20)
+    return (x + n).astype(np.float32)
+
+
+def bursty_loss(packets: int, loss: float = 0.05, burst: float = 2.5, seed: int = 0):
+    """Which packets a network loses, as a boolean mask.
+
+    A two-state (Gilbert) model: losses come in runs averaging ``burst``
+    packets, at ``loss`` of all packets in the long run. Uniform random loss
+    is the textbook version and not what a congested link or a Wi-Fi drop
+    does; a network that loses one packet usually loses the next.
+    """
+    rng = np.random.default_rng(seed)
+    recover = 1.0 / max(burst, 1.0)
+    fail = recover * loss / max(1.0 - loss, 1e-9)
+    lost = np.zeros(packets, dtype=bool)
+    state = rng.random() < loss
+    draws = rng.random(packets)
+    for i in range(packets):
+        lost[i] = state
+        state = draws[i] >= recover if state else draws[i] < fail
+    return lost
+
+
+def _libopus():
+    """libopus through ctypes, or None. Only the decoder is called: its
+    functions take fixed arguments. The encoder's settings go through a
+    variadic call, which ctypes cannot make reliably on Apple Silicon, so
+    encoding is left to ffmpeg."""
+    import ctypes
+    import ctypes.util
+
+    for name in (ctypes.util.find_library("opus"), "/opt/homebrew/lib/libopus.dylib",
+                 "/usr/local/lib/libopus.dylib", "libopus.so.0"):
+        if not name:
+            continue
+        try:
+            lib = ctypes.CDLL(name)
+        except OSError:
+            continue
+        lib.opus_decoder_create.restype = ctypes.c_void_p
+        lib.opus_decoder_create.argtypes = [ctypes.c_int, ctypes.c_int,
+                                            ctypes.POINTER(ctypes.c_int)]
+        lib.opus_decode_float.restype = ctypes.c_int
+        lib.opus_decode_float.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int32,
+                                          ctypes.POINTER(ctypes.c_float), ctypes.c_int,
+                                          ctypes.c_int]
+        lib.opus_decoder_destroy.argtypes = [ctypes.c_void_p]
+        return lib
+    return None
+
+
+def _ogg_packets(data: bytes) -> list[bytes]:
+    """The packets of one logical Ogg stream, in order."""
+    packets, partial, at = [], b"", 0
+    while at < len(data):
+        if data[at:at + 4] != b"OggS":
+            raise ValueError("not an Ogg page")
+        count = data[at + 26]
+        lacing = data[at + 27: at + 27 + count]
+        at += 27 + count
+        for size in lacing:
+            partial += data[at: at + size]
+            at += size
+            if size < 255:
+                packets.append(partial)
+                partial = b""
+    return packets
+
+
+def opus_call(
+    x: np.ndarray,
+    rate: int,
+    bitrate_kbps: int = 12,
+    loss: float = 0.05,
+    burst: float = 2.5,
+    seed: int = 0,
+):
+    """A VoIP leg: Opus in its voice mode, wideband, with packets lost.
+
+    Encoded by ffmpeg's libopus at ``bitrate_kbps`` in 20 ms packets with an
+    8 kHz ceiling — the one real call in this project's material stops at
+    7.5 kHz. Decoded packet by packet through libopus, and a lost packet is
+    handed to the decoder *as lost*, so its own concealment fills the gap the
+    way a real receiver does: the last sound stretched and faded, not a hole.
+    The decoder's pre-skip is removed, which aligns the result exactly.
+    """
+    import ctypes
+    import shutil
+    import subprocess
+    import tempfile
+    from pathlib import Path
+
+    import soundfile as sf
+
+    lib = _libopus()
+    if not shutil.which("ffmpeg") or lib is None:
+        raise RuntimeError("opus_call needs ffmpeg on PATH and libopus")
+    with tempfile.TemporaryDirectory() as work:
+        raw, squeezed = Path(work) / "in.wav", Path(work) / "mid.opus"
+        sf.write(raw, np.asarray(x, dtype=np.float32), rate, subtype="FLOAT")
+        subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-i", str(raw), "-ar", "48000", "-ac", "1",
+             "-c:a", "libopus", "-application", "voip", "-b:a", f"{bitrate_kbps}k",
+             "-frame_duration", "20", "-cutoff", "8000", "-map_metadata", "-1",
+             str(squeezed)],
+            check=True,
+        )
+        packets = _ogg_packets(squeezed.read_bytes())
+    head, audio = packets[0], packets[2:]
+    if not head.startswith(b"OpusHead"):
+        raise RuntimeError("ffmpeg did not write an Ogg Opus stream")
+    pre_skip = int.from_bytes(head[10:12], "little")
+
+    def decode(lost: np.ndarray) -> np.ndarray:
+        error = ctypes.c_int(0)
+        decoder = lib.opus_decoder_create(48000, 1, ctypes.byref(error))
+        if error.value or not decoder:
+            raise RuntimeError(f"libopus would not make a decoder ({error.value})")
+        pcm = (ctypes.c_float * 5760)()
+        pieces, last = [], 960
+        try:
+            for packet, gone in zip(audio, lost):
+                if gone:
+                    n = lib.opus_decode_float(decoder, None, 0, pcm, last, 0)
+                else:
+                    n = lib.opus_decode_float(decoder, packet, len(packet), pcm, 5760, 0)
+                    last = max(n, 120)
+                if n < 0:
+                    raise RuntimeError(f"libopus decode failed ({n})")
+                pieces.append(np.ctypeslib.as_array(pcm)[:n].copy())
+        finally:
+            lib.opus_decoder_destroy(decoder)
+        y = np.concatenate(pieces)[pre_skip:] if pieces else np.zeros(0, dtype=np.float32)
+        if rate != 48000:
+            from math import gcd
+
+            from scipy import signal
+
+            factor = gcd(48000, int(rate))
+            y = signal.resample_poly(y, rate // factor, 48000 // factor)
+        return y.astype(np.float32)
+
+    # Pre-skip leaves the encoder's few samples of filter delay (5 at 48 kHz
+    # measured). The shift is found on a lossless decode, where nothing but
+    # the codec stands between it and the source, and applied to the lossy
+    # one; searching the lossy one would let a concealed gap pull the answer.
+    clean_decode = decode(np.zeros(len(audio), dtype=bool))
+    lag = _lag(clean_decode, np.asarray(x, dtype=np.float32))
+    y = decode(bursty_loss(len(audio), loss=loss, burst=burst, seed=seed)) if loss > 0 \
+        else clean_decode
+    return _shift(y, lag, len(x))
+
+
+def landline(x: np.ndarray, rate: int, mu: float = 255.0):
+    """A telephone line: 8 kHz sampling, 300–3400 Hz, and G.711 µ-law's
+    8-bit companding. Zero-phase filtering and polyphase resampling keep the
+    alignment without needing to search for it."""
+    from math import gcd
+
+    from scipy import signal
+
+    factor = gcd(int(rate), 8000)
+    narrow = signal.resample_poly(x, 8000 // factor, rate // factor)
+    sos = signal.butter(6, (300.0, 3400.0), btype="band", fs=8000, output="sos")
+    narrow = signal.sosfiltfilt(sos, narrow)
+    peak = np.abs(narrow).max() or 1.0
+    unit = np.clip(narrow / peak, -1.0, 1.0)
+    squeezed = np.sign(unit) * np.log1p(mu * np.abs(unit)) / np.log1p(mu)
+    squeezed = np.round(squeezed * 127.0) / 127.0
+    narrow = np.sign(squeezed) * np.expm1(np.abs(squeezed) * np.log1p(mu)) / mu * peak
+    y = signal.resample_poly(narrow, rate // factor, 8000 // factor)
+    n = len(x)
+    y = y[:n] if len(y) >= n else np.concatenate([y, np.zeros(n - len(y))])
+    return y.astype(np.float32)
+
+
+def overload(x: np.ndarray, rate: int, over_db: float = 12.0):
+    """Input gain pushed ``over_db`` past full scale, then levelled back.
+
+    The converter cannot go above 0 dBFS, so everything louder is flattened
+    there. The producer later brings the track back to speaking level — to
+    the original's RMS here, so the recipe is the flattening and not a fader
+    move as well (dividing by the gain instead measured −6.7 dB).
+    """
+    gain = 10 ** (over_db / 20)
+    peak = np.abs(x).max() or 1.0
+    y = np.clip(x * gain, -peak, peak)
+    rms = np.sqrt(np.mean(np.square(y, dtype=np.float64))) or 1.0
+    return (y * np.sqrt(np.mean(np.square(x, dtype=np.float64))) / rms).astype(np.float32)
+
+
 # ------------------------------------------------------------------ helpers
 
 
@@ -267,20 +693,28 @@ def _envelope(x: np.ndarray, rate: int, attack_ms: float, release_ms: float):
     return np.interp(np.arange(len(x)), np.arange(len(coarse)) * step, out)
 
 
-def _align(y: np.ndarray, reference: np.ndarray) -> np.ndarray:
-    """Shift ``y`` onto ``reference`` and match its length."""
+def _lag(y: np.ndarray, reference: np.ndarray) -> int:
+    """How many samples ``y`` runs late against ``reference``."""
     n = len(reference)
     probe = min(len(y), n, 200000)
     spectrum = np.fft.rfft(y[:probe], probe * 2) * np.conj(
         np.fft.rfft(reference[:probe], probe * 2)
     )
     lag = int(np.argmax(np.fft.irfft(spectrum)))
-    if lag > probe:
-        lag -= probe * 2
+    return lag - probe * 2 if lag > probe else lag
+
+
+def _shift(y: np.ndarray, lag: int, n: int) -> np.ndarray:
+    """Move ``y`` earlier by ``lag`` samples and fit it to length ``n``."""
     y = y[lag:] if lag > 0 else np.concatenate([np.zeros(-lag, dtype=y.dtype), y])
     if len(y) < n:
         y = np.concatenate([y, np.zeros(n - len(y), dtype=y.dtype)])
     return y[:n]
+
+
+def _align(y: np.ndarray, reference: np.ndarray) -> np.ndarray:
+    """Shift ``y`` onto ``reference`` and match its length."""
+    return _shift(y, _lag(y, reference), len(reference))
 
 
 # --------------------------------------------------------------- the recipes
@@ -318,8 +752,14 @@ RECIPES: tuple[Damage, ...] = (
         ((noise, {"snr_db": 20.0}),),
     ),
     Damage(
+        "ground-loop",
+        "a mains buzz: 50 Hz and its harmonics, 30 dB under the speech",
+        ((hum, {}),),
+    ),
+    Damage(
         "room",
-        "a live room, RT60 0.6 s",
+        "a live room, RT60 0.6 s, direct sound 12 dB under the reverberation "
+        "(a distant microphone in a hall; see room-laptop, room-near)",
         ((reverb, {"rt60": 0.6}),),
     ),
     Damage(
@@ -368,10 +808,93 @@ RECIPES: tuple[Damage, ...] = (
         ),
     ),
     Damage(
+        "hum",
+        "mains hum: 50 Hz and five harmonics, -30 dB under the speech, drifting",
+        ((mains, {"mains_hz": 50.0, "level_db": -30.0, "harmonics": 6}),),
+    ),
+    Damage(
+        "buzz",
+        "supply buzz: odd-heavy 50 Hz harmonics up to 4 kHz, -36 dB",
+        (
+            # Harmonics to 4 kHz at -3 dB per octave: a rectifier's spike
+            # train is broadband, which is what separates buzz from hum and
+            # what defeats a notch comb that stops at the fifth harmonic.
+            (mains, {"mains_hz": 50.0, "level_db": -36.0, "harmonics": 80,
+                   "slope_db": -3.0, "odd_only": True}),
+        ),
+    ),
+    Damage(
+        "plosive",
+        "breath pops on word onsets: 12 a minute, peaking at the speech peak",
+        ((plosive, {"per_minute": 12.0, "level_db": 0.0}),),
+    ),
+    Damage(
+        "clipped",
+        "hard clipping 6 dB under the peak, and nothing else",
+        ((clip, {"headroom_db": -6.0}),),
+    ),
+    Damage(
         "opus-16k",
         "a real Opus round trip at 16 kbit/s",
         ((codec, {"bitrate_kbps": 16}),),
         needs="ffmpeg",
+    ),
+    Damage(
+        "voip-call",
+        "a VoIP guest: auto-gain, Opus wideband at 12 kbit/s, 5 % of packets "
+        "lost in bursts and concealed by the decoder",
+        ((autogain, {"target_db": -20.0}),
+         (opus_call, {"bitrate_kbps": 12, "loss": 0.05, "burst": 2.5})),
+        needs="ffmpeg+libopus",
+    ),
+    Damage(
+        "landline",
+        "a telephone line: 8 kHz, 300-3400 Hz, G.711 mu-law",
+        ((landline, {}),),
+    ),
+    Damage(
+        "overload",
+        "input gain 12 dB past full scale: flat-topped at the converter, "
+        "turned back down after",
+        ((overload, {"over_db": 12.0}),),
+    ),
+    Damage(
+        "overload-call",
+        "an overloaded microphone on a VoIP call: overload, then voip-call",
+        ((overload, {"over_db": 12.0}),
+         (autogain, {"target_db": -20.0}),
+         (opus_call, {"bitrate_kbps": 12, "loss": 0.05, "burst": 2.5})),
+        needs="ffmpeg+libopus",
+    ),
+    Damage(
+        "room-laptop",
+        "a laptop microphone at arm's length in a live room: RT60 0.6 s, "
+        "direct and reverberant sound equal (0 dB)",
+        ((reverb, {"rt60": 0.6, "drr_db": 0.0}),),
+    ),
+    Damage(
+        "room-near",
+        "a close microphone in an untreated room: RT60 0.6 s, direct sound "
+        "6 dB over the reverberation",
+        ((reverb, {"rt60": 0.6, "drr_db": 6.0}),),
+    ),
+    Damage(
+        "office",
+        "an open-plan office behind the guest (DEMAND OOFFICE), 15 dB under the speech",
+        ((background, {"environment": "OOFFICE", "snr_db": 15.0}),),
+        needs="demand",
+    ),
+    Damage(
+        "kitchen",
+        "a kitchen: clatter and running water (DEMAND DKITCHEN), 10 dB under the speech",
+        ((background, {"environment": "DKITCHEN", "snr_db": 10.0}),),
+        needs="demand",
+    ),
+    Damage(
+        "cafeteria",
+        "a cafeteria with other people talking (DEMAND PCAFETER), 10 dB under the speech",
+        ((background, {"environment": "PCAFETER", "snr_db": 10.0}),),
+        needs="demand",
     ),
 )
 

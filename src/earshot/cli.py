@@ -14,6 +14,7 @@ table that will eventually be wrong in a way nobody notices.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import sys
 from pathlib import Path
 
@@ -62,6 +63,11 @@ def main(argv: list[str] | None = None) -> int:
         help="print the results as JSON instead of a table; with --out, "
              "results.json is written either way",
     )
+    bench.add_argument(
+        "--jobs", metavar="N", type=int, default=None,
+        help="number of parallel probe evaluation jobs (default: responsive "
+             "CPU budget leaving 1 core free)",
+    )
 
     restore = sub.add_parser(
         "restore", help="process a real recording and write the result"
@@ -79,19 +85,41 @@ def main(argv: list[str] | None = None) -> int:
     restore.add_argument(
         "--chunk", metavar="SECONDS", type=float, default=60.0,
         help="process in chunks this long, 0 for the whole file at once. "
-             "Memory scales with the length of one call: LavaSR needs about "
-             "0.3 GB for 5 s and 1.4 GB for 160 s, so a whole episode does "
-             "not fit on most machines (default: 60)",
+             "The file is streamed, so peak memory is one chunk plus the "
+             "engine's own workspace, which scales with the chunk: LavaSR "
+             "needs about 0.3 GB for 5 s and 1.4 GB for 160 s (default: 60)",
     )
     restore.add_argument(
         "--overlap", metavar="SECONDS", type=float, default=2.0,
         help="crossfade between chunks; must cover whatever context the "
              "engine keeps (default: 2)",
     )
+    restore.add_argument(
+        "--workers", metavar="N", type=int, default=None,
+        help="number of parallel file restoration workers (default: "
+             "responsive CPU budget leaving 1 core free)",
+    )
     restore.set_defaults(func=_restore)
 
     listing = sub.add_parser("damages", help="list the damage recipes")
     listing.set_defaults(func=_damages)
+
+    listen = sub.add_parser(
+        "listen", help="build a synced, loudness-matched listening page for a "
+                       "directory of comparison folders",
+    )
+    listen.add_argument("directory", metavar="DIR",
+                        help="one sub-folder of WAV files per comparison")
+    listen.add_argument("--title", default="Earshot-kuuntelu")
+    listen.add_argument("--serve", type=int, metavar="PORT",
+                        help="serve the page and keep best-take picks in votes.jsonl")
+    listen.add_argument("--no-build", action="store_true",
+                        help="serve the page as it is, keeping its title and intro")
+    listen.set_defaults(func=_listen)
+
+    tally = sub.add_parser("votes", help="the takes picked as best on a served listening page")
+    tally.add_argument("directory", metavar="DIR")
+    tally.set_defaults(func=_votes)
 
     board = sub.add_parser(
         "scoreboard", help="one table across stored results (default results/*.json)"
@@ -141,8 +169,11 @@ def _restore(args) -> int:
     if out_dir:
         out_dir.mkdir(parents=True, exist_ok=True)
 
+    # Targets are settled before anything is processed: two inputs that
+    # would write the same output (two session folders each holding a
+    # "host.wav", say) are found here, not after half the batch has run.
+    plan: list[tuple[Path, Path]] = []
     for path in files:
-        audio, rate = audio_io.read(path)
         if out_dir:
             target = out_dir / path.name
         elif args.out and len(files) == 1:
@@ -152,27 +183,106 @@ def _restore(args) -> int:
         if target.resolve() == path.resolve():
             print(f"error: refusing to write over {path}", file=sys.stderr)
             return 2
+        plan.append((path, target))
+    claimed: dict[Path, Path] = {}
+    for path, target in plan:
+        other = claimed.get(target.resolve())
+        if other is not None:
+            print(f"error: {path} and {other} would both write {target}",
+                  file=sys.stderr)
+            return 2
+        claimed[target.resolve()] = path
 
+    # A batch is hours of work, so one unreadable or unprocessable file
+    # fails that file, not the batch: the rest are still restored and the
+    # failures are listed at the end.
+    import threading
+
+    print_lock = threading.Lock()
+    failures: list[Path] = []
+
+    def restore_one(item: tuple[int, tuple[Path, Path]]) -> Path | None:
+        _idx, (path, target) = item
         started = _time.perf_counter()
         try:
-            done = engines.process_in_chunks(
-                loaded.engine, audio, rate,
-                chunk_seconds=args.chunk, overlap_seconds=args.overlap,
-            )
-        except engines.EngineError as exc:
-            print(f"error: {path.name}: {exc}", file=sys.stderr)
-            return 1
-        elapsed = _time.perf_counter() - started
+            rate = audio_io.rate_of(path)
+            before, after = metrics.DynamicsMeter(rate), metrics.DynamicsMeter(rate)
 
-        audio_io.write(target, done, rate)
-        before, after = metrics.dynamics(audio, rate), metrics.dynamics(done, rate)
-        print(
-            f"{path.name} -> {target.name}\n"
-            f"  {len(audio) / rate / 60:.1f} min in {elapsed:.1f} s "
-            f"({len(audio) / rate / max(elapsed, 1e-9):.0f}x realtime)\n"
-            f"  speech {before.speech:+.1f} -> {after.speech:+.1f} dBFS, "
-            f"floor {before.floor:+.1f} -> {after.floor:+.1f} dBFS"
-        )
+            def measure(_start, incoming, outgoing,
+                        _before=before, _after=after):
+                _before.add(incoming)
+                _after.add(outgoing)
+
+            frames, rate = engines.process_file_in_chunks(
+                loaded.engine, path, target,
+                chunk_seconds=args.chunk, overlap_seconds=args.overlap,
+                on_block=measure,
+            )
+            elapsed = _time.perf_counter() - started
+            b_res, a_res = before.result(), after.result()
+            msg = (
+                f"{path.name} -> {target.name}\n"
+                f"  {frames / rate / 60:.1f} min in {elapsed:.1f} s "
+                f"({frames / rate / max(elapsed, 1e-9):.0f}x realtime)\n"
+                f"  speech {b_res.speech:+.1f} -> {a_res.speech:+.1f} dBFS, "
+                f"floor {b_res.floor:+.1f} -> {a_res.floor:+.1f} dBFS"
+            )
+            with print_lock:
+                print(msg)
+            return None
+        except Exception as exc:
+            with print_lock:
+                print(f"error: {path.name}: {exc}", file=sys.stderr)
+            return path
+
+    max_workers = args.workers if args.workers is not None else engines.cpu_thread_budget()
+    max_workers = max(1, min(max_workers, len(plan)))
+
+    if max_workers == 1 or len(plan) == 1:
+        for item in enumerate(plan):
+            failed = restore_one(item)
+            if failed:
+                failures.append(failed)
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            for failed in executor.map(restore_one, enumerate(plan)):
+                if failed:
+                    failures.append(failed)
+
+    if failures:
+        names = ", ".join(p.name for p in failures)
+        print(f"failed: {len(failures)} of {len(plan)} ({names})", file=sys.stderr)
+        return 1
+    return 0
+
+
+def _listen(args) -> int:
+    from . import listen
+
+    directory = Path(args.directory)
+    if not getattr(args, "no_build", False):
+        print(f"wrote {listen.build(directory, title=args.title)}")
+    if getattr(args, "serve", None):
+        server = listen.serve(directory, port=args.serve)
+        print(f"serving {directory} on port {args.serve}; picks go to {directory / 'votes.jsonl'}")
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+    return 0
+
+
+def _votes(args) -> int:
+    from . import listen
+
+    picked = listen.votes(Path(args.directory))
+    if not picked:
+        print("no picks yet")
+        return 0
+    for vote in picked:
+        how = "blind" if vote.get("blind") else "names showing"
+        print(f"{vote['comparison']:28s} {vote['kind']:6s} {vote.get('label', '?'):32s} "
+              f"({how}, shown as {vote.get('shown_as', '?')}; {vote['picks']} picks, last {vote.get('at', '?')})")
     return 0
 
 
@@ -230,14 +340,26 @@ def _bench(args) -> int:
     for _, item in loaded:
         probes.warm_up(item, pieces[0].rate)
 
+    bench_jobs = args.jobs if args.jobs is not None else engines.cpu_thread_budget()
+    bench_jobs = max(1, bench_jobs)
+
     for recipe in recipes:
-        runs: list[probes.Run] = []
-        for piece in pieces:
-            for _, item in loaded:
-                run = probes.run_all(item, piece.audio, piece.rate, recipe)
-                run.material = piece.label
-                run.speaker = piece.speaker
-                runs.append(run)
+        # Build tasks: (piece, item) pairs to preserve exact ordering
+        tasks = [(piece, item) for piece in pieces for _, item in loaded]
+
+        def eval_task(task):
+            piece, item = task
+            run = probes.run_all(item, piece.audio, piece.rate, recipe)
+            run.material = piece.label
+            run.speaker = piece.speaker
+            return run
+
+        if bench_jobs == 1 or len(tasks) <= 1:
+            runs = [eval_task(t) for t in tasks]
+        else:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=bench_jobs) as executor:
+                runs = list(executor.map(eval_task, tasks))
+
         every += runs
         sections.append(
             report.render(report.aggregate(runs), f"{recipe.name} — {recipe.describe}")

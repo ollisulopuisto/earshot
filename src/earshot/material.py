@@ -23,6 +23,8 @@ a sample look larger than it is.
 
 from __future__ import annotations
 
+import re
+
 import hashlib
 from dataclasses import dataclass
 from pathlib import Path
@@ -66,6 +68,9 @@ class Excerpt:
         return self.path.stem.split()[0].lower() if self.path.stem else "unknown"
 
 
+_GENERATED_OUTPUT = re.compile(r"^(.+) \[.+\]$")
+
+
 def recordings(where: str | Path) -> list[Path]:
     """Every readable recording under a path, sorted for reproducibility."""
     root = Path(where)
@@ -77,7 +82,24 @@ def recordings(where: str | Path) -> list[Path]:
         if p.suffix.lower() in EXTENSIONS and not p.name.startswith(".")
     ]
     # Anything the bench itself wrote is not material.
-    return [p for p in found if not p.name.startswith(("00-", "01-", "02-"))]
+    found = [p for p in found if not p.name.startswith(("00-", "01-", "02-"))]
+    # Neither is the output of an earlier restore: "take [lavasr].wav" next
+    # to "take.wav" is a result, not an input. Without this, restoring a
+    # directory twice ingests its own output and compounds - the second run
+    # restores "take [lavasr].wav" into "take [lavasr] [lavasr].wav", and so
+    # on. The prefix must exist, so a source that happens to carry brackets
+    # in its name ("take [raw].wav" with no "take.wav") is still material.
+    kept = []
+    for p in found:
+        generated = _GENERATED_OUTPUT.match(p.stem)
+        # The base must be beside it - same folder, same name minus the
+        # bracketed suffix. A basename match in another directory says
+        # nothing: folderB/take.wav does not make folderA/take [raw].wav
+        # anyone's output.
+        if generated and p.with_name(generated.group(1) + p.suffix).exists():
+            continue
+        kept.append(p)
+    return kept
 
 
 def _speech_level(x: np.ndarray, rate: int) -> float:

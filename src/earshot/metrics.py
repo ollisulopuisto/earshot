@@ -128,13 +128,57 @@ def dynamics(x: np.ndarray, rate: int, fraction: float = 0.2) -> Dynamics:
     """
     frame = max(1, int(0.4 * rate))
     count = max(1, len(x) // frame)
-    levels = np.array([rms_db(x[i * frame : (i + 1) * frame]) for i in range(count)])
+    arr = np.asarray(x)
+    if len(arr) >= frame:
+        truncated = arr[: count * frame].reshape(count, frame)
+        means = np.mean(truncated**2, axis=1)
+        levels = 20 * np.log10(np.sqrt(means).astype(np.float64) + 1e-12)
+    else:
+        levels = np.array([rms_db(arr)])
     take = max(1, int(count * fraction))
     order = np.argsort(levels)
     return Dynamics(
         speech=float(levels[order[-take:]].mean()),
         floor=float(levels[order[:take]].mean()),
     )
+
+
+class DynamicsMeter:
+    """``dynamics()`` over a signal that arrives in blocks.
+
+    Streaming restore cannot hand ``dynamics()`` the whole recording - not
+    holding it is the point. Frames are counted from the start of the
+    stream, not of any block, and only complete frames count, so
+    ``result()`` equals ``dynamics()`` over the whole signal, partial tail
+    frame dropped the same way.
+    """
+
+    def __init__(self, rate: int, fraction: float = 0.2):
+        self._frame = max(1, int(0.4 * rate))
+        self._fraction = fraction
+        self._carry = np.empty(0, dtype=np.float32)
+        self._levels: list[float] = []
+
+    def add(self, x: np.ndarray) -> None:
+        x = np.concatenate([self._carry, np.asarray(x).reshape(-1)])
+        whole = len(x) // self._frame * self._frame
+        for i in range(0, whole, self._frame):
+            self._levels.append(rms_db(x[i : i + self._frame]))
+        self._carry = x[whole:]
+
+    def result(self) -> Dynamics:
+        if self._levels:
+            levels = np.array(self._levels)
+        else:
+            # Shorter than one frame: dynamics() scores the whole signal as
+            # a single short frame, so the carry - everything seen - is it.
+            levels = np.array([rms_db(self._carry)])
+        take = max(1, int(len(levels) * self._fraction))
+        order = np.argsort(levels)
+        return Dynamics(
+            speech=float(levels[order[-take:]].mean()),
+            floor=float(levels[order[:take]].mean()),
+        )
 
 
 def suppression(before: np.ndarray, after: np.ndarray) -> float:
@@ -160,6 +204,40 @@ def spectral_tilt(x: np.ndarray, rate: int, low: float = 200.0, high: float = 80
     octaves = np.log2(freqs[mask] / low)
     decibels = 10 * np.log10(power[mask])
     return float(np.polyfit(octaves, decibels, 1)[0])
+
+
+BODY_BAND_HZ = (80.0, 250.0)
+SPEECH_BAND_HZ = (300.0, 3000.0)
+
+
+def body(x: np.ndarray, rate: int) -> float:
+    """The level of 80–250 Hz against 300–3000 Hz, in dB.
+
+    Where a voice's fundamental and second harmonic live, against where its
+    intelligibility does: a balance, so a fader move leaves it alone. A
+    telephone band cuts at 300 Hz and takes this about 20 dB down (measured
+    on the listening sets, 2026-10-03), which is the thinness the owner heard.
+    """
+    from scipy import signal
+
+    x = np.asarray(x, dtype=np.float64)
+    if len(x) < 256:
+        return float("nan")
+    f, p = signal.welch(x, rate, nperseg=min(8192, len(x)))
+    low = p[(f >= BODY_BAND_HZ[0]) & (f < BODY_BAND_HZ[1])].sum()
+    mid = p[(f >= SPEECH_BAND_HZ[0]) & (f < SPEECH_BAND_HZ[1])].sum()
+    return float(10 * np.log10((low + 1e-30) / (mid + 1e-30)))
+
+
+def speaker_similarity(a: np.ndarray, b: np.ndarray, rate: int) -> float:
+    """Cosine between speaker embeddings of ``a`` and ``b``; 1 is one voice.
+
+    Raises EngineError when the speaker model is unavailable, so a caller
+    reports a skip rather than a number about nothing.
+    """
+    from . import speaker
+
+    return float(np.dot(speaker.embed(a, rate), speaker.embed(b, rate)))
 
 
 def repeatability(first: np.ndarray, second: np.ndarray) -> float:
@@ -244,3 +322,36 @@ def perceptual(reference: np.ndarray, degraded: np.ndarray, rate: int) -> dict:
     except Exception:
         pass
     return out
+
+
+def line_residue(error: np.ndarray, reference: np.ndarray, rate: int,
+                 fundamental: float = 50.0, top: float = 6000.0) -> float:
+    """Energy of ``error`` at the harmonics of ``fundamental``, in dB of speech.
+
+    Each harmonic's window widens with its number, because drift of a few
+    tenths of a hertz at the fundamental is k times that at the k-th
+    harmonic. What falls between the harmonics is not counted: that is the
+    voice, and other probes answer for it.
+    """
+    e = np.asarray(error, dtype=np.float64)
+    r = np.asarray(reference, dtype=np.float64)
+    window = np.hanning(len(e))
+    spectrum = np.abs(np.fft.rfft(e * window)) ** 2
+    freqs = np.fft.rfftfreq(len(e), 1 / rate)
+    lines = np.zeros_like(freqs, dtype=bool)
+    # Narrow-slice window evaluation: because freqs is strictly increasing,
+    # find each harmonic window's index range via searchsorted and evaluate
+    # the condition on that slice instead of scanning all bins for every k.
+    limit = min(top, rate / 2 * 0.95)
+    k_max = int(limit // fundamental)
+    if k_max >= 1:
+        ks = np.arange(1, k_max + 1)
+        ks = ks[ks * fundamental < limit]
+        centres = ks * fundamental
+        widths = 1.0 + 0.3 * ks
+        idx_lo = np.searchsorted(freqs, centres - widths, side="left")
+        idx_hi = np.searchsorted(freqs, centres + widths, side="right")
+        for c, w, lo_i, hi_i in zip(centres, widths, idx_lo, idx_hi):
+            lines[lo_i:hi_i] |= np.abs(freqs[lo_i:hi_i] - c) <= w
+    speech = np.sum(np.abs(np.fft.rfft(r * window)) ** 2) + 1e-30
+    return float(10 * np.log10(spectrum[lines].sum() / speech + 1e-30))

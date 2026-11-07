@@ -163,6 +163,145 @@ def process_in_chunks(
     return out
 
 
+def process_file_in_chunks(
+    engine,
+    source,
+    target,
+    *,
+    chunk_seconds: float = 60.0,
+    overlap_seconds: float = 2.0,
+    on_block=None,
+) -> tuple[int, int]:
+    """Stream ``source`` through ``engine`` into ``target``, a chunk at a time.
+
+    ``process_in_chunks`` chunks the *engine* but not the file: the whole
+    recording and the whole result sit in memory beside the engine's own
+    workspace - 1.3 GB together for a 56 minute episode, before the
+    model's gigabytes even start. This is the same chunking reading and
+    writing a chunk at a time, so peak memory is the workspace plus a few
+    chunks rather than the episode held whole.
+
+    The output is identical to ``process_in_chunks`` over the whole file:
+    same chunk boundaries, same complementary ramps summing to one, same
+    single-pass path for anything no longer than a chunk, and the overlap
+    zone sums the same two faded values in the same order. The tests assert
+    this, not this docstring.
+
+    The audio lands in a sibling temporary file and is renamed onto
+    ``target`` only after the last sample is processed: a failure or
+    interrupt midway leaves no truncated file under the final name, and an
+    existing target survives an unsuccessful run untouched.
+
+    ``on_block(start, input, output)``, when given, is called once per
+    flushed region; the regions tile the recording contiguously from 0, so
+    a caller can measure levels over the stream without holding it.
+    Returns ``(frames, rate)``.
+    """
+    import os
+    import tempfile
+    from pathlib import Path
+
+    import soundfile as sf
+
+    name = getattr(engine, "name", "?")
+    info = sf.info(str(source))
+    rate = info.samplerate
+    total = info.frames
+    chunk = int(chunk_seconds * rate)
+    overlap = int(overlap_seconds * rate)
+
+    def mono(block: np.ndarray) -> np.ndarray:
+        # Restoration is per microphone; a stereo file is averaged to one
+        # channel here exactly as audio_io.read averages it.
+        if block.ndim > 1:
+            block = block.mean(axis=1)
+        return np.asarray(block, dtype=np.float32)
+
+    def process(fin, fout) -> None:
+        if chunk <= 0 or total <= chunk:
+            x = mono(fin.read(total, dtype="float32"))
+            done = np.array(check_contract(x, engine.process(x, rate), name),
+                            dtype=np.float32, copy=True)
+            fout.write(done)
+            if on_block is not None:
+                on_block(0, x, done)
+            return
+
+        clamped = max(1, min(overlap, chunk // 2))
+        # The same ramps as process_in_chunks, including the off-by-two that
+        # makes them sum to exactly one.
+        fade_in = np.linspace(0.0, 1.0, clamped + 2, dtype=np.float32)[1:-1]
+        fade_out = (1.0 - fade_in).astype(np.float32)
+
+        pending = None  # the previous chunk's faded tail, length clamped
+        pos = 0
+        while pos < total:
+            stop = min(pos + chunk, total)
+            # Chunks overlap in the *input* too, so this is not a sequential
+            # read: step back to pos, or every chunk after the first starts
+            # where the previous one ended and the crossfade joins different
+            # audio.
+            fin.seek(pos)
+            x = mono(fin.read(stop - pos, dtype="float32"))
+            # Copied, for the same reason as process_in_chunks: an engine
+            # may return a view of its input, and fading that in place
+            # rewrites the recording.
+            done = np.array(check_contract(x, engine.process(x, rate), name),
+                            dtype=np.float32, copy=True)
+
+            if pos > 0:
+                done[:clamped] *= fade_in[: len(done)]
+            if stop < total:
+                tail = min(clamped, len(done))
+                done[len(done) - tail :] *= fade_out[:tail]
+
+            # Flush [pos, stop') - contiguous with everything flushed so
+            # far: the crossfade zone first, then the body no later chunk
+            # will touch.
+            end = len(done) if stop >= total else len(done) - clamped
+            parts = []
+            if pos > 0:
+                parts.append(pending + done[:clamped])
+            parts.append(done[clamped if pos > 0 else 0 : end])
+            flushed = parts[0] if len(parts) == 1 else np.concatenate(parts)
+            fout.write(flushed)
+            if on_block is not None:
+                on_block(pos, x[: len(flushed)], flushed)
+            if stop >= total:
+                break
+            pending = done[len(done) - clamped :]
+            pos += chunk - clamped
+
+    # Written beside the target and renamed on success, so a failure or
+    # interrupt never leaves a truncated file under the final name and an
+    # existing target survives an unsuccessful run. sf.SoundFile cannot
+    # infer the format from a ".partial" suffix, so it comes from the
+    # target's own extension.
+    target = Path(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fmt = {".wav": "WAV", ".flac": "FLAC", ".aiff": "AIFF", ".aif": "AIFF",
+           ".ogg": "OGG"}.get(target.suffix.lower(), "WAV")
+    fd, partial = tempfile.mkstemp(dir=str(target.parent),
+                                   prefix=target.name + ".", suffix=".partial")
+    os.close(fd)
+    completed = False
+    try:
+        with sf.SoundFile(str(source)) as fin, sf.SoundFile(
+            str(partial), "w", samplerate=rate, channels=1, subtype="PCM_24",
+            format=fmt,
+        ) as fout:
+            process(fin, fout)
+        os.replace(partial, target)
+        completed = True
+    finally:
+        if not completed:
+            try:
+                os.unlink(partial)
+            except OSError:
+                pass
+    return total, rate
+
+
 def check_contract(before: np.ndarray, after: np.ndarray, name: str) -> np.ndarray:
     """Enforce rule 1 at the point of use.
 
@@ -182,9 +321,101 @@ def check_contract(before: np.ndarray, after: np.ndarray, name: str) -> np.ndarr
     return after
 
 
+def cpu_thread_budget(reserve: int = 1) -> int:
+    """The number of CPU threads or workers to use.
+
+    Maximizes CPU utilization while leaving ``reserve`` core(s) free (default 1)
+    so that the system/desktop remains responsive during processing.
+
+    Can be overridden via the ``EARSHOT_NUM_THREADS`` or ``EARSHOT_WORKERS``
+    environment variable.
+    """
+    import os
+
+    for env_var in ("EARSHOT_NUM_THREADS", "EARSHOT_WORKERS"):
+        val = os.environ.get(env_var, "").strip()
+        if val:
+            try:
+                num = int(val)
+                if num > 0:
+                    return num
+            except ValueError:
+                pass
+
+    count = None
+    if hasattr(os, "sched_getaffinity"):
+        try:
+            count = len(os.sched_getaffinity(0))
+        except OSError:
+            pass
+    if not count and hasattr(os, "process_cpu_count"):
+        count = os.process_cpu_count()
+    if not count:
+        count = os.cpu_count() or 1
+    return max(1, count - max(0, reserve))
+
+
+def configure_torch_threads(threads: int | None = None) -> int:
+    """Configure PyTorch's intra-op thread count to stay within the CPU budget."""
+    t = threads or cpu_thread_budget()
+    try:
+        import torch
+        torch.set_num_threads(t)
+    except (ImportError, RuntimeError, AttributeError):
+        pass
+    return t
+
+
+def torch_device(index: int = 0) -> str:
+    """The device PyTorch engines run on: ``EARSHOT_DEVICE``, else CUDA if
+    present, else the CPU.
+
+    When multiple CUDA devices are available, ``index`` distributes workloads
+    across ``cuda:0``, ``cuda:1``, etc.
+
+    The Apple GPU is never chosen unasked. Measured with UniverSR on an
+    M1 Max: 11 s per model pass on MPS against 15 s on the CPU, and the first
+    MPS attempt sat waiting on the GPU for over ten minutes.
+    """
+    import os
+    import re
+
+    chosen = os.environ.get("EARSHOT_DEVICE", "").strip()
+    if chosen:
+        if not re.fullmatch(r"(cpu|mps|cuda(:\d+)?)", chosen):
+            raise EngineError(
+                f"EARSHOT_DEVICE must be cpu, mps, cuda or cuda:N, got {chosen!r}"
+            )
+        return chosen
+    try:
+        import torch
+    except ImportError:
+        return "cpu"
+    if torch.cuda.is_available():
+        device_count_fn = getattr(torch.cuda, "device_count", None)
+        count = device_count_fn() if callable(device_count_fn) else 1
+        return f"cuda:{index % count}" if count > 1 else "cuda"
+    return "cpu"
+
+
+from . import audiosr as _audiosr  # noqa: E402,F401
+from . import body as _body  # noqa: E402,F401
 from . import chain as _chain  # noqa: E402,F401
+from . import declip as _declip  # noqa: E402,F401
 from . import deepfilternet as _deepfilternet  # noqa: E402,F401
+from . import dehum as _dehum  # noqa: E402,F401
+from . import gate as _gate  # noqa: E402,F401
+from . import keepzero as _keepzero  # noqa: E402,F401
 from . import lavasr as _lavasr  # noqa: E402,F401
+from . import mossformer2 as _mossformer2  # noqa: E402,F401
+from . import notch as _notch  # noqa: E402,F401
+from . import novasr as _novasr  # noqa: E402,F401
 from . import passthrough as _passthrough  # noqa: E402,F401  (registers itself)
+from . import plosive as _plosive  # noqa: E402,F401
 from . import router as _router  # noqa: E402,F401
+from . import sidon as _sidon  # noqa: E402,F401
+from . import tonematch as _tonematch  # noqa: E402,F401
+from . import unipase as _unipase  # noqa: E402,F401
+from . import universr as _universr  # noqa: E402,F401
 from . import vst3 as _vst3  # noqa: E402,F401
+from . import wpe as _wpe  # noqa: E402,F401

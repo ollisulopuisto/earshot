@@ -30,10 +30,13 @@ def test_the_file_is_what_was_pinned(pin):
 def test_every_vendored_file_is_accounted_for():
     """A file nobody recorded is a file nobody can trace."""
     recorded = {p.path for p in vendor.PINNED}
+    # Recursive: UniPASE is vendored as a tree, and a file nobody recorded
+    # in a subdirectory is as untraceable as one at the top.
     present = {
-        p.name
-        for p in HERE.iterdir()
-        if p.is_file() and p.name not in {"__init__.py", "README.md"}
+        p.relative_to(HERE).as_posix()
+        for p in HERE.rglob("*")
+        if p.is_file() and "__pycache__" not in p.parts
+        and p.relative_to(HERE).as_posix() not in {"__init__.py", "README.md"}
         and not p.name.startswith("LICENSE")
     }
     assert present == recorded, f"not recorded in PINNED: {present - recorded}"

@@ -1,0 +1,93 @@
+[
+ {
+  "engine": "route",
+  "damage": "clean",
+  "lsd_gain": 0.0,
+  "speaker_change": 0.0,
+  "ovrl_change": 0.0
+ },
+ {
+  "engine": "route",
+  "damage": "hiss",
+  "lsd_gain": 9.070016574859618,
+  "speaker_change": -0.04680895805358887,
+  "ovrl_change": 0.297308300969722
+ },
+ {
+  "engine": "route",
+  "damage": "room-laptop",
+  "lsd_gain": 0.9247880935668945,
+  "speaker_change": 0.003199279308319092,
+  "ovrl_change": 0.6906839267315249
+ },
+ {
+  "engine": "route",
+  "damage": "room-near",
+  "lsd_gain": 0.387205171585083,
+  "speaker_change": 0.0038270831108093263,
+  "ovrl_change": 0.15580608445186844
+ },
+ {
+  "engine": "route",
+  "damage": "wideband-voip",
+  "lsd_gain": 5.146705913543701,
+  "speaker_change": -0.06455550193786622,
+  "ovrl_change": 0.621071939428304
+ },
+ {
+  "engine": "route",
+  "damage": "narrowband-voip",
+  "lsd_gain": 2.9051671981811524,
+  "speaker_change": 0.04432117938995361,
+  "ovrl_change": 0.6870380113299701
+ },
+ {
+  "engine": "route",
+  "damage": "voip-call",
+  "lsd_gain": 0.7100902557373047,
+  "speaker_change": -0.05411959886550903,
+  "ovrl_change": 0.18252728970992393
+ },
+ {
+  "engine": "route",
+  "damage": "landline",
+  "lsd_gain": 1.6944969177246094,
+  "speaker_change": -0.025867784023284913,
+  "ovrl_change": 0.26452723873607387
+ },
+ {
+  "engine": "route",
+  "damage": "overload",
+  "lsd_gain": 1.6223227739334107,
+  "speaker_change": 0.01704888343811035,
+  "ovrl_change": 0.028533322711278952
+ },
+ {
+  "engine": "route",
+  "damage": "overload-call",
+  "lsd_gain": 1.312704372406006,
+  "speaker_change": -0.021244585514068604,
+  "ovrl_change": 0.2418384723052367
+ },
+ {
+  "engine": "route",
+  "damage": "office",
+  "lsd_gain": 1.0515209436416626,
+  "speaker_change": -0.0012235760688781739,
+  "ovrl_change": 0.1441917378080694
+ },
+ {
+  "engine": "route",
+  "damage": "kitchen",
+  "lsd_gain": 11.035232067108154,
+  "speaker_change": -0.018521463871002196,
+  "ovrl_change": 0.2563035616886083
+ },
+ {
+  "engine": "route",
+  "damage": "cafeteria",
+  "lsd_gain": 6.494210481643677,
+  "speaker_change": 0.0065263152122497555,
+  "ovrl_change": 0.8691331993933133
+ }
+]

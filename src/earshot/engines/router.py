@@ -226,12 +226,14 @@ class RouterEngine:
 
     def _crossfade(self, edge: np.ndarray, freqs: np.ndarray) -> np.ndarray:
         """0 below the edge, 1 above it, raised-cosine in between."""
-        with np.errstate(divide="ignore", invalid="ignore"):
-            octaves = np.log2(
-                np.maximum(freqs[:, None], 1.0) / np.maximum(edge[None, :], 1.0)
-            )
+        # Decomposing log2(freqs / edge) into log2(freqs) - log2(edge) via 1D
+        # evaluations avoids computing 2D elementwise division and ~10^6
+        # transcendental log2 calls across (bins x frames).
+        log2_freqs = np.log2(np.maximum(freqs, 1.0, dtype=np.float32))[:, None]
+        log2_edge = np.log2(np.maximum(edge, 1.0, dtype=np.float32))[None, :]
         half = CROSSOVER_OCTAVES / 2.0
-        ramp = np.clip((octaves + half) / max(CROSSOVER_OCTAVES, 1e-6), 0.0, 1.0)
+        scale = np.float32(1.0 / max(CROSSOVER_OCTAVES, 1e-6))
+        ramp = np.clip((log2_freqs - log2_edge + half) * scale, 0.0, 1.0)
         return (0.5 - 0.5 * np.cos(np.pi * ramp)).astype(np.float32)
 
 
