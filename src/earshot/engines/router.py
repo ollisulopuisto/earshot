@@ -19,11 +19,13 @@ speaker's own waveform survives untouched; above it, invented content fills
 a space that was empty anyway. This is what LavaSR does at a fixed 4 kHz;
 here the edge moves to where the material actually stops.
 
-**How the edge is found.** Per analysis window, the noise floor is the median
-level of the top of the spectrum, where speech has nothing to contribute. The
-edge is the highest frequency whose level still stands ``EDGE_MARGIN_DB``
-above that floor. Silence has no edge and is left alone entirely — a passage
-with no speech in it should not have speech invented into it.
+**How the edge is found.** Per analysis window, the reference is the median
+level in the 300–3000 Hz speech band. The edge is the highest frequency whose
+level still stands ``CLIFF_DB`` above that reference, provided that
+content is spread across a local frequency neighbourhood. A single narrow
+whistle or codec spur no longer counts as a whole occupied band. Silence has
+no edge and is left alone entirely — a passage with no speech in it should not
+have speech invented into it.
 
 **Why the edge is smoothed.** An edge recomputed every frame jitters between
 neighbouring bins on ordinary speech, and a crossover that moves quickly is
@@ -87,6 +89,22 @@ REFERENCE_BAND_HZ = (300.0, 3000.0)
 # that band is nearly inaudible and it is where every restoration engine
 # invents anyway.
 CLIFF_DB = 40.0
+
+# A lone spectral peak can be much louder than the codec noise around it while
+# still saying nothing about whether the surrounding band survived. Count a
+# frequency as occupied only when at least this fraction of a neighbourhood
+# around it is occupied. The 400 Hz span is several voiced harmonics wide but
+# still local compared with the transitions this router follows.
+#
+# Measured at 48 kHz with the 2048-sample analysis frame on a 4 s synthetic
+# moving-pitch harmonic voice with broad formants and -70 dBFS noise. After
+# brickwall cuts, an added -30 dBFS 12 kHz tone moved the highest-bin rule's
+# 3.4 kHz edge from 3.42 kHz to 12.02 kHz; 20% occupancy over 400 Hz returned
+# 3.54 kHz. On 7 and 8 kHz cuts the new rule returned 6.91 and 7.91 kHz with
+# or without the tone. The uncut control remained pass-through in every
+# analysis frame. This is detector calibration, not a speech-quality result.
+EDGE_OCCUPANCY_HZ = 400.0
+EDGE_OCCUPANCY_FRACTION = 0.20
 
 # The crossfade around the edge, in octaves. Narrow enough that little is
 # blended, wide enough not to be a step.
@@ -182,6 +200,22 @@ class RouterEngine:
         silent = reference < -80.0
 
         occupied = power > (reference - self.margin_db)[None, :]
+        # The highest-bin rule treated one codec spur as evidence that all
+        # frequencies below it survived. Require local support, while keeping
+        # the check wide enough to cover several adjacent harmonics.
+        occupancy_bins = max(1, int(round(EDGE_OCCUPANCY_HZ / (rate / FRAME))))
+        if occupancy_bins % 2 == 0:
+            occupancy_bins += 1
+        half_span = occupancy_bins // 2
+        padded = np.pad(occupied, ((half_span, half_span), (0, 0)), mode="edge")
+        cumulative = np.pad(
+            np.cumsum(padded, axis=0, dtype=np.int16),
+            ((1, 0), (0, 0)),
+            mode="constant",
+        )
+        occupied = (
+            cumulative[occupancy_bins:] - cumulative[:-occupancy_bins]
+        ) >= (occupancy_bins * EDGE_OCCUPANCY_FRACTION)
         index = np.where(
             occupied.any(axis=0),
             occupied.shape[0] - 1 - np.argmax(occupied[::-1], axis=0),
