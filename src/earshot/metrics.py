@@ -339,9 +339,19 @@ def line_residue(error: np.ndarray, reference: np.ndarray, rate: int,
     spectrum = np.abs(np.fft.rfft(e * window)) ** 2
     freqs = np.fft.rfftfreq(len(e), 1 / rate)
     lines = np.zeros_like(freqs, dtype=bool)
-    k = 1
-    while k * fundamental < min(top, rate / 2 * 0.95):
-        lines |= np.abs(freqs - k * fundamental) <= 1.0 + 0.3 * k
-        k += 1
+    # Narrow-slice window evaluation: because freqs is strictly increasing,
+    # find each harmonic window's index range via searchsorted and evaluate
+    # the condition on that slice instead of scanning all bins for every k.
+    limit = min(top, rate / 2 * 0.95)
+    k_max = int(limit // fundamental)
+    if k_max >= 1:
+        ks = np.arange(1, k_max + 1)
+        ks = ks[ks * fundamental < limit]
+        centres = ks * fundamental
+        widths = 1.0 + 0.3 * ks
+        idx_lo = np.searchsorted(freqs, centres - widths, side="left")
+        idx_hi = np.searchsorted(freqs, centres + widths, side="right")
+        for c, w, lo_i, hi_i in zip(centres, widths, idx_lo, idx_hi):
+            lines[lo_i:hi_i] |= np.abs(freqs[lo_i:hi_i] - c) <= w
     speech = np.sum(np.abs(np.fft.rfft(r * window)) ** 2) + 1e-30
     return float(10 * np.log10(spectrum[lines].sum() / speech + 1e-30))
