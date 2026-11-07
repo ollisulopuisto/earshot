@@ -304,14 +304,35 @@ def run_all(
             ]
 
     # --- origin: filtering or invention, band by band
-    for name, band_low, band_high in BANDS:
-        if band_low >= rate / 2:
+    # The same four band filters are reused in the per-band stability probe
+    # below, so each signal is sosfilt'ed once per band instead of once per
+    # probe (restored: 8x -> 4x). The math is identical to metrics.band_correlation
+    # on the raw signals: same filter, same frames, same correlation.
+    from scipy import signal as _sig
+
+    nyquist = rate / 2
+    _soses = [
+        _sig.butter(4, [lo / nyquist, min(hi, nyquist * 0.99) / nyquist],
+                    btype="band", output="sos")
+        for _, lo, hi in BANDS
+    ]
+    _n = min(len(broken), len(restored))
+    _fb = [_sig.sosfilt(sos, np.asarray(broken)[:_n]) for sos in _soses]
+    _fr = [_sig.sosfilt(sos, np.asarray(restored)[:_n]) for sos in _soses]
+
+    for index, (name, band_low, band_high) in enumerate(BANDS):
+        if band_low >= nyquist:
             continue
+        fa, fr = _fb[index], _fr[index]
+        if np.std(fa) < 1e-12 or np.std(fr) < 1e-12:
+            correlation = float("nan")  # matches band_correlation's guard
+        else:
+            correlation = float(np.corrcoef(fa, fr)[0, 1])
         run.results.append(
             Result(
                 "origin",
                 name,
-                metrics.band_correlation(broken, restored, rate, band_low, band_high),
+                correlation,
                 "r",
                 "",
                 f"{band_low:.0f}–{band_high:.0f} Hz; ~1 filtered, ~0 synthesised",
@@ -346,19 +367,17 @@ def run_all(
     # band it invents the two runs differ by *more than the signal* (-1 dB).
     # An engine can be a pure function where it filters and a dice roll where
     # it generates, and only a per-band reading says so.
-    from scipy import signal as _sig
+    # `repeat` is filtered with the same four band filters built for origin
+    # (`_soses`/`_fr`), so `restored` is never filtered twice for one band.
+    _n2 = min(len(restored), len(repeat))
+    _fr2 = [_sig.sosfilt(sos, np.asarray(repeat)[:_n2]) for sos in _soses]
 
-    for name, band_low, band_high in BANDS:
+    for index, (name, band_low, band_high) in enumerate(BANDS):
         if band_low >= rate / 2:
             continue
-        sos = _sig.butter(
-            4, [band_low / (rate / 2), min(band_high, rate / 2 * 0.99) / (rate / 2)],
-            btype="band", output="sos",
-        )
         run.results.append(
             Result("stability", name,
-                   metrics.repeatability(_sig.sosfilt(sos, restored),
-                                         _sig.sosfilt(sos, repeat)),
+                   metrics.repeatability(_fr[index], _fr2[index]),
                    "dB", "higher",
                    f"{band_low:.0f}–{band_high:.0f} Hz; low means this band is "
                    "generated afresh each run")
