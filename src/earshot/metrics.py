@@ -20,6 +20,7 @@ That is what the thresholds in ``probes.py`` are relative to.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 
 import numpy as np
 from scipy import signal
@@ -210,6 +211,25 @@ BODY_BAND_HZ = (80.0, 250.0)
 SPEECH_BAND_HZ = (300.0, 3000.0)
 
 
+@lru_cache(maxsize=16)
+def _body_welch_plan(
+    nperseg: int, rate: int
+) -> tuple[np.ndarray, tuple[int, int], tuple[int, int]]:
+    # Cache Hann window and band bin slices: avoids re-evaluating window design
+    # and linear boolean mask scans across ~4097 bins on every metric call.
+    win = signal.windows.get_window("hann", nperseg)
+    freqs = np.fft.rfftfreq(nperseg, 1 / rate)
+    low_slice = (
+        int(np.searchsorted(freqs, BODY_BAND_HZ[0])),
+        int(np.searchsorted(freqs, BODY_BAND_HZ[1])),
+    )
+    mid_slice = (
+        int(np.searchsorted(freqs, SPEECH_BAND_HZ[0])),
+        int(np.searchsorted(freqs, SPEECH_BAND_HZ[1])),
+    )
+    return win, low_slice, mid_slice
+
+
 def body(x: np.ndarray, rate: int) -> float:
     """The level of 80–250 Hz against 300–3000 Hz, in dB.
 
@@ -218,15 +238,28 @@ def body(x: np.ndarray, rate: int) -> float:
     telephone band cuts at 300 Hz and takes this about 20 dB down (measured
     on the listening sets, 2026-10-03), which is the thinness the owner heard.
     """
-    from scipy import signal
-
     x = np.asarray(x, dtype=np.float64)
     if len(x) < 256:
         return float("nan")
-    f, p = signal.welch(x, rate, nperseg=min(8192, len(x)))
-    low = p[(f >= BODY_BAND_HZ[0]) & (f < BODY_BAND_HZ[1])].sum()
-    mid = p[(f >= SPEECH_BAND_HZ[0]) & (f < SPEECH_BAND_HZ[1])].sum()
-    return float(10 * np.log10((low + 1e-30) / (mid + 1e-30)))
+    nperseg = min(8192, len(x))
+    win, (i_lo1, i_hi1), (i_lo2, i_hi2) = _body_welch_plan(nperseg, rate)
+
+    # Welch periodogram accumulation directly into target bands:
+    # Avoids scipy.signal.welch/ShortTimeFFT overhead (allocating full
+    # 2D spectrograms, computing unused bins above 3 kHz, and scaling factors
+    # that cancel in the decibel ratio anyway).
+    hop = nperseg // 2
+    n_seg = max(1, (len(x) - hop) // hop)
+    low_sum = 0.0
+    mid_sum = 0.0
+    for p in range(n_seg):
+        seg = x[p * hop : p * hop + nperseg]
+        fft_res = np.fft.rfft((seg - seg.mean()) * win)
+        pwr = fft_res.real**2 + fft_res.imag**2
+        low_sum += pwr[i_lo1:i_hi1].sum()
+        mid_sum += pwr[i_lo2:i_hi2].sum()
+
+    return float(10 * np.log10((low_sum + 1e-30) / (mid_sum + 1e-30)))
 
 
 def speaker_similarity(a: np.ndarray, b: np.ndarray, rate: int) -> float:
