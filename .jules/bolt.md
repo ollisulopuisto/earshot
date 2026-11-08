@@ -2,6 +2,10 @@
 
 Format: `## YYYY-MM-DD - [Title]` / `**Learning:**` / `**Action:**`
 
+## 2026-11-08 - Direct Target-Band Periodogram Accumulation and Window Caching in Body Metric
+**Learning:** In audio spectral balance evaluation (`metrics.body`), calling `scipy.signal.welch(x, rate, nperseg=8192)` evaluates full Welch spectral estimation across 4097 bins via SciPy's `ShortTimeFFT` (handling generic zero-padding, complex 2D spectrogram allocations, and unused bins up to 24 kHz) just to compute the decibel ratio between two localized frequency bands: body (80–250 Hz) and speech (300–3000 Hz). In addition, full-array boolean masking `(f >= low) & (f < high)` repeatedly scans all 4097 frequency bins on every call. Caching window designs and `searchsorted` index slice bounds with `@functools.lru_cache` and accumulating periodogram powers directly into the target slice bounds bypasses SciPy's spectrogram allocations and unnecessary frequency bins, dropping `metrics.body` runtime from 44.9 ms to 14.6 ms (3.08x faster) and speeding up `probes.run_all` by ~20% (~66 ms saved across 3 body calls) while preserving bit-exact numerical results (< 1e-12 diff).
+**Action:** When evaluating energy ratios or power balance across localized spectral bands, cache window designs and boundary bin indices via `np.searchsorted`, and accumulate periodograms directly over the target slice bounds instead of running full-spectrum PSD estimators.
+
 ## 2026-11-07 - run_all re-filters `restored` 8x when 4x suffice (target selected)
 **Learning:** In `probes.run_all`, the same four BANDS filters are applied to
 `restored` once in `origin` (via `metrics.band_correlation`) and again in
