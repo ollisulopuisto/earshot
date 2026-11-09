@@ -53,3 +53,22 @@ guard), stability calls metrics.repeatability on the prefiltered signals.
 ## 2026-10-03 - Complex Baseband Filtering in Dehum Engine
 **Learning:** In audio restoration pipelines using demodulated complex baseband estimation (like `DehumEngine`), smoothing filters are evaluated thousands of times across harmonics and local offset bands. `signal.butter` has substantial overhead (designing analog filter, bilinear transform, pole-zero pairing to SOS), making repeated filter construction a major bottleneck. Furthermore, `sosfiltfilt` supports multidimensional arrays along an axis (`axis=-1`), allowing complex components to be filtered simultaneously in a single 2D pass instead of two separate passes for real and imaginary parts.
 **Action:** When applying Butterworth/SOS filtering repeatedly with fixed (bandwidth, sample_rate) parameters, cache filter coefficients with `functools.lru_cache` and stack multi-channel/complex components along a new axis to run `sosfiltfilt` once.
+
+
+## 2026-11-09 - PR #35 missing optimization restored (Instinct)
+
+Devin correctly found the original PR had no file changes. Implemented
+LineResiduePlan and one per-tonal-probe owner, with no global reference cache.
+The wrapper keeps the one-off API. Shape guards prevent accidental error/reference
+misalignment. Independent pre-plan metric tests cover odd/even lengths, 8/16/48kHz,
+50/60Hz, no harmonic bins, silence and float32/64. Spies prove one window and
+three FFTs for a before/after pair, and a single plan only for tonal damage.
+21 new regressions failed before implementation; full locked-environment suite:
+352 passed, 28 expected dependency/material skips. Offline CLI bench passes.
+The unpinned pip environment initially exposed an unrelated dynamics precision
+failure; the repo's locked uv environment, matching CI, passes that same test.
+Benchmark includes plan creation and alternates order over 20 paired trials:
+39.14ms separate vs 25.20ms shared median (1.55x), identical scores. Raw runs
+and reproduction script are committed. Synthetic execution-time evidence only,
+no restoration-quality claim or real voice upload. CI/review checked after push;
+no manual paid review, release or deployment.

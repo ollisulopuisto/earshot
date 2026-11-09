@@ -357,6 +357,51 @@ def perceptual(reference: np.ndarray, degraded: np.ndarray, rate: int) -> dict:
     return out
 
 
+class LineResiduePlan:
+    """Reference spectrum and harmonic mask shared by aligned error scores.
+
+    The plan owns only derived arrays, not the caller's reference. Its lifetime
+    is one tonal probe, so before/after reuse does not retain recordings globally.
+    """
+
+    def __init__(self, reference: np.ndarray, rate: int,
+                 fundamental: float = 50.0, top: float = 6000.0):
+        r = np.asarray(reference, dtype=np.float64)
+        if r.ndim != 1 or not len(r):
+            raise ValueError("reference must be a nonempty one-dimensional signal")
+        if not np.isfinite(fundamental) or fundamental <= 0:
+            raise ValueError("fundamental must be finite and positive")
+        if not np.isfinite(rate) or rate <= 0 or not np.isfinite(top):
+            raise ValueError("rate must be positive and rate/top must be finite")
+        self._window = np.hanning(len(r))
+        freqs = np.fft.rfftfreq(len(r), 1 / rate)
+        lines = np.zeros_like(freqs, dtype=bool)
+        # Narrow-slice window evaluation: because freqs is strictly increasing,
+        # find each harmonic window's index range via searchsorted and evaluate
+        # the condition on that slice instead of scanning all bins for every k.
+        limit = min(top, rate / 2 * 0.95)
+        k_max = int(limit // fundamental)
+        if k_max >= 1:
+            ks = np.arange(1, k_max + 1)
+            ks = ks[ks * fundamental < limit]
+            centres = ks * fundamental
+            widths = 1.0 + 0.3 * ks
+            idx_lo = np.searchsorted(freqs, centres - widths, side="left")
+            idx_hi = np.searchsorted(freqs, centres + widths, side="right")
+            for c, w, lo_i, hi_i in zip(centres, widths, idx_lo, idx_hi):
+                lines[lo_i:hi_i] |= np.abs(freqs[lo_i:hi_i] - c) <= w
+        self._lines = lines
+        self._speech = np.sum(np.abs(np.fft.rfft(r * self._window)) ** 2) + 1e-30
+
+    def score(self, error: np.ndarray) -> float:
+        """Score an error with the reference's exact shape and sample alignment."""
+        e = np.asarray(error, dtype=np.float64)
+        if e.shape != self._window.shape:
+            raise ValueError("error shape must match the reference shape")
+        spectrum = np.abs(np.fft.rfft(e * self._window)) ** 2
+        return float(10 * np.log10(spectrum[self._lines].sum() / self._speech + 1e-30))
+
+
 def line_residue(error: np.ndarray, reference: np.ndarray, rate: int,
                  fundamental: float = 50.0, top: float = 6000.0) -> float:
     """Energy of ``error`` at the harmonics of ``fundamental``, in dB of speech.
@@ -366,25 +411,4 @@ def line_residue(error: np.ndarray, reference: np.ndarray, rate: int,
     harmonic. What falls between the harmonics is not counted: that is the
     voice, and other probes answer for it.
     """
-    e = np.asarray(error, dtype=np.float64)
-    r = np.asarray(reference, dtype=np.float64)
-    window = np.hanning(len(e))
-    spectrum = np.abs(np.fft.rfft(e * window)) ** 2
-    freqs = np.fft.rfftfreq(len(e), 1 / rate)
-    lines = np.zeros_like(freqs, dtype=bool)
-    # Narrow-slice window evaluation: because freqs is strictly increasing,
-    # find each harmonic window's index range via searchsorted and evaluate
-    # the condition on that slice instead of scanning all bins for every k.
-    limit = min(top, rate / 2 * 0.95)
-    k_max = int(limit // fundamental)
-    if k_max >= 1:
-        ks = np.arange(1, k_max + 1)
-        ks = ks[ks * fundamental < limit]
-        centres = ks * fundamental
-        widths = 1.0 + 0.3 * ks
-        idx_lo = np.searchsorted(freqs, centres - widths, side="left")
-        idx_hi = np.searchsorted(freqs, centres + widths, side="right")
-        for c, w, lo_i, hi_i in zip(centres, widths, idx_lo, idx_hi):
-            lines[lo_i:hi_i] |= np.abs(freqs[lo_i:hi_i] - c) <= w
-    speech = np.sum(np.abs(np.fft.rfft(r * window)) ** 2) + 1e-30
-    return float(10 * np.log10(spectrum[lines].sum() / speech + 1e-30))
+    return LineResiduePlan(reference, rate, fundamental, top).score(error)
