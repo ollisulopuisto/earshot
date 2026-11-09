@@ -243,8 +243,9 @@ def run_all(
     tonal = [o for f, o in damage.steps if f in (degrade.hum, degrade.mains)]
     if tonal:
         fundamental = float(tonal[0].get("mains_hz", 50.0))
-        before = metrics.line_residue(broken - clean, clean, rate, fundamental)
-        after = metrics.line_residue(restored - clean, clean, rate, fundamental)
+        plan = metrics.LineResiduePlan(clean, rate, fundamental)
+        before = plan.score(broken - clean)
+        after = plan.score(restored - clean)
         run.results += [
             Result("tonal", "before", before, "dB", "lower",
                    "error at the mains harmonics, relative to the speech"),

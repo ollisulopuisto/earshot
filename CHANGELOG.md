@@ -4,6 +4,14 @@ What each version contains, for whoever runs the bench or restores a file
 with it. Versions are CalVer (`vYY.MM.DD.N`). Entries up to v26.10.02.1 were
 written afterwards from `git log`; the commit messages carry the numbers.
 
+## [Unreleased]
+
+- Reuse one reference FFT, Hann window and harmonic mask for the tonal probe's
+  before/after scores. Synthetic 10-second 48kHz pair benchmark: median
+  39.14ms to 25.20ms (1.55x), including plan setup; scores unchanged.
+  Reproduce with `uv run python scripts/benchmark_line_residue_plan.py`;
+  raw runs are in `results/2026-11-09-line-residue-plan.json`.
+
 ## [v26.10.04.1] - 2026-10-04
 
 - `route`: measures each input and sends each kind of damage to the engine
