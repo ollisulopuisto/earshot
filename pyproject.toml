@@ -46,7 +46,7 @@ novasr = [
 unipase = ["torch>=2.15.0", "torchaudio>=2.11.1", "omegaconf>=2.4.0", "einops>=0.7"]
 # Sidon: TorchScript exports, and transformers only for the SeamlessM4T
 # filterbank front end.
-sidon = ["torch>=2.15.0", "torchaudio>=2.11.1", "transformers>=5.22.0"]
+sidon = ["torch>=2.15.0", "torchaudio>=2.11.1", "transformers>=5.22.1"]
 # MossFormer2 SE 48K (ClearerVoice-Studio, Apache-2.0): the network is
 # vendored; it imports rotary-embedding-torch, and torchinfo at module level.
 mossformer2 = ["torch>=2.15.0", "torchaudio>=2.11.1", "rotary-embedding-torch>=0.8", "torchinfo>=1.8"]
