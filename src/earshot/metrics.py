@@ -47,14 +47,20 @@ class LogSpectralDistancePlan:
         match_level: bool = True,
     ):
         r = np.asarray(reference)
-        if r.ndim != 1 or len(r) == 0:
-            raise ValueError("reference must be a nonempty one-dimensional signal")
+        if r.ndim != 1:
+            raise ValueError("reference must be a one-dimensional signal")
         if not np.isfinite(rate) or rate <= 0:
             raise ValueError("rate must be positive and finite")
         self._length = len(r)
         self._rate = rate
         self._match_level = match_level
-        self._ref_rms = float(np.sqrt(np.mean(r**2)) + 1e-12)
+        self._ref_rms = float(np.sqrt(np.mean(r**2)) + 1e-12) if len(r) > 0 else 0.0
+
+        if len(r) == 0:
+            self._valid = False
+            self._lb = None
+            self._mask = np.zeros(0, dtype=bool)
+            return
 
         freqs = np.fft.rfftfreq(1024, 1 / rate)
         mask = np.ones(len(freqs), dtype=bool)
@@ -74,9 +80,6 @@ class LogSpectralDistancePlan:
 
     def score(self, x: np.ndarray) -> float:
         """Score an audio signal with the reference's exact shape and sample alignment."""
-        # Alignment is the contract the whole bench rests on, so it is
-        # checked before anything can return: an empty band makes the score
-        # NaN, but it must not let a misaligned signal slip the shape guard.
         arr = np.asarray(x)
         if arr.shape != (self._length,):
             raise ValueError(
@@ -124,8 +127,6 @@ def log_spectral_distance(
     and the bench should show it.
     """
     n = min(len(a), len(b))
-    # No samples means nothing to measure. NaN, not a raise and not zero:
-    # zero would read as a perfect restoration of an absent signal.
     if n == 0:
         return float("nan")
     return LogSpectralDistancePlan(
