@@ -7,7 +7,9 @@
 #include <iostream>
 #include <fstream>
 #include <atomic>
+#include <thread>
 #include <chrono>
+#include <random>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -18,36 +20,12 @@
 #define mkdir_compat(dir) mkdir(dir, 0755)
 #endif
 
-// ARA extension declarations
-static CLAP_CONSTEXPR const char CLAP_EXT_ARA_FACTORY[] = "org.ara-audio.ara.factory/2";
-static CLAP_CONSTEXPR const char CLAP_EXT_ARA_PLUGINEXTENSION[] = "org.ara-audio.ara.pluginextension/2";
-#define CLAP_PLUGIN_FEATURE_ARA_SUPPORTED "ara:supported"
-
-typedef void *ARAFactoryPtr;
-typedef void *ARAPlugInExtensionInstancePtr;
-typedef void *ARADocumentControllerRef;
-typedef int32_t ARAPlugInInstanceRoleFlags;
-
-typedef struct clap_ara_factory {
-    uint32_t(CLAP_ABI *get_factory_count)(const struct clap_ara_factory *factory);
-    ARAFactoryPtr(CLAP_ABI *get_ara_factory)(const struct clap_ara_factory *factory, uint32_t index);
-    const char *(CLAP_ABI *get_plugin_id)(const struct clap_ara_factory *factory, uint32_t index);
-} clap_ara_factory_t;
-
-typedef struct clap_ara_plugin_extension {
-    ARAFactoryPtr(CLAP_ABI *get_factory)(const clap_plugin_t *plugin);
-    ARAPlugInExtensionInstancePtr(CLAP_ABI *bind_to_document_controller)(
-        const clap_plugin_t *plugin, ARADocumentControllerRef documentControllerRef,
-        ARAPlugInInstanceRoleFlags knownRoles, ARAPlugInInstanceRoleFlags assignedRoles);
-} clap_ara_plugin_extension_t;
-
 static const char *features[] = {
     CLAP_PLUGIN_FEATURE_AUDIO_EFFECT,
     CLAP_PLUGIN_FEATURE_MONO,
     CLAP_PLUGIN_FEATURE_STEREO,
     CLAP_PLUGIN_FEATURE_RESTORATION,
     CLAP_PLUGIN_FEATURE_UTILITY,
-    CLAP_PLUGIN_FEATURE_ARA_SUPPORTED,
     nullptr
 };
 
@@ -60,7 +38,7 @@ static const clap_plugin_descriptor_t s_bridge_desc = {
     "",
     "",
     "0.1.0",
-    "Audio bridge plugin for earshot speech restoration (VST3, AU, ARA2, AAX)",
+    "Audio bridge plugin for earshot speech restoration",
     &features[0]
 };
 
@@ -156,23 +134,20 @@ struct WavWriter {
                 monoData[i] = sum / channels;
             }
             return true;
-        } else if (format == 1) { // PCM 16 or 24
-            uint32_t bytesPerSample = (dataSize / channels) / (dataSize / (channels * 2));
-            if (bytesPerSample == 2) {
-                uint32_t totalSamples = dataSize / 2;
-                std::vector<int16_t> all(totalSamples);
-                in.read(reinterpret_cast<char*>(all.data()), dataSize);
-                uint32_t frames = totalSamples / channels;
-                monoData.resize(frames);
-                for (uint32_t i = 0; i < frames; ++i) {
-                    float sum = 0.0f;
-                    for (uint16_t c = 0; c < channels; ++c) {
-                        sum += all[i * channels + c] / 32768.0f;
-                    }
-                    monoData[i] = sum / channels;
+        } else if (format == 1) { // PCM 16
+            uint32_t totalSamples = dataSize / 2;
+            std::vector<int16_t> all(totalSamples);
+            in.read(reinterpret_cast<char*>(all.data()), dataSize);
+            uint32_t frames = totalSamples / channels;
+            monoData.resize(frames);
+            for (uint32_t i = 0; i < frames; ++i) {
+                float sum = 0.0f;
+                for (uint16_t c = 0; c < channels; ++c) {
+                    sum += all[i * channels + c] / 32768.0f;
                 }
-                return true;
+                monoData[i] = sum / channels;
             }
+            return true;
         }
         return false;
     }
@@ -185,13 +160,18 @@ typedef struct {
     double sample_rate;
 
     std::atomic<bool> capturing { false };
+    std::atomic<bool> trigger_restore_flag { false };
+    std::atomic<bool> restoring_in_background { false };
     std::atomic<bool> playing_restored { false };
+
     std::vector<float> captured_buffer;
     std::vector<float> restored_buffer;
     size_t playback_pos { 0 };
 
-    std::string bridge_dir { "/tmp/earshot_bridge" };
+    std::string instance_id;
+    std::string bridge_dir;
     std::string engine { "route" };
+    std::thread worker_thread;
 } earshot_bridge_plug_t;
 
 ///////////////////////////////////
@@ -291,29 +271,36 @@ static bool bridge_params_get_info(const clap_plugin_t *plugin, uint32_t param_i
     return false;
 }
 
-static bool bridge_trigger_restore(earshot_bridge_plug_t *plug) {
-    if (plug->captured_buffer.empty()) return false;
+static void bridge_start_restore_worker(earshot_bridge_plug_t *plug) {
+    if (plug->restoring_in_background.load() || plug->captured_buffer.empty()) return;
 
-    mkdir_compat(plug->bridge_dir.c_str());
-    std::string in_wav = plug->bridge_dir + "/selection_in.wav";
-    std::string out_wav = plug->bridge_dir + "/selection_out.wav";
-
-    if (!WavWriter::writeWavHeaderAndData(in_wav, plug->captured_buffer, static_cast<int>(plug->sample_rate))) {
-        return false;
+    plug->restoring_in_background.store(true);
+    if (plug->worker_thread.joinable()) {
+        plug->worker_thread.join();
     }
 
-    std::ostringstream cmd;
-    cmd << "earshot restore \"" << in_wav << "\" -o \"" << out_wav << "\" --engine " << plug->engine;
-    int rc = std::system(cmd.str().c_str());
-    if (rc != 0) return false;
+    plug->worker_thread = std::thread([plug]() {
+        mkdir_compat("/tmp/earshot_bridge");
+        mkdir_compat(plug->bridge_dir.c_str());
+        std::string in_wav = plug->bridge_dir + "/selection_in.wav";
+        std::string out_wav = plug->bridge_dir + "/selection_out.wav";
 
-    int sr = 0;
-    if (WavWriter::readWavData(out_wav, plug->restored_buffer, sr)) {
-        plug->playback_pos = 0;
-        plug->playing_restored.store(true);
-        return true;
-    }
-    return false;
+        if (WavWriter::writeWavHeaderAndData(in_wav, plug->captured_buffer, static_cast<int>(plug->sample_rate))) {
+            std::ostringstream cmd;
+            cmd << "earshot restore \"" << in_wav << "\" -o \"" << out_wav << "\" --engine " << plug->engine;
+            int rc = std::system(cmd.str().c_str());
+            if (rc == 0) {
+                int sr = 0;
+                std::vector<float> restored;
+                if (WavWriter::readWavData(out_wav, restored, sr)) {
+                    plug->restored_buffer = std::move(restored);
+                    plug->playback_pos = 0;
+                    plug->playing_restored.store(true);
+                }
+            }
+        }
+        plug->restoring_in_background.store(false);
+    });
 }
 
 static bool bridge_params_get_value(const clap_plugin_t *plugin, clap_id param_id, double *out_value) {
@@ -358,7 +345,7 @@ static void bridge_handle_param_event(earshot_bridge_plug_t *plug, const clap_ev
             }
         } else if (ev->param_id == PARAM_RESTORE) {
             if (ev->value >= 0.5) {
-                bridge_trigger_restore(plug);
+                plug->trigger_restore_flag.store(true);
             }
         }
     }
@@ -373,6 +360,9 @@ static void bridge_params_flush(const clap_plugin_t *plugin,
         const auto *hdr = in->get(in, i);
         bridge_handle_param_event(plug, hdr);
     }
+    if (plug->trigger_restore_flag.exchange(false)) {
+        bridge_start_restore_worker(plug);
+    }
 }
 
 static const clap_plugin_params_t s_bridge_params = {
@@ -384,25 +374,6 @@ static const clap_plugin_params_t s_bridge_params = {
     bridge_params_flush
 };
 
-/////////////////////////////////
-// ARA2 plugin extension stubs //
-/////////////////////////////////
-
-static ARAFactoryPtr bridge_ara_get_factory(const clap_plugin_t *plugin) {
-    return nullptr;
-}
-
-static ARAPlugInExtensionInstancePtr bridge_ara_bind_to_document_controller(
-    const clap_plugin_t *plugin, ARADocumentControllerRef documentControllerRef,
-    ARAPlugInInstanceRoleFlags knownRoles, ARAPlugInInstanceRoleFlags assignedRoles) {
-    return nullptr;
-}
-
-static const clap_ara_plugin_extension_t s_bridge_ara_extension = {
-    bridge_ara_get_factory,
-    bridge_ara_bind_to_document_controller
-};
-
 static bool bridge_init(const struct clap_plugin *plugin) {
     auto *plug = (earshot_bridge_plug_t *)plugin->plugin_data;
     plug->channels = 1;
@@ -412,6 +383,9 @@ static bool bridge_init(const struct clap_plugin *plugin) {
 
 static void bridge_destroy(const struct clap_plugin *plugin) {
     auto *plug = (earshot_bridge_plug_t *)plugin->plugin_data;
+    if (plug->worker_thread.joinable()) {
+        plug->worker_thread.join();
+    }
     delete plug;
 }
 
@@ -443,6 +417,10 @@ static clap_process_status bridge_process(const struct clap_plugin *plugin,
             const auto *hdr = process->in_events->get(process->in_events, i);
             bridge_handle_param_event(plug, hdr);
         }
+    }
+
+    if (plug->trigger_restore_flag.exchange(false)) {
+        bridge_start_restore_worker(plug);
     }
 
     if (process->audio_inputs_count == 0 || process->audio_outputs_count == 0) {
@@ -503,7 +481,6 @@ static const void *bridge_get_extension(const struct clap_plugin *plugin, const 
     if (!strcmp(id, CLAP_EXT_AUDIO_PORTS)) return &s_bridge_audio_ports;
     if (!strcmp(id, CLAP_EXT_CONFIGURABLE_AUDIO_PORTS)) return &s_bridge_configurable_audio_ports;
     if (!strcmp(id, CLAP_EXT_PARAMS)) return &s_bridge_params;
-    if (!strcmp(id, CLAP_EXT_ARA_PLUGINEXTENSION)) return &s_bridge_ara_extension;
     return nullptr;
 }
 
@@ -514,6 +491,12 @@ clap_plugin_t *create_earshot_bridge_plugin(const clap_host_t *host) {
     plug->host = host;
     plug->channels = 1;
     plug->sample_rate = 48000.0;
+
+    // Generate unique instance directory to prevent file collisions
+    uint64_t random_val = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    plug->instance_id = std::to_string(random_val);
+    plug->bridge_dir = "/tmp/earshot_bridge/" + plug->instance_id;
+
     plug->plugin.desc = &s_bridge_desc;
     plug->plugin.plugin_data = plug;
     plug->plugin.init = bridge_init;
@@ -551,28 +534,6 @@ static const clap_plugin_factory_t s_bridge_factory = {
     bridge_factory_create_plugin
 };
 
-//////////////////////////////////////
-// ARA2 factory extension at entry  //
-//////////////////////////////////////
-
-static uint32_t bridge_ara_factory_get_count(const struct clap_ara_factory *factory) {
-    return 1;
-}
-
-static ARAFactoryPtr bridge_ara_factory_get_factory(const struct clap_ara_factory *factory, uint32_t index) {
-    return nullptr;
-}
-
-static const char *bridge_ara_factory_get_plugin_id(const struct clap_ara_factory *factory, uint32_t index) {
-    return s_bridge_desc.id;
-}
-
-static const clap_ara_factory_t s_bridge_ara_factory = {
-    bridge_ara_factory_get_count,
-    bridge_ara_factory_get_factory,
-    bridge_ara_factory_get_plugin_id
-};
-
 bool earshot_bridge_entry_init(const char *plugin_path) {
     return true;
 }
@@ -581,6 +542,5 @@ void earshot_bridge_entry_deinit(void) {}
 
 const void *earshot_bridge_entry_get_factory(const char *factory_id) {
     if (!strcmp(factory_id, CLAP_PLUGIN_FACTORY_ID)) return &s_bridge_factory;
-    if (!strcmp(factory_id, CLAP_EXT_ARA_FACTORY)) return &s_bridge_ara_factory;
     return nullptr;
 }

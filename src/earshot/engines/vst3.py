@@ -69,7 +69,7 @@ class VST3Engine:
         return self.plugin.process(block, rate, reset=True)[0]
 
 
-def _load_plugin_engine(argument: str, scheme: str) -> Loaded:
+def _load_plugin_engine(argument: str) -> Loaded:
     path, _, query = argument.partition("?")
     parameters = {}
     for pair in filter(None, query.split("&")):
@@ -90,13 +90,13 @@ def _load_plugin_engine(argument: str, scheme: str) -> Loaded:
 @register("vst3")
 def _load_vst3(argument: str) -> Loaded:
     """``vst3:/path/to/Thing.vst3`` or ``vst3:/path/to/Thing.vst3?mix=100``."""
-    return _load_plugin_engine(argument, "vst3")
+    return _load_plugin_engine(argument)
 
 
 @register("au")
 def _load_au(argument: str) -> Loaded:
     """``au:/path/to/Thing.component`` or ``au:/path/to/Thing.component?mix=100``."""
-    return _load_plugin_engine(argument, "au")
+    return _load_plugin_engine(argument)
 
 
 @register("ara2")

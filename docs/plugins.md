@@ -52,7 +52,7 @@ Located in `plugin/earshot_bridge/`, the bridge plugin compiles into native plug
 - **Formats supported:**
   - **VST3:** For Reaper, Ableton Live, Bitwig, Cubase, Studio One (Linux, macOS, Windows).
   - **AU (AUv2):** For Logic Pro, Ableton Live, Reaper on macOS.
-  - **ARA2:** ARA companion factory extension enabled for hosts supporting ARA (Reaper, Logic Pro, Studio One).
+  - **ARA2:** Direct timeline integration extension (in research/specification phase for DAWs supporting ARA2 like Reaper, Logic Pro, Studio One).
   - **AAX:** For Pro Tools (macOS and Windows when configured with Avid AAX SDK).
 - **Building:**
   ```bash

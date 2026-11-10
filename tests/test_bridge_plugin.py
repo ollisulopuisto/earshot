@@ -1,7 +1,5 @@
 from pathlib import Path
 import os
-import shutil
-import subprocess
 import pytest
 import numpy as np
 import soundfile as sf
@@ -11,24 +9,10 @@ from earshot.engines.vst3 import VST3Engine
 
 @pytest.fixture(scope="module")
 def built_bridge_vst3():
+    pytest.importorskip("pedalboard", reason="the vst3 engine needs the 'vst3' extra")
     plugin_path = Path("plugin/earshot_bridge/build/Release/EarshotBridge.vst3")
     if not plugin_path.exists():
-        # Build it if cmake and tools are available
-        if shutil.which("cmake"):
-            build_dir = Path("plugin/earshot_bridge/build")
-            res = subprocess.run(
-                ["cmake", "-B", str(build_dir), "-S", "plugin/earshot_bridge"],
-                capture_output=True,
-                text=True,
-            )
-            if res.returncode == 0:
-                subprocess.run(
-                    ["cmake", "--build", str(build_dir)],
-                    capture_output=True,
-                    text=True,
-                )
-    if not plugin_path.exists():
-        pytest.skip("EarshotBridge.vst3 could not be built in this environment")
+        pytest.skip("EarshotBridge.vst3 is not built")
     return str(plugin_path)
 
 
