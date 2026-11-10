@@ -36,7 +36,6 @@ can rank without knowing what any of it means.
 
 from __future__ import annotations
 
-import os
 import resource
 import time
 from dataclasses import dataclass, field
@@ -224,8 +223,9 @@ def run_all(
     # --- recovery: how close to the original, in the band the damage hit
     low, high = reference_band or _damaged_band(damage, rate)
     if high > low:
-        before = metrics.log_spectral_distance(broken, clean, rate, low, high)
-        after = metrics.log_spectral_distance(restored, clean, rate, low, high)
+        plan = metrics.LogSpectralDistancePlan(clean, rate, low, high)
+        before = plan.score(broken)
+        after = plan.score(restored)
         run.results += [
             Result("recovery", "lsd_before", before, "dB", "lower",
                    f"{low:.0f}–{high:.0f} Hz, damaged vs clean"),

@@ -30,6 +30,65 @@ def rms_db(x: np.ndarray) -> float:
     return float(20 * np.log10(np.sqrt(np.mean(np.asarray(x) ** 2)) + 1e-12))
 
 
+class LogSpectralDistancePlan:
+    """Reference spectrum and band mask shared by aligned distance scores.
+
+    The plan owns only derived arrays and parameters, not the caller's reference.
+    Its lifetime is one recovery probe, so before/after reuse does not retain
+    recordings globally.
+    """
+
+    def __init__(
+        self,
+        reference: np.ndarray,
+        rate: int,
+        low: float = 0.0,
+        high: float = 0.0,
+        match_level: bool = True,
+    ):
+        r = np.asarray(reference)
+        if r.ndim != 1 or len(r) == 0:
+            raise ValueError("reference must be a nonempty one-dimensional signal")
+        if not np.isfinite(rate) or rate <= 0:
+            raise ValueError("rate must be positive and finite")
+        self._length = len(r)
+        self._rate = rate
+        self._match_level = match_level
+        self._ref_rms = float(np.sqrt(np.mean(r**2)) + 1e-12)
+
+        freqs = np.fft.rfftfreq(1024, 1 / rate)
+        mask = np.ones(len(freqs), dtype=bool)
+        if high:
+            mask &= freqs < high
+        if low:
+            mask &= freqs >= low
+        self._mask = mask
+
+        if not mask.any():
+            self._valid = False
+            self._lb = None
+        else:
+            self._valid = True
+            _, _, B = signal.stft(r, rate, nperseg=1024)
+            self._lb = 10 * np.log10(np.abs(B[mask]) ** 2 + 1e-10)
+
+    def score(self, x: np.ndarray) -> float:
+        """Score an audio signal with the reference's exact shape and sample alignment."""
+        if not self._valid:
+            return float("nan")
+        arr = np.asarray(x)
+        if arr.shape != (self._length,):
+            raise ValueError(
+                f"signal shape {arr.shape} must match reference shape ({self._length},)"
+            )
+        if self._match_level:
+            scale = self._ref_rms / (np.sqrt(np.mean(arr**2)) + 1e-12)
+            arr = arr * scale
+        _, _, A = signal.stft(arr, self._rate, nperseg=1024)
+        la = 10 * np.log10(np.abs(A[self._mask]) ** 2 + 1e-10)
+        return float(np.sqrt(((la - self._lb) ** 2).mean()))
+
+
 def log_spectral_distance(
     a: np.ndarray,
     b: np.ndarray,
@@ -62,23 +121,9 @@ def log_spectral_distance(
     and the bench should show it.
     """
     n = min(len(a), len(b))
-    x, y = np.asarray(a)[:n], np.asarray(b)[:n]
-    if match_level:
-        scale = (np.sqrt(np.mean(y**2)) + 1e-12) / (np.sqrt(np.mean(x**2)) + 1e-12)
-        x = x * scale
-    _, _, A = signal.stft(x, rate, nperseg=1024)
-    _, _, B = signal.stft(y, rate, nperseg=1024)
-    freqs = np.fft.rfftfreq(1024, 1 / rate)
-    mask = np.ones(len(freqs), dtype=bool)
-    if high:
-        mask &= freqs < high
-    if low:
-        mask &= freqs >= low
-    if not mask.any():
-        return float("nan")
-    la = 10 * np.log10(np.abs(A[mask]) ** 2 + 1e-10)
-    lb = 10 * np.log10(np.abs(B[mask]) ** 2 + 1e-10)
-    return float(np.sqrt(((la - lb) ** 2).mean()))
+    return LogSpectralDistancePlan(
+        np.asarray(b)[:n], rate, low=low, high=high, match_level=match_level
+    ).score(np.asarray(a)[:n])
 
 
 def band_correlation(
