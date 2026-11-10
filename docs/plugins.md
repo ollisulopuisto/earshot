@@ -49,10 +49,10 @@ Everything in earshot is offline by construction:
 
 ### Architecture: The Bridge Plugin (`plugin/earshot_bridge`)
 Located in `plugin/earshot_bridge/`, the bridge plugin compiles into native plugin targets:
-- **Formats supported:**
-  - **VST3:** For Reaper, Ableton Live, Bitwig, Cubase, Studio One (Linux, macOS, Windows).
+- **Format targets (not all host-tested):**
+  - **VST3:** Wrapper target for Reaper, Ableton Live, Bitwig, Cubase and Studio One. The native bridge repair is tested on Linux; Windows packaging is not verified.
   - **AU (AUv2):** For Logic Pro, Ableton Live, Reaper on macOS.
-  - **ARA2:** Direct timeline integration extension (in research/specification phase for DAWs supporting ARA2 like Reaper, Logic Pro, Studio One).
+  - **ARA2:** Not implemented. No ARA factory is advertised; this plugin cannot access a DAW-selected clip through ARA.
   - **AAX:** For Pro Tools (macOS and Windows when configured with Avid AAX SDK).
 - **Building:**
   ```bash
@@ -60,6 +60,11 @@ Located in `plugin/earshot_bridge/`, the bridge plugin compiles into native plug
   cmake --build plugin/earshot_bridge/build
   ```
 - **Workflow:**
-  1. The user inserts `Earshot Bridge` in their DAW or ARA clip editor.
-  2. The bridge passes audio transparently during playback.
-  3. For offline restoration, the bridge hands the selected audio to `earshot.cli restore`, which computes the restoration sample-accurately and returns the audio to the DAW track in-place.
+  1. Insert `Earshot Bridge` as an effect. Enable Capture Selection and play the desired audio, then disable capture (maximum 60 seconds, float32 input, downmixed to mono).
+  2. Trigger Restore With Earshot. A persistent background worker runs the local `earshot restore` command; no subprocess, thread creation, join, or file access runs in the audio callback. A new capture while that job owns the captured samples is refused. Private recordings live in an atomic mode-0700 temporary directory per instance, removed on destruction.
+  3. The result is not inserted as a DAW clip and does not start playing when processing completes. Seek back and play the captured region again: the plugin replaces only matching host timeline samples. A host must supply a seconds timeline and playing state; without that information, or after a discontinuous capture, the plugin remains passthrough. Stopping, seeking and reset never advance an independent playback counter.
+  4. The replacement is mono on each output channel. Float64 audio remains passthrough, and mismatched output sample rates or sample counts are rejected. AU/AAX wrapper builds, real DAW transport behavior and ARA integration are not verified by the Linux native tests.
+
+### Native safety and workflow tests
+
+The existing tests workflow builds the C++ tests with AddressSanitizer/UndefinedBehaviorSanitizer, independently of any VST3 bundle. `wav_io_test.cpp` covers odd-size PCM24 (the old decoder overran its allocation), PCM16/32, float32, stereo downmix, partial frames and truncated files. `bridge_state_test.cpp` uses a local fake CLI, waits for the background job, checks the real per-instance directory and tests immutable capture ownership, new capture while a prior result plays, delayed completion, seek/reset and missing transport. A separate local ThreadSanitizer run checks the threaded handoff. No model or restoration service is called by these tests.
