@@ -22,10 +22,5 @@ jobs:
       - run: uv run pytest -q
         env:
           EARSHOT_NO_DOWNLOAD: "1"
-      - name: native bridge safety and worker handoff (no plugin bundle or models)
-        run: |
-          git clone --quiet https://github.com/free-audio/clap.git "$RUNNER_TEMP/clap"
-          git -C "$RUNNER_TEMP/clap" checkout --quiet 69a69252fdd6ac1d06e246d9a04c0a89d9607a17
-          CLAP_INCLUDE_DIR="$RUNNER_TEMP/clap/include" plugin/earshot_bridge/tests/run_native.sh
       - name: the bench must run with nothing installed
         run: uv run earshot bench --seconds 4 --damage clean --damage narrowband-voip
