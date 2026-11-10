@@ -88,7 +88,8 @@ def test_plan_owns_derived_reference_state_and_reuses_stft():
 
     assert score1 == pytest.approx(expected1, rel=1e-12, abs=1e-12)
     assert score2 == pytest.approx(expected2, rel=1e-12, abs=1e-12)
-    # Exactly 3 STFT calls: 1 for reference upon plan creation, 1 for sig1, 1 for sig2
+    # Hoisting exists to compute the reference STFT once per plan, so the
+    # call count is the reuse contract: a fourth call means it regressed.
     assert stft_mock.call_count == 3
 
 
@@ -110,12 +111,14 @@ def test_validation_and_shape_guards():
     plan = metrics.LogSpectralDistancePlan(np.ones(1024), 16000)
     assert plan.score(np.ones(1024)) == pytest.approx(0.0, abs=1e-12)
 
-    # Score shape mismatch
+    # The bench compares sample against sample, so a misaligned signal is a
+    # contract violation (raise), never a score.
     for bad_sig in [np.zeros(1023), np.zeros(1025), np.zeros((1024, 1))]:
         with pytest.raises(ValueError, match="shape"):
             plan.score(bad_sig)
 
-    # Plan initialization validation
+    # A plan built on a malformed reference or rate cannot measure anything;
+    # failing at construction keeps the error at the call that caused it.
     for bad_ref in [np.zeros((1024, 1)), np.zeros((2, 2))]:
         with pytest.raises(ValueError, match="reference"):
             metrics.LogSpectralDistancePlan(bad_ref, 16000)
@@ -124,10 +127,15 @@ def test_validation_and_shape_guards():
         with pytest.raises(ValueError, match="rate"):
             metrics.LogSpectralDistancePlan(np.zeros(1024), bad_rate)
 
-    # Invalid empty frequency band returns nan
+    # An empty band leaves no bins to compare. NaN rather than zero, so the
+    # score can never read as a perfect restoration - but the shape guard
+    # still fires first, because misalignment stays a contract violation
+    # even when there is nothing to measure.
     nan_plan = metrics.LogSpectralDistancePlan(np.ones(1024), 16000, low=10000, high=5000)
     assert np.isnan(nan_plan.score(np.ones(1024)))
     assert np.isnan(metrics.log_spectral_distance(np.ones(1024), np.ones(1024), 16000, low=10000, high=5000))
+    with pytest.raises(ValueError, match="shape"):
+        nan_plan.score(np.ones(512))
 
 
 def test_probe_uses_one_plan_for_recovery():

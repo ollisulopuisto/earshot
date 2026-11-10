@@ -80,6 +80,9 @@ class LogSpectralDistancePlan:
 
     def score(self, x: np.ndarray) -> float:
         """Score an audio signal with the reference's exact shape and sample alignment."""
+        # Alignment is the contract the whole bench rests on, so it is
+        # checked before anything can return: an empty band makes the score
+        # NaN, but it must not let a misaligned signal slip the shape guard.
         arr = np.asarray(x)
         if arr.shape != (self._length,):
             raise ValueError(
@@ -127,6 +130,8 @@ def log_spectral_distance(
     and the bench should show it.
     """
     n = min(len(a), len(b))
+    # No samples means nothing to measure. NaN, not a raise and not zero:
+    # zero would read as a perfect restoration of an absent signal.
     if n == 0:
         return float("nan")
     return LogSpectralDistancePlan(
