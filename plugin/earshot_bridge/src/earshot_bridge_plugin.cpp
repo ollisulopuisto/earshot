@@ -10,15 +10,15 @@
 #include <thread>
 #include <chrono>
 #include <random>
+#include <filesystem>
+#include <cmath>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#if defined(_WIN32)
-#include <direct.h>
-#define mkdir_compat(dir) _mkdir(dir)
-#else
-#define mkdir_compat(dir) mkdir(dir, 0755)
-#endif
+#include <spawn.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <cerrno>
+extern char **environ;
 
 static const char *features[] = {
     CLAP_PLUGIN_FEATURE_AUDIO_EFFECT,
@@ -49,109 +49,7 @@ enum {
     PARAM_COUNT = 2
 };
 
-struct WavWriter {
-    static bool writeWavHeaderAndData(const std::string& path, const std::vector<float>& monoData, int sampleRate) {
-        std::ofstream out(path, std::ios::binary);
-        if (!out) return false;
-
-        uint32_t numSamples = static_cast<uint32_t>(monoData.size());
-        uint32_t byteRate = sampleRate * 4;
-        uint32_t dataSize = numSamples * 4;
-        uint32_t chunkSize = 36 + dataSize;
-        uint16_t numChannels = 1;
-        uint16_t bitsPerSample = 32;
-        uint16_t audioFormat = 3; // IEEE float
-        uint16_t blockAlign = 4;
-        uint32_t subchunk1Size = 16;
-
-        out.write("RIFF", 4);
-        out.write(reinterpret_cast<const char*>(&chunkSize), 4);
-        out.write("WAVE", 4);
-        out.write("fmt ", 4);
-        out.write(reinterpret_cast<const char*>(&subchunk1Size), 4);
-        out.write(reinterpret_cast<const char*>(&audioFormat), 2);
-        out.write(reinterpret_cast<const char*>(&numChannels), 2);
-        uint32_t sr = static_cast<uint32_t>(sampleRate);
-        out.write(reinterpret_cast<const char*>(&sr), 4);
-        out.write(reinterpret_cast<const char*>(&byteRate), 4);
-        out.write(reinterpret_cast<const char*>(&blockAlign), 2);
-        out.write(reinterpret_cast<const char*>(&bitsPerSample), 2);
-        out.write("data", 4);
-        out.write(reinterpret_cast<const char*>(&dataSize), 4);
-        if (!monoData.empty()) {
-            out.write(reinterpret_cast<const char*>(monoData.data()), dataSize);
-        }
-        return true;
-    }
-
-    static bool readWavData(const std::string& path, std::vector<float>& monoData, int& sampleRate) {
-        std::ifstream in(path, std::ios::binary);
-        if (!in) return false;
-
-        char id[4];
-        in.read(id, 4);
-        if (strncmp(id, "RIFF", 4) != 0) return false;
-        uint32_t fileSize = 0;
-        in.read(reinterpret_cast<char*>(&fileSize), 4);
-        in.read(id, 4);
-        if (strncmp(id, "WAVE", 4) != 0) return false;
-
-        uint16_t format = 0;
-        uint16_t channels = 0;
-        uint32_t sr = 0;
-        uint32_t dataSize = 0;
-
-        while (in.read(id, 4)) {
-            uint32_t subchunkSize = 0;
-            in.read(reinterpret_cast<char*>(&subchunkSize), 4);
-            if (strncmp(id, "fmt ", 4) == 0) {
-                in.read(reinterpret_cast<char*>(&format), 2);
-                in.read(reinterpret_cast<char*>(&channels), 2);
-                in.read(reinterpret_cast<char*>(&sr), 4);
-                sampleRate = static_cast<int>(sr);
-                in.seekg(subchunkSize - 8, std::ios::cur);
-            } else if (strncmp(id, "data", 4) == 0) {
-                dataSize = subchunkSize;
-                break;
-            } else {
-                in.seekg(subchunkSize, std::ios::cur);
-            }
-        }
-
-        if (dataSize == 0 || channels == 0) return false;
-
-        if (format == 3) { // IEEE Float
-            uint32_t totalFloats = dataSize / 4;
-            std::vector<float> all(totalFloats);
-            in.read(reinterpret_cast<char*>(all.data()), dataSize);
-            uint32_t frames = totalFloats / channels;
-            monoData.resize(frames);
-            for (uint32_t i = 0; i < frames; ++i) {
-                float sum = 0.0f;
-                for (uint16_t c = 0; c < channels; ++c) {
-                    sum += all[i * channels + c];
-                }
-                monoData[i] = sum / channels;
-            }
-            return true;
-        } else if (format == 1) { // PCM 16
-            uint32_t totalSamples = dataSize / 2;
-            std::vector<int16_t> all(totalSamples);
-            in.read(reinterpret_cast<char*>(all.data()), dataSize);
-            uint32_t frames = totalSamples / channels;
-            monoData.resize(frames);
-            for (uint32_t i = 0; i < frames; ++i) {
-                float sum = 0.0f;
-                for (uint16_t c = 0; c < channels; ++c) {
-                    sum += all[i * channels + c] / 32768.0f;
-                }
-                monoData[i] = sum / channels;
-            }
-            return true;
-        }
-        return false;
-    }
-};
+#include "wav_io.h"
 
 typedef struct {
     clap_plugin_t plugin;
@@ -166,9 +64,17 @@ typedef struct {
 
     std::vector<float> captured_buffer;
     std::vector<float> restored_buffer;
-    size_t playback_pos { 0 };
 
-    std::string instance_id;
+    // Audio owns capture while job_pending is false; the worker only reads it
+    // after the audio thread publishes a job. New capture is refused until done.
+    std::atomic<bool> job_pending { false };
+    std::atomic<bool> result_ready { false };
+    std::atomic<bool> stop_worker { false };
+    std::vector<float> pending_result;
+    int64_t capture_start { 0 }, result_start { 0 }, active_start { 0 };
+    bool capture_has_position { false }, result_has_position { false }, active_has_position { false };
+    bool capture_first_block { true };
+    bool active_result { false };
     std::string bridge_dir;
     std::string engine { "route" };
     std::thread worker_thread;
@@ -271,36 +177,80 @@ static bool bridge_params_get_info(const clap_plugin_t *plugin, uint32_t param_i
     return false;
 }
 
-static void bridge_start_restore_worker(earshot_bridge_plug_t *plug) {
-    if (plug->restoring_in_background.load() || plug->captured_buffer.empty()) return;
-
-    plug->restoring_in_background.store(true);
-    if (plug->worker_thread.joinable()) {
-        plug->worker_thread.join();
+// Spawn without a shell and retain the child process group so teardown can
+// cancel an outstanding restore rather than waiting for a model to finish.
+static bool bridge_run_restore(earshot_bridge_plug_t *plug, const std::string& input, const std::string& output) {
+    char *args[] = {const_cast<char*>("earshot"), const_cast<char*>("restore"),
+        const_cast<char*>(input.c_str()), const_cast<char*>("-o"),
+        const_cast<char*>(output.c_str()), const_cast<char*>("--engine"),
+        const_cast<char*>(plug->engine.c_str()), nullptr};
+    posix_spawnattr_t attr;
+    if (posix_spawnattr_init(&attr) != 0) return false;
+    posix_spawnattr_setflags(&attr, POSIX_SPAWN_SETPGROUP);
+    posix_spawnattr_setpgroup(&attr, 0);
+    pid_t child = -1;
+    const int spawned = posix_spawnp(&child, "earshot", nullptr, &attr, args, environ);
+    posix_spawnattr_destroy(&attr);
+    if (spawned != 0) return false;
+    int status = 0;
+    while (true) {
+        const pid_t result = waitpid(child, &status, WNOHANG);
+        if (result == child) return WIFEXITED(status) && WEXITSTATUS(status) == 0;
+        if (result < 0 && errno != EINTR) return false;
+        if (plug->stop_worker.load()) {
+            kill(-child, SIGTERM);
+            for (int i = 0; i < 20; ++i) {
+                if (waitpid(child, &status, WNOHANG) == child) return false;
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+            kill(-child, SIGKILL);
+            while (waitpid(child, &status, 0) < 0 && errno == EINTR) {}
+            return false;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+}
 
-    plug->worker_thread = std::thread([plug]() {
-        mkdir_compat("/tmp/earshot_bridge");
-        mkdir_compat(plug->bridge_dir.c_str());
-        std::string in_wav = plug->bridge_dir + "/selection_in.wav";
-        std::string out_wav = plug->bridge_dir + "/selection_out.wav";
-
+// Runs on activation, never in process/params.flush. One worker owns all
+// filesystem, subprocess and decode work for this instance until deactivation.
+static void bridge_worker(earshot_bridge_plug_t *plug) {
+    while (!plug->stop_worker.load(std::memory_order_acquire)) {
+        if (!plug->job_pending.load(std::memory_order_acquire)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            continue;
+        }
+        const std::string in_wav = plug->bridge_dir + "/selection_in.wav";
+        const std::string out_wav = plug->bridge_dir + "/selection_out.wav";
+        std::error_code file_error;
+        std::filesystem::remove(out_wav, file_error); // never accept stale output after a failed run
         if (WavWriter::writeWavHeaderAndData(in_wav, plug->captured_buffer, static_cast<int>(plug->sample_rate))) {
-            std::ostringstream cmd;
-            cmd << "earshot restore \"" << in_wav << "\" -o \"" << out_wav << "\" --engine " << plug->engine;
-            int rc = std::system(cmd.str().c_str());
-            if (rc == 0) {
-                int sr = 0;
-                std::vector<float> restored;
-                if (WavWriter::readWavData(out_wav, restored, sr)) {
-                    plug->restored_buffer = std::move(restored);
-                    plug->playback_pos = 0;
-                    plug->playing_restored.store(true);
+            const bool restored_ok = bridge_run_restore(plug, in_wav, out_wav);
+            int sr = 0;
+            std::vector<float> restored;
+            if (restored_ok && WavWriter::readWavData(out_wav, restored, sr) && sr == int(plug->sample_rate) && restored.size() == plug->captured_buffer.size()) {
+                // At most one unpublished result. Audio swaps this vector into
+                // its own storage before releasing the slot back to the worker.
+                while (plug->result_ready.load(std::memory_order_acquire) && !plug->stop_worker.load())
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                if (!plug->stop_worker.load()) {
+                    plug->pending_result = std::move(restored);
+                    plug->result_start = plug->capture_start;
+                    plug->result_has_position = plug->capture_has_position;
+                    plug->result_ready.store(true, std::memory_order_release);
                 }
             }
         }
         plug->restoring_in_background.store(false);
-    });
+        plug->job_pending.store(false, std::memory_order_release);
+    }
+}
+
+// Audio-thread handoff only: no allocation, join, subprocess or file access.
+static void bridge_queue_restore(earshot_bridge_plug_t *plug) {
+    if (plug->job_pending.load(std::memory_order_acquire) || plug->captured_buffer.empty()) return;
+    plug->capturing.store(false);
+    plug->restoring_in_background.store(true);
+    plug->job_pending.store(true, std::memory_order_release);
 }
 
 static bool bridge_params_get_value(const clap_plugin_t *plugin, clap_id param_id, double *out_value) {
@@ -336,10 +286,11 @@ static void bridge_handle_param_event(earshot_bridge_plug_t *plug, const clap_ev
         const auto *ev = (const clap_event_param_value_t *)hdr;
         if (ev->param_id == PARAM_CAPTURE) {
             bool start = ev->value >= 0.5;
-            if (start) {
+            if (start && !plug->job_pending.load(std::memory_order_acquire)) {
                 plug->captured_buffer.clear();
+                plug->capture_first_block = true;
+                plug->capture_has_position = false;
                 plug->capturing.store(true);
-                plug->playing_restored.store(false);
             } else {
                 plug->capturing.store(false);
             }
@@ -361,7 +312,7 @@ static void bridge_params_flush(const clap_plugin_t *plugin,
         bridge_handle_param_event(plug, hdr);
     }
     if (plug->trigger_restore_flag.exchange(false)) {
-        bridge_start_restore_worker(plug);
+        bridge_queue_restore(plug);
     }
 }
 
@@ -383,9 +334,10 @@ static bool bridge_init(const struct clap_plugin *plugin) {
 
 static void bridge_destroy(const struct clap_plugin *plugin) {
     auto *plug = (earshot_bridge_plug_t *)plugin->plugin_data;
-    if (plug->worker_thread.joinable()) {
-        plug->worker_thread.join();
-    }
+    plug->stop_worker.store(true);
+    if (plug->worker_thread.joinable()) plug->worker_thread.join();
+    std::error_code cleanup_error;
+    std::filesystem::remove_all(plug->bridge_dir, cleanup_error);
     delete plug;
 }
 
@@ -393,10 +345,23 @@ static bool bridge_activate(const struct clap_plugin *plugin, double sample_rate
                             uint32_t min_frames_count, uint32_t max_frames_count) {
     auto *plug = (earshot_bridge_plug_t *)plugin->plugin_data;
     plug->sample_rate = sample_rate;
+    // Fixed capture budget, allocated while the audio callback is inactive.
+    plug->captured_buffer.reserve(static_cast<size_t>(sample_rate * 60));
+    plug->stop_worker.store(false);
+    if (!plug->worker_thread.joinable()) plug->worker_thread = std::thread(bridge_worker, plug);
     return true;
 }
 
-static void bridge_deactivate(const struct clap_plugin *plugin) {}
+static void bridge_deactivate(const struct clap_plugin *plugin) {
+    auto *plug = (earshot_bridge_plug_t *)plugin->plugin_data;
+    plug->stop_worker.store(true);
+    if (plug->worker_thread.joinable()) plug->worker_thread.join();
+    plug->job_pending.store(false);
+    plug->capturing.store(false);
+    plug->result_ready.store(false);
+    plug->active_result = false;
+    plug->playing_restored.store(false);
+}
 
 static bool bridge_start_processing(const struct clap_plugin *plugin) {
     return true;
@@ -404,24 +369,16 @@ static bool bridge_start_processing(const struct clap_plugin *plugin) {
 
 static void bridge_stop_processing(const struct clap_plugin *plugin) {}
 
-static void bridge_reset(const struct clap_plugin *plugin) {}
+static void bridge_reset(const struct clap_plugin *plugin) {
+    auto *plug = (earshot_bridge_plug_t *)plugin->plugin_data;
+    // Playback is always re-indexed from transport, never from elapsed blocks.
+    plug->playing_restored.store(false);
+    plug->capturing.store(false);
+}
 
 static clap_process_status bridge_process(const struct clap_plugin *plugin,
                                           const clap_process_t *process) {
     auto *plug = (earshot_bridge_plug_t *)plugin->plugin_data;
-
-    // Process parameter events
-    if (process->in_events) {
-        uint32_t nev = process->in_events->size(process->in_events);
-        for (uint32_t i = 0; i < nev; ++i) {
-            const auto *hdr = process->in_events->get(process->in_events, i);
-            bridge_handle_param_event(plug, hdr);
-        }
-    }
-
-    if (plug->trigger_restore_flag.exchange(false)) {
-        bridge_start_restore_worker(plug);
-    }
 
     if (process->audio_inputs_count == 0 || process->audio_outputs_count == 0) {
         return CLAP_PROCESS_CONTINUE;
@@ -434,45 +391,59 @@ static clap_process_status bridge_process(const struct clap_plugin *plugin,
                             ? in_buf.channel_count
                             : out_buf.channel_count;
 
-    bool is_capturing = plug->capturing.load();
-    bool is_playing_restored = plug->playing_restored.load();
-
-    for (uint32_t c = 0; c < channels; ++c) {
-        if (in_buf.data32 && out_buf.data32) {
-            if (is_playing_restored && !plug->restored_buffer.empty()) {
-                for (uint32_t f = 0; f < nframes; ++f) {
-                    size_t p = plug->playback_pos + f;
-                    if (p < plug->restored_buffer.size()) {
-                        out_buf.data32[c][f] = plug->restored_buffer[p];
-                    } else {
-                        out_buf.data32[c][f] = in_buf.data32[c][f];
-                    }
-                }
+    if (plug->result_ready.load(std::memory_order_acquire)) {
+        plug->restored_buffer.swap(plug->pending_result);
+        plug->active_start = plug->result_start;
+        plug->active_has_position = plug->result_has_position;
+        plug->active_result = true;
+        plug->result_ready.store(false, std::memory_order_release);
+    }
+    const auto *transport = process->transport;
+    const bool has_position = transport && (transport->flags & CLAP_TRANSPORT_HAS_SECONDS_TIMELINE);
+    const bool host_playing = has_position && (transport->flags & CLAP_TRANSPORT_IS_PLAYING);
+    const int64_t block_start = has_position ? static_cast<int64_t>(std::llround(
+        double(transport->song_pos_seconds) / double(CLAP_SECTIME_FACTOR) * plug->sample_rate)) : 0;
+    bool replaced = false;
+    uint32_t event_index = 0;
+    const uint32_t event_count = process->in_events ? process->in_events->size(process->in_events) : 0;
+    for (uint32_t f = 0; f < nframes; ++f) {
+        while (event_index < event_count) {
+            const auto *event = process->in_events->get(process->in_events, event_index);
+            if (event->time > f) break;
+            bridge_handle_param_event(plug, event);
+            ++event_index;
+        }
+        if (plug->trigger_restore_flag.exchange(false)) bridge_queue_restore(plug);
+        // Capture precedes output so in-place host buffers do not record the
+        // previous restoration instead of the incoming selection.
+        if (plug->capturing.load() && !plug->job_pending.load(std::memory_order_acquire) && in_buf.data32 && in_buf.channel_count > 0) {
+            if (plug->capture_first_block) {
+                plug->capture_start = block_start + f;
+                plug->capture_has_position = host_playing;
+                plug->capture_first_block = false;
+            } else if (!has_position || block_start + f != plug->capture_start + int64_t(plug->captured_buffer.size())) {
+                plug->capture_has_position = false;
+            }
+            if (plug->captured_buffer.size() == plug->captured_buffer.capacity()) {
+                plug->capturing.store(false);
             } else {
-                if (in_buf.data32[c] != out_buf.data32[c]) {
-                    memcpy(out_buf.data32[c], in_buf.data32[c], nframes * sizeof(float));
-                }
+                float sum = 0.0f;
+                for (uint32_t c = 0; c < in_buf.channel_count; ++c) sum += in_buf.data32[c][f];
+                plug->captured_buffer.push_back(sum / in_buf.channel_count);
+            }
+        }
+        const int64_t pos = block_start + f - plug->active_start;
+        const bool use = host_playing && !plug->capturing.load() && plug->active_result && plug->active_has_position && pos >= 0 && uint64_t(pos) < plug->restored_buffer.size();
+        for (uint32_t c = 0; c < channels; ++c) {
+            if (in_buf.data32 && out_buf.data32) {
+                out_buf.data32[c][f] = use ? plug->restored_buffer[size_t(pos)] : in_buf.data32[c][f];
+                replaced = replaced || use;
+            } else if (in_buf.data64 && out_buf.data64) {
+                out_buf.data64[c][f] = in_buf.data64[c][f];
             }
         }
     }
-
-    if (is_capturing && in_buf.data32 && in_buf.channel_count > 0) {
-        for (uint32_t f = 0; f < nframes; ++f) {
-            float sum = 0.0f;
-            for (uint32_t c = 0; c < in_buf.channel_count; ++c) {
-                sum += in_buf.data32[c][f];
-            }
-            plug->captured_buffer.push_back(sum / in_buf.channel_count);
-        }
-    }
-
-    if (is_playing_restored) {
-        plug->playback_pos += nframes;
-        if (plug->playback_pos >= plug->restored_buffer.size()) {
-            plug->playing_restored.store(false);
-            plug->playback_pos = 0;
-        }
-    }
+    plug->playing_restored.store(replaced);
 
     return CLAP_PROCESS_CONTINUE;
 }
@@ -492,10 +463,14 @@ clap_plugin_t *create_earshot_bridge_plugin(const clap_host_t *host) {
     plug->channels = 1;
     plug->sample_rate = 48000.0;
 
-    // Generate unique instance directory to prevent file collisions
-    uint64_t random_val = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-    plug->instance_id = std::to_string(random_val);
-    plug->bridge_dir = "/tmp/earshot_bridge/" + plug->instance_id;
+    // Atomic, private directory: no shared predictable recording path or
+    // symlink-following mkdir. mkdtemp creates it with mode 0700.
+    std::string pattern = "/tmp/earshot-bridge-XXXXXX";
+    std::vector<char> directory(pattern.begin(), pattern.end());
+    directory.push_back('\0');
+    const char *made = mkdtemp(directory.data());
+    if (!made) { delete plug; return nullptr; }
+    plug->bridge_dir = made;
 
     plug->plugin.desc = &s_bridge_desc;
     plug->plugin.plugin_data = plug;
