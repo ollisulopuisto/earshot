@@ -69,9 +69,7 @@ class VST3Engine:
         return self.plugin.process(block, rate, reset=True)[0]
 
 
-@register("vst3")
-def _load(argument: str) -> Loaded:
-    """``vst3:/path/to/Thing.vst3`` or ``vst3:/path/to/Thing.vst3?mix=100``."""
+def _load_plugin_engine(argument: str, scheme: str) -> Loaded:
     path, _, query = argument.partition("?")
     parameters = {}
     for pair in filter(None, query.split("&")):
@@ -87,3 +85,38 @@ def _load(argument: str) -> Loaded:
         load_seconds=time.perf_counter() - started,
         notes={"parameters": engine.applied},
     )
+
+
+@register("vst3")
+def _load_vst3(argument: str) -> Loaded:
+    """``vst3:/path/to/Thing.vst3`` or ``vst3:/path/to/Thing.vst3?mix=100``."""
+    return _load_plugin_engine(argument, "vst3")
+
+
+@register("au")
+def _load_au(argument: str) -> Loaded:
+    """``au:/path/to/Thing.component`` or ``au:/path/to/Thing.component?mix=100``."""
+    return _load_plugin_engine(argument, "au")
+
+
+@register("ara2")
+def _load_ara2(argument: str) -> Loaded:
+    raise EngineError(
+        "ARA2 plugins cannot be loaded directly as bench engines; "
+        "ARA2 is a host-plugin integration protocol for DAWs. For DAW integration, "
+        "see plugin/earshot_bridge, docs/plugins.md, and issue #8."
+    )
+
+
+@register("aax")
+def _load_aax(argument: str) -> Loaded:
+    raise EngineError(
+        "Pro Tools AAX plugins cannot be loaded directly in Python (pedalboard supports "
+        "VST3 and AU formats). For Pro Tools DAW workflow integration, see plugin/earshot_bridge, "
+        "docs/plugins.md, and issue #8."
+    )
+
+
+@register("protools")
+def _load_protools(argument: str) -> Loaded:
+    return _load_aax(argument)

@@ -591,11 +591,11 @@ their `arm` label rather than dropping out of the summary.
 ## Where this is going
 
 A [bridge plugin](https://github.com/ollisulopuisto/earshot/issues/8) — a thin
-VST3/AU that hands the host's selection to earshot and takes the result back,
-the way RX Connect does. Not a real-time plugin: everything here is offline by
-construction, which is the contract the bench rests on, and a plugin that sees
-512 samples at a time cannot keep it. Not yet, either — the engines are still
-moving, and freezing a moving target into C++ means porting it twice.
+VST3/AU/AAX or ARA2 integration that hands the host's selection to earshot and
+takes the result back, the way RX Connect does (see `plugin/earshot_bridge` and
+[`docs/plugins.md`](docs/plugins.md)). Not a real-time plugin: everything here
+is offline by construction, which is the contract the bench rests on, and a plugin
+that sees 512 samples at a time cannot keep it.
 
 ## State
 
