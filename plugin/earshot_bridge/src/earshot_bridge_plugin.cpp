@@ -384,13 +384,9 @@ static void bridge_reset(const struct clap_plugin *plugin) {
     auto *plug = (earshot_bridge_plug_t *)plugin->plugin_data;
     // Playback is always re-indexed from transport, never from elapsed blocks.
     plug->playing_restored.store(false);
-    // A transport reset invalidates captured positions, not the user's arm.
-    // Never touch the buffer while its immutable job belongs to the worker.
-    if (plug->capturing.load() && !plug->job_pending.load(std::memory_order_acquire)) {
-        plug->captured_buffer.clear();
-        plug->capture_first_block = true;
-        plug->capture_has_position = false;
-    }
+    // Reset does not identify stop versus seek. Keep the recorded selection
+    // and arm; process checks the next playing position before appending.
+
 }
 
 static clap_process_status bridge_process(const struct clap_plugin *plugin,
@@ -433,15 +429,19 @@ static clap_process_status bridge_process(const struct clap_plugin *plugin,
         if (plug->trigger_restore_flag.exchange(false)) bridge_queue_restore(plug);
         // Capture precedes output so in-place host buffers do not record the
         // previous restoration instead of the incoming selection.
-        if (plug->capturing.load() && !plug->job_pending.load(std::memory_order_acquire) && in_buf.data32 && in_buf.channel_count > 0) {
+        if (plug->capturing.load() && !plug->job_pending.load(std::memory_order_acquire) && host_playing && in_buf.data32 && in_buf.channel_count > 0) {
             if (plug->capture_first_block) {
                 plug->capture_start = block_start + f;
                 plug->capture_has_position = host_playing;
                 plug->capture_first_block = false;
             } else if (!has_position || block_start + f != plug->capture_start + int64_t(plug->captured_buffer.size())) {
-                plug->capture_has_position = false;
+                // Do not join audio from different timeline regions or erase
+                // the completed selection on stop/seek. Restore can still use it.
+                plug->capturing.store(false);
             }
-            if (plug->captured_buffer.size() >= plug->max_capture_samples) {
+            if (!plug->capturing.load()) {
+                // Existing selection remains immutable until Restore/recapture.
+            } else if (plug->captured_buffer.size() >= plug->max_capture_samples) {
                 plug->capturing.store(false);
             } else {
                 float sum = 0.0f;

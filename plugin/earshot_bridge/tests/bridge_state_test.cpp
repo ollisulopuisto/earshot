@@ -77,10 +77,22 @@ int main() {
     bridge_activate(plugin,192000,1,4); bridge_deactivate(plugin);
     bridge_activate(plugin,48000,1,4);
     param(p,PARAM_CAPTURE,1);
+    process.transport=&transport; transport.song_pos_seconds=0;
     // Seed one frame before the current cap without processing 60 seconds.
     p->captured_buffer.resize(48000 * 60 - 1);
     bridge_process(plugin,&process);
     assert(p->captured_buffer.size()==48000 * 60 && !p->capturing.load());
+    // Stopping/resetting after recording preserves the selection for Restore.
+    param(p,PARAM_CAPTURE,1); process.transport=&transport; transport.song_pos_seconds=0;
+    bridge_process(plugin,&process); const auto selection=p->captured_buffer;
+    bridge_reset(plugin); assert(p->captured_buffer==selection && p->capturing.load());
+    transport.flags=CLAP_TRANSPORT_HAS_SECONDS_TIMELINE; // stopped buffers are not selection audio
+    bridge_process(plugin,&process); assert(p->captured_buffer==selection);
+    transport.flags|=CLAP_TRANSPORT_IS_PLAYING;
+    transport.song_pos_seconds=CLAP_SECTIME_FACTOR; // seeking must not concatenate discontinuous audio
+    bridge_process(plugin,&process); assert(p->captured_buffer==selection && !p->capturing.load());
+    assert(p->capture_has_position);
+    param(p,PARAM_RESTORE,1); bridge_process(plugin,&process); assert(p->job_pending.load()); wait_job(p);
     // A slow CLI must be cancellable when the host removes the plugin.
     { std::ofstream f(script); f << "#!/bin/sh\nsleep 30\n"; }
     param(p,PARAM_RESTORE,1); bridge_process(plugin,&process);
