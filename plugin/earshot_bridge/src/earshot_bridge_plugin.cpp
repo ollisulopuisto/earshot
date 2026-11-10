@@ -62,6 +62,7 @@ typedef struct {
     std::atomic<bool> restoring_in_background { false };
     std::atomic<bool> playing_restored { false };
 
+    size_t max_capture_samples { 0 };
     std::vector<float> captured_buffer;
     std::vector<float> restored_buffer;
 
@@ -287,6 +288,12 @@ static void bridge_handle_param_event(earshot_bridge_plug_t *plug, const clap_ev
         if (ev->param_id == PARAM_CAPTURE) {
             bool start = ev->value >= 0.5;
             if (start && !plug->job_pending.load(std::memory_order_acquire)) {
+                // A new selection supersedes both published and active audio.
+                // job_pending=false acquires the worker's completed handoff,
+                // so discarding its ready slot cannot race with publication.
+                plug->active_result = false;
+                plug->playing_restored.store(false);
+                plug->result_ready.store(false, std::memory_order_release);
                 plug->captured_buffer.clear();
                 plug->capture_first_block = true;
                 plug->capture_has_position = false;
@@ -346,7 +353,11 @@ static bool bridge_activate(const struct clap_plugin *plugin, double sample_rate
     auto *plug = (earshot_bridge_plug_t *)plugin->plugin_data;
     plug->sample_rate = sample_rate;
     // Fixed capture budget, allocated while the audio callback is inactive.
-    plug->captured_buffer.reserve(static_cast<size_t>(sample_rate * 60));
+    plug->max_capture_samples = static_cast<size_t>(sample_rate * 60);
+    plug->captured_buffer.clear();
+    plug->capture_first_block = true;
+    plug->capture_has_position = false;
+    plug->captured_buffer.reserve(plug->max_capture_samples);
     plug->stop_worker.store(false);
     if (!plug->worker_thread.joinable()) plug->worker_thread = std::thread(bridge_worker, plug);
     return true;
@@ -373,7 +384,13 @@ static void bridge_reset(const struct clap_plugin *plugin) {
     auto *plug = (earshot_bridge_plug_t *)plugin->plugin_data;
     // Playback is always re-indexed from transport, never from elapsed blocks.
     plug->playing_restored.store(false);
-    plug->capturing.store(false);
+    // A transport reset invalidates captured positions, not the user's arm.
+    // Never touch the buffer while its immutable job belongs to the worker.
+    if (plug->capturing.load() && !plug->job_pending.load(std::memory_order_acquire)) {
+        plug->captured_buffer.clear();
+        plug->capture_first_block = true;
+        plug->capture_has_position = false;
+    }
 }
 
 static clap_process_status bridge_process(const struct clap_plugin *plugin,
@@ -424,7 +441,7 @@ static clap_process_status bridge_process(const struct clap_plugin *plugin,
             } else if (!has_position || block_start + f != plug->capture_start + int64_t(plug->captured_buffer.size())) {
                 plug->capture_has_position = false;
             }
-            if (plug->captured_buffer.size() == plug->captured_buffer.capacity()) {
+            if (plug->captured_buffer.size() >= plug->max_capture_samples) {
                 plug->capturing.store(false);
             } else {
                 float sum = 0.0f;

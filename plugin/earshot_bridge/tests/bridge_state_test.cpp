@@ -49,12 +49,38 @@ int main() {
     for(auto x:output) assert(x==0); // stopped means passthrough
     transport.flags|=CLAP_TRANSPORT_IS_PLAYING;
     for(auto &x:input) x=.75f;
-    param(p,PARAM_CAPTURE,1); bridge_process(plugin,&process); // capture while the previous result exists
+    param(p,PARAM_CAPTURE,1);
+    bridge_reset(plugin); // seeking after arming must not disarm the control
+    assert(p->capturing.load());
+    bridge_process(plugin,&process); // capture while the previous result exists
     assert(p->captured_buffer[0]==.75f);
+    param(p,PARAM_CAPTURE,0); bridge_process(plugin,&process);
+    for(auto x:output) assert(x==.75f); // recapture invalidates the old .25 result
+    { std::ofstream f(script); f << "#!/bin/sh\nexit 1\n"; }
+    param(p,PARAM_RESTORE,1); bridge_process(plugin,&process); wait_job(p);
+    bridge_process(plugin,&process); for(auto x:output) assert(x==.75f);
+    { std::ofstream f(script); f << "#!/bin/sh\nsleep 0.05\ncp \"$2\" \"$4\"\n"; }
+    param(p,PARAM_RESTORE,1); bridge_process(plugin,&process); wait_job(p);
+    // Start a new capture before audio consumes the ready result: discard it.
+    assert(p->result_ready.load());
+    param(p,PARAM_CAPTURE,1); param(p,PARAM_CAPTURE,0);
+    for(auto &x:input) x=.5f;
+    bridge_process(plugin,&process); for(auto x:output) assert(x==.5f);
+    // Record and restore once more to retain the successful playback contract.
+    param(p,PARAM_CAPTURE,1); for(auto &x:input) x=.75f;
+    bridge_process(plugin,&process);
     param(p,PARAM_RESTORE,1); bridge_process(plugin,&process); wait_job(p);
     for(auto &x:input) x=0;
     bridge_process(plugin,&process); for(auto x:output) assert(x==.75f);
     process.transport=nullptr; bridge_process(plugin,&process); for(auto x:output) assert(x==0);
+    bridge_deactivate(plugin);
+    bridge_activate(plugin,192000,1,4); bridge_deactivate(plugin);
+    bridge_activate(plugin,48000,1,4);
+    param(p,PARAM_CAPTURE,1);
+    // Seed one frame before the current cap without processing 60 seconds.
+    p->captured_buffer.resize(48000 * 60 - 1);
+    bridge_process(plugin,&process);
+    assert(p->captured_buffer.size()==48000 * 60 && !p->capturing.load());
     // A slow CLI must be cancellable when the host removes the plugin.
     { std::ofstream f(script); f << "#!/bin/sh\nsleep 30\n"; }
     param(p,PARAM_RESTORE,1); bridge_process(plugin,&process);
