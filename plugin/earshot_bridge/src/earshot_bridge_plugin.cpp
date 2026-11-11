@@ -51,7 +51,7 @@ enum {
 
 #include "wav_io.h"
 
-typedef struct {
+typedef struct earshot_bridge_plug {
     clap_plugin_t plugin;
     const clap_host_t *host;
     uint32_t channels;

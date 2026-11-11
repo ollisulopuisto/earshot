@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.22)
 project(earshot_bridge VERSION 0.1.0 LANGUAGES C CXX)
 
+# The AU wrapper adds .mm sources. Enable the language in the top-level
+# directory so its compile rules remain available during generation.
+if(APPLE)
+    enable_language(OBJCXX)
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -24,6 +30,7 @@ target_link_libraries(earshot_bridge_clap PRIVATE clap)
 target_add_vst3_wrapper(
     TARGET earshot_bridge_clap
     OUTPUT_NAME "EarshotBridge"
+    BUNDLE_VERSION "${PROJECT_VERSION}"
 )
 
 # 2. Audio Unit (AUv2) target: macOS (Logic Pro, Ableton Live, Reaper)
@@ -34,6 +41,7 @@ if(APPLE)
     target_add_auv2_wrapper(
         TARGET earshot_bridge_au
         OUTPUT_NAME "EarshotBridge"
+        BUNDLE_VERSION "${PROJECT_VERSION}"
         BUNDLE_IDENTIFIER "fi.iki.dst.earshot.bridge.auv2"
         MANUFACTURER_NAME "earshot"
         MANUFACTURER_CODE "Ersh"
