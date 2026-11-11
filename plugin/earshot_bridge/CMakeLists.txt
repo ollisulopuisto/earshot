@@ -9,8 +9,7 @@ include(FetchContent)
 FetchContent_Declare(
     clap_wrapper
     GIT_REPOSITORY https://github.com/free-audio/clap-wrapper.git
-    GIT_TAG main
-    GIT_SHALLOW TRUE
+    GIT_TAG 806bba0a5f792e3966b99c1561ab9952d3316d7c
 )
 set(CLAP_WRAPPER_DOWNLOAD_DEPENDENCIES ON CACHE BOOL "" FORCE)
 set(CLAP_WRAPPER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
