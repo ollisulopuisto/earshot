@@ -107,9 +107,12 @@ def _bands_sos(rate: int) -> tuple[np.ndarray, ...]:
     """Precompute the 4 Butterworth band filters for a given sample rate.
 
     Designing SOS filters via signal.butter involves analog filter design,
-    bilinear transform, and pole-zero pairing. That takes ~6.1 ms per call,
-    which was recomputed on every run_all invocation across identical rates.
-    Caching by sample rate reduces the design cost from ~6.1 ms to ~0.006 ms.
+    bilinear transform, and pole-zero pairing. Timing the four filters at
+    48 kHz over 500 alternating iterations gave a median of 1.269 ms for
+    direct design and 0.0004 ms for cached retrieval (Python 3.10, scipy
+    1.15, Linux x86_64; reproduce with scripts/benchmark_bands_sos.py).
+    Caching by sample rate keeps the design cost off every run_all
+    invocation across identical rates.
     """
     nyquist = rate / 2
     return tuple(
