@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.22)
 project(earshot_bridge VERSION 0.1.0 LANGUAGES C CXX)
 
+# The AU wrapper adds .mm sources. Enable the language in the top-level
+# directory so its compile rules remain available during generation.
+if(APPLE)
+    enable_language(OBJCXX)
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
