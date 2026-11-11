@@ -12,6 +12,13 @@ for kind in vst3 component; do
   test -n "$bundle"
   test "$(printf '%s\n' "$bundle" | wc -l | tr -d ' ')" = 1
   test -f "$bundle/Contents/Info.plist"
+  for key in CFBundleVersion CFBundleShortVersionString; do
+    version=$(/usr/libexec/PlistBuddy -c "Print :$key" "$bundle/Contents/Info.plist")
+    if ! [[ "$version" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]]; then
+      echo "Invalid $key in $bundle" >&2
+      exit 1
+    fi
+  done
   executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$bundle/Contents/Info.plist")
   test -n "$executable"
   binary="$bundle/Contents/MacOS/$executable"
