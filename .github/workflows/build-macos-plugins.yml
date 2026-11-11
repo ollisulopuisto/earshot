@@ -1,0 +1,45 @@
+name: Build macOS bridge plugins
+
+# Manual builds only. No paid runners, Actions artifacts or caches.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate manual build
+        env:
+          ACTOR: ${{ github.actor }}
+          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+        run: |
+          test "$ACTOR" = ollisulopuisto
+          test "$TRIGGERING_ACTOR" = ollisulopuisto
+      - name: Configure arm64 VST3 and AUv2
+        run: |
+          cmake -S plugin/earshot_bridge -B build/plugins \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+            -DCLAP_WRAPPER_BUILD_AAX=OFF \
+            -DCLAP_WRAPPER_COPY_AFTER_BUILD=OFF
+      - name: Build
+        run: cmake --build build/plugins --config Release --parallel 3
+      - name: Verify bundles and package
+        run: bash scripts/package-macos-plugins.sh build/plugins release
+      - name: Deliver to a draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="manual-plugins-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          gh release create "$tag" release/* --repo "$GITHUB_REPOSITORY" \
+            --draft --prerelease --latest=false --target "$GITHUB_SHA" \
+            --title "Earshot Bridge arm64 manual build ${GITHUB_RUN_ID}" \
+            --notes 'Experimental VST3 and AUv2 bundles. Ad-hoc signed only, not Developer ID signed or notarized. Never loaded in a DAW. Requires a separately installed earshot command for restoration. AAX is not included (Avid SDK required).'
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json url,assets

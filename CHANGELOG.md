@@ -1,3 +1,7 @@
+# Manual plugin builds
+
+- Add an on-demand macOS arm64 VST3/AUv2 build with bundle/architecture checks and draft-release ZIP delivery. Ad-hoc signature only; no notarization, AAX SDK or DAW validation.
+
 # Changelog
 
 What each version contains, for whoever runs the bench or restores a file
