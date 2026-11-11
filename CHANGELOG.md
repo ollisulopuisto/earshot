@@ -1,7 +1,3 @@
-# Manual plugin builds
-
-- Add an on-demand macOS arm64 VST3/AUv2 build with bundle/architecture checks and draft-release ZIP delivery. Ad-hoc signature only; no notarization, AAX SDK or DAW validation.
-
 # Changelog
 
 What each version contains, for whoever runs the bench or restores a file
@@ -9,6 +5,8 @@ with it. Versions are CalVer (`vYY.MM.DD.N`). Entries up to v26.10.02.1 were
 written afterwards from `git log`; the commit messages carry the numbers.
 
 ## [Unreleased]
+
+- Add an on-demand macOS arm64 VST3/AUv2 build with bundle/architecture checks and draft-release ZIP delivery. Ad-hoc signature only; no notarization, AAX SDK or DAW validation.
 
 - Reuse one reference FFT, Hann window and harmonic mask for the tonal probe's
   before/after scores. Synthetic 10-second 48kHz pair benchmark: median
