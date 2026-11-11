@@ -9,6 +9,23 @@ from earshot import engines
 def test_registry_knows_its_schemes():
     assert "passthrough" in engines.schemes()
     assert "vst3" in engines.schemes()
+    assert "au" in engines.schemes()
+    assert "ara2" in engines.schemes()
+    assert "aax" in engines.schemes()
+    assert "protools" in engines.schemes()
+
+
+def test_au_scheme_validates_path():
+    with pytest.raises(engines.EngineError) as caught:
+        engines.load("au:/nonexistent/Thing.component")
+    assert "no plug-in at" in str(caught.value)
+
+
+@pytest.mark.parametrize("scheme", ["ara2", "aax", "protools"])
+def test_unsupported_plugin_schemes_give_informative_error(scheme):
+    with pytest.raises(engines.EngineError) as caught:
+        engines.load(f"{scheme}:/some/path")
+    assert "docs/plugins.md" in str(caught.value)
 
 
 def test_unknown_scheme_lists_the_known_ones():
