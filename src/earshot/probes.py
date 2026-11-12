@@ -109,7 +109,7 @@ def _bands_sos(rate: int) -> tuple[np.ndarray, ...]:
     Designing SOS filters via signal.butter involves analog filter design,
     bilinear transform, and pole-zero pairing. Timing the four filters at
     48 kHz over 500 alternating iterations gave a median of 1.269 ms for
-    direct design and 0.0003 ms for cached retrieval (Python 3.10, scipy
+    direct design and 0.00034 ms for cached retrieval (Python 3.10, scipy
     1.15, Linux x86_64; reproduce with scripts/benchmark_bands_sos.py).
     Caching by sample rate keeps the design cost off every run_all
     invocation across identical rates.
