@@ -1,0 +1,16 @@
+{
+  "measured": "design of the 4 BANDS Butterworth SOS filters for one sample rate",
+  "rate": 48000,
+  "iterations": 500,
+  "python": "3.10.12",
+  "scipy": "1.15.3",
+  "platform": "Linux-6.1.189+-x86_64-with-glibc2.35",
+  "median_seconds": {
+    "direct": 0.0012691399999980035,
+    "cached": 3.414999980577704e-07
+  },
+  "p90_seconds": {
+    "direct": 0.001332898999997667,
+    "cached": 4.700000033608376e-07
+  }
+}

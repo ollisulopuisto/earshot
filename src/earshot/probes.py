@@ -36,11 +36,13 @@ can rank without knowing what any of it means.
 
 from __future__ import annotations
 
+from functools import lru_cache
 import resource
 import time
 from dataclasses import dataclass, field
 
 import numpy as np
+from scipy import signal as _signal
 
 from . import degrade, metrics
 from .engines import Loaded, check_contract
@@ -98,6 +100,30 @@ BANDS: tuple[tuple[str, float, float], ...] = (
     ("high", 6000.0, 12000.0),
     ("air", 14000.0, 20000.0),
 )
+
+
+@lru_cache(maxsize=16)
+def _bands_sos(rate: int) -> tuple[np.ndarray, ...]:
+    """Precompute the 4 Butterworth band filters for a given sample rate.
+
+    Designing SOS filters via signal.butter involves analog filter design,
+    bilinear transform, and pole-zero pairing. Timing the four filters at
+    48 kHz over 500 alternating iterations gave a median of 1.269 ms for
+    direct design and 0.00034 ms for cached retrieval (Python 3.10, scipy
+    1.15, Linux x86_64; reproduce with scripts/benchmark_bands_sos.py).
+    Caching by sample rate keeps the design cost off every run_all
+    invocation across identical rates.
+    """
+    nyquist = rate / 2
+    return tuple(
+        _signal.butter(
+            4,
+            [lo / nyquist, min(hi, nyquist * 0.99) / nyquist],
+            btype="band",
+            output="sos",
+        )
+        for _, lo, hi in BANDS
+    )
 
 
 def warm_up(loaded: Loaded, rate: int = 48000, seconds: float = 1.0) -> None:
@@ -307,19 +333,15 @@ def run_all(
     # --- origin: filtering or invention, band by band
     # The same four band filters are reused in the per-band stability probe
     # below, so each signal is sosfilt'ed once per band instead of once per
-    # probe (restored: 8x -> 4x). The math is identical to metrics.band_correlation
-    # on the raw signals: same filter, same frames, same correlation.
-    from scipy import signal as _sig
-
+    # probe (restored: 8x -> 4x). Filter coefficients are cached via
+    # _bands_sos(rate) to avoid re-evaluating signal.butter on every call.
+    # The math is identical to metrics.band_correlation on the raw signals:
+    # same filter, same frames, same correlation.
     nyquist = rate / 2
-    _soses = [
-        _sig.butter(4, [lo / nyquist, min(hi, nyquist * 0.99) / nyquist],
-                    btype="band", output="sos")
-        for _, lo, hi in BANDS
-    ]
+    _soses = _bands_sos(rate)
     _n = min(len(broken), len(restored))
-    _fb = [_sig.sosfilt(sos, np.asarray(broken)[:_n]) for sos in _soses]
-    _fr = [_sig.sosfilt(sos, np.asarray(restored)[:_n]) for sos in _soses]
+    _fb = [_signal.sosfilt(sos, np.asarray(broken)[:_n]) for sos in _soses]
+    _fr = [_signal.sosfilt(sos, np.asarray(restored)[:_n]) for sos in _soses]
 
     for index, (name, band_low, band_high) in enumerate(BANDS):
         if band_low >= nyquist:
@@ -371,7 +393,7 @@ def run_all(
     # `repeat` is filtered with the same four band filters built for origin
     # (`_soses`/`_fr`), so `restored` is never filtered twice for one band.
     _n2 = min(len(restored), len(repeat))
-    _fr2 = [_sig.sosfilt(sos, np.asarray(repeat)[:_n2]) for sos in _soses]
+    _fr2 = [_signal.sosfilt(sos, np.asarray(repeat)[:_n2]) for sos in _soses]
 
     for index, (name, band_low, band_high) in enumerate(BANDS):
         if band_low >= rate / 2:

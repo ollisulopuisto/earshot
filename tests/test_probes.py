@@ -148,3 +148,43 @@ def test_removing_non_speech_counts_as_better():
     run = probes.preservation(engines.load("passthrough"))
     overall = [r for r in run.results if r.metric == "overall"][0]
     assert overall.better == "higher"
+
+
+def test_bands_sos_cache_matches_direct_filter_design():
+    """Caching must return the exact filter coefficients that signal.butter produces."""
+    from scipy import signal as _signal
+
+    for rate in (44100, 48000, 96000):
+        cached = probes._bands_sos(rate)
+        nyquist = rate / 2
+        direct = tuple(
+            _signal.butter(
+                4,
+                [lo / nyquist, min(hi, nyquist * 0.99) / nyquist],
+                btype="band",
+                output="sos",
+            )
+            for _, lo, hi in probes.BANDS
+        )
+        assert len(cached) == len(direct) == len(probes.BANDS)
+        for c_sos, d_sos in zip(cached, direct):
+            np.testing.assert_array_equal(c_sos, d_sos)
+
+
+def test_bands_sos_returns_cached_object_and_survives_filtering():
+    """Cached filter arrays must be reused by identity across repeated calls
+    and filtering audio through them must not alter the cached coefficients.
+    """
+    first = probes._bands_sos(48000)
+    second = probes._bands_sos(48000)
+    assert first is second
+    copies = [sos.copy() for sos in first]
+
+    rng = np.random.default_rng(42)
+    sig = rng.normal(size=4800).astype(np.float32)
+    for sos in first:
+        from scipy import signal as _signal
+        _signal.sosfilt(sos, sig)
+
+    for orig_sos, current_sos in zip(copies, probes._bands_sos(48000)):
+        np.testing.assert_array_equal(orig_sos, current_sos)
