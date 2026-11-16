@@ -561,7 +561,7 @@ requires-dist = [
     { name = "pystoi", marker = "extra == 'perceptual'", specifier = ">=0.4" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pyyaml", marker = "extra == 'lavasr'", specifier = ">=6.0" },
-    { name = "rotary-embedding-torch", marker = "extra == 'mossformer2'", specifier = ">=0.8" },
+    { name = "rotary-embedding-torch", marker = "extra == 'mossformer2'", specifier = ">=0.9.2" },
     { name = "scipy", specifier = ">=1.11" },
     { name = "soundfile", specifier = ">=0.12" },
     { name = "torch", marker = "extra == 'deepfilternet'", specifier = ">=2.15.0" },
@@ -579,7 +579,7 @@ requires-dist = [
     { name = "torchaudio", marker = "extra == 'unipase'", specifier = ">=2.11.1" },
     { name = "torchaudio", marker = "extra == 'universr'", specifier = ">=2.11.1" },
     { name = "torchinfo", marker = "extra == 'mossformer2'", specifier = ">=1.8" },
-    { name = "transformers", marker = "extra == 'sidon'", specifier = ">=5.22.1" },
+    { name = "transformers", marker = "extra == 'sidon'", specifier = ">=5.22.2" },
     { name = "universr", marker = "extra == 'universr'", git = "https://github.com/woongzip1/UniverSR?rev=d8636623fe0c0704296239c1d3d3c5b911ecb2e0" },
 ]
 provides-extras = ["vst3", "perceptual", "lavasr", "deepfilternet", "universr", "novasr", "unipase", "sidon", "mossformer2", "wpe", "speaker", "dev"]
@@ -1533,15 +1533,15 @@ wheels = [
 
 [[package]]
 name = "rotary-embedding-torch"
-version = "0.9.1"
+version = "0.9.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "einops" },
     { name = "torch" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fc/63/776d55b395aed9d2815afc1740056e919691d1be1ceee203d101d33d1674/rotary_embedding_torch-0.9.1.tar.gz", hash = "sha256:f43c39cd9c0aaa17d47e876db89a552a203dd8af35e7980f484ab7ad7ea8bf69", size = 13246, upload-time = "2026-06-20T23:39:14.667Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/42/45/a363e3848971bb77bfdbf02895f6d47e0db0b2eca19e3c256195c3511505/rotary_embedding_torch-0.9.2.tar.gz", hash = "sha256:5eb7c8e899af5fb3cfa24f9e5902663183ef77c9e3fa55f478d0de34d183431b", size = 13361, upload-time = "2026-11-07T14:09:09.22Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ea/63/ca681366df98d207876c6ad7761ef6910668c83ec766fd5a70c56b9c3567/rotary_embedding_torch-0.9.1-py3-none-any.whl", hash = "sha256:489ef53e21ab4c4eb35c0c97b551d724f5eea71c2bca39acb8fee8d88b142a76", size = 17423, upload-time = "2026-06-20T23:39:13.427Z" },
+    { url = "https://files.pythonhosted.org/packages/99/30/db962f3755fc0accdd164e3320e2116bd8d4c52b60ead7d65db3f1bfd3e6/rotary_embedding_torch-0.9.2-py3-none-any.whl", hash = "sha256:c57891f82e6d73981d46b08ea22e2944d217bc3b463612e336498c9f32d69d16", size = 17530, upload-time = "2026-11-07T14:09:08.104Z" },
 ]
 
 [[package]]
@@ -1892,7 +1892,7 @@ wheels = [
 
 [[package]]
 name = "transformers"
-version = "5.22.1"
+version = "5.22.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "huggingface-hub" },
@@ -1905,9 +1905,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/17/d6/a610b37bbc3450c056ea68c7f5016d06da8e787c1ac32b20ce58d18a1eb0/transformers-5.22.1.tar.gz", hash = "sha256:bed9fd76d6f43b4a1a9fc5d0c565ace7c77edbd029784f8cbcdf772cb5e924d8", size = 10381794, upload-time = "2026-10-30T07:48:03.721Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/42/54/b040ac523bad74f303d032505e3464cf4794f9d51defc8981ec66001936e/transformers-5.22.2.tar.gz", hash = "sha256:55f57e5cbd7c0b500b7a706daa0ecd76567b56ca139e6e02ef0bba0437e3a763", size = 10383941, upload-time = "2026-11-06T15:42:57.587Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/75/75/47ebe0e2f1b04a180000e3a49ebdf4669dbab0c63489bcecf7855c26e4f4/transformers-5.22.1-py3-none-any.whl", hash = "sha256:c940b4bf98de4f568723895f330ba1460a398bd83061b93b70238c3fe32e4389", size = 13051755, upload-time = "2026-10-30T07:47:59.888Z" },
+    { url = "https://files.pythonhosted.org/packages/ff/bb/cc0b27a3000ddcf4903d3a26983c8b4c9a36050bbaf05675f353e8bcb08c/transformers-5.22.2-py3-none-any.whl", hash = "sha256:829c2820aff91730b8ec45a4b8ff4be07f586a140b68a9073998b36fa35297dc", size = 13053178, upload-time = "2026-11-06T15:42:54.257Z" },
 ]
 
 [[package]]
