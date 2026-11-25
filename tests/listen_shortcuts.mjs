@@ -23,4 +23,13 @@ for(const [key,code] of [[' ','Space'],['2','Digit2'],['ArrowLeft','ArrowLeft'],
 doc.activeElement={isContentEditable:true};handler(event(' ','Space'));assert.equal(plays,1);
 doc.activeElement=null;doc.querySelectorAll=()=>[{getClientRects:()=>[{}]}];handler(event(' ','Space'));assert.equal(plays,1);
 doc.querySelectorAll=()=>[];handler(event('9'));assert.deepEqual(selected,[2]);
+const bar = {closest:()=>null};
+view.el = {contains:el=>el===bar};
+doc.activeElement=bar;
+handler(event('ArrowRight','ArrowRight',{target:bar}));assert.equal(seeks.at(-1),12);
+const button={closest:selector=>selector.includes('button')?{}:null};
+doc.activeElement=button;
+const count=plays;handler(event(' ','Space',{target:button}));assert.equal(plays,count);
+handler(event('ArrowLeft','ArrowLeft',{target:button}));assert.equal(seeks.at(-1),8);
+handler(event('2','Digit2',{target:button}));assert.equal(selected.at(-1),0);
 console.log('actual listening handler: bare keys, modifiers, editing, controls, dialog, IME, bounds pass');

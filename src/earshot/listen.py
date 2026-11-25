@@ -451,8 +451,12 @@ function listeningShortcut(e) {
   if (e.defaultPrevented || e.isComposing || e.keyCode === 229 ||
       e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return null;
   const owned = el => Boolean(el?.isContentEditable || el?.closest?.(
-    'input, textarea, select, button, a, [role="button"], [role="slider"], [role="textbox"], [contenteditable]:not([contenteditable="false"])'));
-  if (owned(e.target) || owned(e.composedPath?.()[0]) || owned(document.activeElement)) return null;
+    'input, textarea, select, [role="textbox"], [contenteditable]:not([contenteditable="false"])'));
+  const targets = [e.target, e.composedPath?.()[0], document.activeElement];
+  if (targets.some(owned)) return null;
+  // Buttons/links own native activation, not listening arrows or take digits.
+  if ((e.code === "Space" || e.key === "Enter") && targets.some(el =>
+      el?.closest?.('button, a, [role="button"]'))) return null;
   if ([...document.querySelectorAll('dialog[open], [role="dialog"][aria-modal="true"]')]
       .some(el => el.getClientRects().length > 0)) return null;
   return LISTEN_SHORTCUTS.find(row => row.code ? row.code === e.code : row.key === e.key);
@@ -460,7 +464,9 @@ function listeningShortcut(e) {
 document.addEventListener("keydown", (e) => {
   const command = listeningShortcut(e);
   if (!command) return;
-  const v = state.active || views[0];
+  const target = e.composedPath?.()[0] || e.target;
+  const v = views.find(view => view.el?.contains(target) || view.el?.contains(document.activeElement))
+    || state.active || views[0];
   if (!v) return;
   if (command.id === "take") {
     const order = v.visibleOrder();
