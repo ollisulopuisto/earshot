@@ -5,4 +5,4 @@ model by reputation is how you end up with something that sounds impressive
 on a demo and replaces your speaker's voice on your own material.
 """
 
-__version__ = "0.1.0"
+__version__ = "26.11.25.1"
