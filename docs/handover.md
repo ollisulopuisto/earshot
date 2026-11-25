@@ -571,3 +571,9 @@ Tests compare gain/filter chunk outputs within PCM24quantization, not real model
 quality/listening or Mac performance. Four-minute Linux synthetic VmPeak test
 passes;102MB/23MB are worker measurements, not a new native/model claim.
 Human merge pending; no weights, new service, workflow, release or model run.
+
+## 25 November 2026: listening shortcut ownership
+
+Branch fix/listening-shortcut-ownership from main d88f943; version26.11.25.1. Central inline registry keeps each generated listening page self-contained. Bare Space/arrows/digits operate the active comparison or first comparison, while modifiers, IME, focused text/controls and visible dialogs retain their keys. Actual listener VM test first reproduced Option-Space playback, now passes the modifier/focus/dialog/IME matrix and visible take bounds. Existing listening-page generation and vote tests:9pass. No DSP/model quality change, native plugin build, audio quality or real browser acceptance claim. Own adversarial review traced active comparison, blind visible-order mapping, seek bounds and generated HTML packaging. PR only.
+
+Review follow-up FIND-earshot-43-1: controls now own only native activation, while arrows and take digits still work after a button/seek-bar click. Focused comparison wins over the active/default comparison, so a focused bar seeks its own audio. Text/select/editable fields still own every key. Focused-button/bar VM acceptance reproduced the blocked-arrow regression, then passes. Existing9listeningtests pass; real-browser acceptance still unverified.

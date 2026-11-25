@@ -142,3 +142,15 @@ def test_the_worst_take_can_be_picked_too(tmp_path, capsys):
     assert main(["votes", str(tmp_path)]) == 0
     out = capsys.readouterr().out
     assert "best" in out and "worst" in out
+
+
+def test_listening_shortcuts_keep_modified_and_control_keys_with_host():
+    import shutil
+    import subprocess
+    import pytest
+    from pathlib import Path
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node.js required for actual listening-page handler acceptance")
+    subprocess.run([node, str(Path(__file__).with_name("listen_shortcuts.mjs"))], check=True)

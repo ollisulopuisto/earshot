@@ -440,17 +440,43 @@ function bindSwitch(id, key, storeAs = key) {
 bindSwitch("sw-match", "match"); bindSwitch("sw-blind", "blind", "blind-default-on"); bindSwitch("sw-loop", "loop");
 views.forEach(v => v.render());
 
+// One registry owns listening-page commands; focused controls keep their keys.
+const LISTEN_SHORTCUTS = Object.freeze([
+  {id: "toggle", code: "Space"},
+  ...Array.from({length: 9}, (_, i) => ({id: "take", key: String(i + 1), index: i})),
+  {id: "seek", key: "ArrowLeft", seconds: -2},
+  {id: "seek", key: "ArrowRight", seconds: 2},
+]);
+function listeningShortcut(e) {
+  if (e.defaultPrevented || e.isComposing || e.keyCode === 229 ||
+      e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return null;
+  const owned = el => Boolean(el?.isContentEditable || el?.closest?.(
+    'input, textarea, select, [role="textbox"], [contenteditable]:not([contenteditable="false"])'));
+  const targets = [e.target, e.composedPath?.()[0], document.activeElement];
+  if (targets.some(owned)) return null;
+  // Buttons/links own native activation, not listening arrows or take digits.
+  if ((e.code === "Space" || e.key === "Enter") && targets.some(el =>
+      el?.closest?.('button, a, [role="button"]'))) return null;
+  if ([...document.querySelectorAll('dialog[open], [role="dialog"][aria-modal="true"]')]
+      .some(el => el.getClientRects().length > 0)) return null;
+  return LISTEN_SHORTCUTS.find(row => row.code ? row.code === e.code : row.key === e.key);
+}
 document.addEventListener("keydown", (e) => {
-  if (e.target.closest && e.target.closest("input, textarea")) return;
-  const v = state.active || views[0];
+  const command = listeningShortcut(e);
+  if (!command) return;
+  const target = e.composedPath?.()[0] || e.target;
+  const v = views.find(view => view.el?.contains(target) || view.el?.contains(document.activeElement))
+    || state.active || views[0];
   if (!v) return;
-  if (e.code === "Space") { e.preventDefault(); v.toggle(); }
-  else if (/^[1-9]$/.test(e.key)) {
-    const order = v.visibleOrder(); const k = Number(e.key) - 1;
-    if (k < order.length) v.select(order[k]);
+  if (command.id === "take") {
+    const order = v.visibleOrder();
+    if (command.index >= order.length) return;
+    e.preventDefault(); v.select(order[command.index]);
+  } else if (command.id === "toggle") {
+    e.preventDefault(); v.toggle();
+  } else if (command.id === "seek") {
+    e.preventDefault(); v.seek(v.position() + command.seconds);
   }
-  else if (e.key === "ArrowLeft") v.seek(v.position() - 2);
-  else if (e.key === "ArrowRight") v.seek(v.position() + 2);
 });
 </script>
 """

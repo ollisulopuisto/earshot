@@ -6,6 +6,10 @@ written afterwards from `git log`; the commit messages carry the numbers.
 
 ## [Unreleased]
 
+## [v26.11.25.1] - 2026-11-25
+
+- Listening shortcuts now use one registry and only accept bare Space, arrows and digits. Modified keys stay with the browser/system; focused text, controls, dialogs and IME keep their keys.
+
 - Add an on-demand macOS arm64 VST3/AUv2 build with bundle/architecture checks and draft-release ZIP delivery. Ad-hoc signature only; no notarization, AAX SDK or DAW validation.
 
 - Reuse one reference FFT, Hann window and harmonic mask for the tonal probe's
